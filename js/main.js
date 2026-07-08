@@ -19,6 +19,7 @@ import { analyzeAppliancePhotos, analyzeRoomFrames, checkAnalyzeServer, readFile
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
+import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
 import {
   dismissInstallPrompt,
   installHintMode,
@@ -72,6 +73,7 @@ const ROOM_ORDER = [
 const els = {
   buildTag: document.getElementById("build-tag"),
   applianceList: document.getElementById("appliance-list"),
+  roomFilterChips: document.getElementById("room-filter-chips"),
   emptyState: document.getElementById("empty-state"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
   installBanner: document.getElementById("install-banner"),
@@ -111,6 +113,7 @@ const els = {
   inputReceipt: document.getElementById("input-receipt-photo"),
   btnAnalyze: document.getElementById("btn-analyze"),
   btnSkipReceipt: document.getElementById("btn-skip-receipt"),
+  btnSkipLabel: document.getElementById("btn-skip-label"),
   labelHintText: document.getElementById("label-hint-text"),
   reviewPhotos: document.getElementById("review-photos"),
   reviewForm: document.getElementById("review-form"),
@@ -125,6 +128,11 @@ const els = {
   detailBody: document.getElementById("detail-body"),
   detailManuals: document.getElementById("detail-manuals"),
   detailRepair: document.getElementById("detail-repair"),
+  detailLabelLede: document.getElementById("detail-label-lede"),
+  previewDetailLabelPhoto: document.getElementById("preview-detail-label-photo"),
+  labelDetailLabelPhoto: document.getElementById("label-detail-label-photo"),
+  inputDetailLabelPhoto: document.getElementById("input-detail-label-photo"),
+  btnClearDetailLabelPhoto: document.getElementById("btn-clear-detail-label-photo"),
   btnEdit: document.getElementById("btn-edit-appliance"),
   btnDelete: document.getElementById("btn-delete-appliance"),
   editForm: document.getElementById("edit-appliance-form"),
@@ -138,6 +146,7 @@ const els = {
   settingsForm: document.getElementById("settings-form"),
   fieldApiKey: document.getElementById("field-api-key"),
   fieldTheme: document.getElementById("field-theme"),
+  fieldRoomChips: document.getElementById("field-room-chips"),
   apiKeyStatus: document.getElementById("api-key-status"),
   btnClearApiKey: document.getElementById("btn-clear-api-key"),
   settingsAccount: document.getElementById("settings-account"),
@@ -202,6 +211,8 @@ let detailId = null;
 let toastTimer = 0;
 let authMode = "signin";
 let allowOfflineUse = false;
+/** @type {"all" | string} */
+let homeRoomFilter = "all";
 
 /** Secure contexts only (HTTPS / localhost). HTTP on iPhone needs a fallback. */
 function newRecordId() {
@@ -341,11 +352,19 @@ function init() {
     if (els.labelHintText) {
       els.labelHintText.textContent = hintForType(els.fieldType?.value || "");
     }
+    if (els.btnToStep3) els.btnToStep3.disabled = false;
     showView("scan2");
   });
   els.inputLabel?.addEventListener("change", () => void onLabelPhoto());
   els.btnRetakeLabel?.addEventListener("click", () => clearLabelPhoto());
   els.btnToStep3?.addEventListener("click", () => showView("scan3"));
+  els.btnSkipLabel?.addEventListener("click", () => {
+    scan.labelPhotoDataUrl = null;
+    if (els.inputLabel) els.inputLabel.value = "";
+    setPreview(els.previewLabel, null);
+    updateCaptureButtons();
+    showView("scan3");
+  });
   els.inputReceipt?.addEventListener("change", () => void onReceiptPhoto());
   els.btnRetakeReceipt?.addEventListener("click", () => clearReceiptPhoto());
   els.btnSkipReceipt?.addEventListener("click", () => {
@@ -365,6 +384,8 @@ function init() {
     void saveRecord();
   });
   els.btnDelete?.addEventListener("click", () => void removeDetail());
+  els.inputDetailLabelPhoto?.addEventListener("change", () => void onDetailLabelPhotoSelected());
+  els.btnClearDetailLabelPhoto?.addEventListener("click", () => clearDetailLabelPhoto());
   els.btnEdit?.addEventListener("click", () => void openEditAppliance());
   els.btnEditBack?.addEventListener("click", () => {
     if (detailId) void openDetail(detailId);
@@ -384,6 +405,13 @@ function init() {
       saveThemePreference(value);
       toast(value === "light" ? "Daylight mode on" : value === "dark" ? "Dark mode on" : "Using system appearance");
     }
+  });
+  els.fieldRoomChips?.addEventListener("change", () => {
+    const enabled = els.fieldRoomChips?.checked ?? true;
+    saveRoomChipsEnabled(enabled);
+    if (!enabled) homeRoomFilter = "all";
+    toast(enabled ? "Room filter chips on" : "Room filter chips off");
+    void renderHome();
   });
   els.btnClearApiKey?.addEventListener("click", () => clearSettingsApiKey());
   els.btnSignOut?.addEventListener("click", () => void handleSignOut());
@@ -998,7 +1026,7 @@ async function saveRoomItems() {
         modelNumber: item.modelNumber.trim(),
         serialNumber: item.serialNumber.trim(),
         appliancePhotoDataUrl: photo,
-        labelPhotoDataUrl: photo,
+        labelPhotoDataUrl: null,
         receiptPhotoDataUrl: null,
         confidence: item.confidence || "room-video",
         scannedAt: new Date().toISOString(),
@@ -1091,7 +1119,7 @@ function clearAppliancePhoto() {
   setPreview(els.previewLabel, null);
   setPreview(els.previewReceipt, null);
   if (els.btnToStep2) els.btnToStep2.disabled = true;
-  if (els.btnToStep3) els.btnToStep3.disabled = true;
+  if (els.btnToStep3) els.btnToStep3.disabled = false;
   updateCaptureButtons();
   toast("Appliance photo cleared");
 }
@@ -1103,7 +1131,6 @@ function clearLabelPhoto() {
   if (els.inputReceipt) els.inputReceipt.value = "";
   setPreview(els.previewLabel, null);
   setPreview(els.previewReceipt, null);
-  if (els.btnToStep3) els.btnToStep3.disabled = true;
   updateCaptureButtons();
   toast("Label photo cleared");
 }
@@ -1148,7 +1175,6 @@ async function onLabelPhoto() {
   if (!file) return;
   scan.labelPhotoDataUrl = await readFileAsDataUrl(file);
   setPreview(els.previewLabel, scan.labelPhotoDataUrl);
-  if (els.btnToStep3) els.btnToStep3.disabled = false;
   updateCaptureButtons();
 }
 
@@ -1161,7 +1187,7 @@ async function onReceiptPhoto() {
 }
 
 async function runAnalysis() {
-  if (!scan.appliancePhotoDataUrl || !scan.labelPhotoDataUrl) return;
+  if (!scan.appliancePhotoDataUrl) return;
 
   if (els.btnAnalyze) {
     els.btnAnalyze.disabled = true;
@@ -1169,14 +1195,17 @@ async function runAnalysis() {
   }
 
   try {
-    const [appliancePhoto, labelPhoto] = await Promise.all([
-      compressDataUrl(scan.appliancePhotoDataUrl, { maxEdge: 960, quality: 0.72 }),
-      compressDataUrl(scan.labelPhotoDataUrl, { maxEdge: 960, quality: 0.72 }),
-    ]);
+    const appliancePhoto = await compressDataUrl(scan.appliancePhotoDataUrl, {
+      maxEdge: 960,
+      quality: 0.72,
+    });
+    const labelPhoto = scan.labelPhotoDataUrl
+      ? await compressDataUrl(scan.labelPhotoDataUrl, { maxEdge: 960, quality: 0.72 })
+      : null;
 
     const result = await analyzeAppliancePhotos({
       appliancePhotoDataUrl: appliancePhoto,
-      labelPhotoDataUrl: labelPhoto,
+      ...(labelPhoto ? { labelPhotoDataUrl: labelPhoto } : {}),
     });
 
     if (els.labelHintText) {
@@ -1204,10 +1233,10 @@ async function runAnalysis() {
 
     if (els.reviewPhotos) {
       els.reviewPhotos.innerHTML = "";
-      const photos = [
-        ["Appliance", scan.appliancePhotoDataUrl],
-        ["Label", scan.labelPhotoDataUrl],
-      ];
+      const photos = [["Appliance", scan.appliancePhotoDataUrl]];
+      if (scan.labelPhotoDataUrl) {
+        photos.push(["Label", scan.labelPhotoDataUrl]);
+      }
       if (scan.receiptPhotoDataUrl) {
         photos.push(["Receipt", scan.receiptPhotoDataUrl]);
       }
@@ -1231,7 +1260,7 @@ async function runAnalysis() {
 }
 
 async function saveRecord() {
-  if (!scan.appliancePhotoDataUrl || !scan.labelPhotoDataUrl) return;
+  if (!scan.appliancePhotoDataUrl) return;
 
   const submitBtn = els.reviewForm?.querySelector('button[type="submit"]');
   if (submitBtn instanceof HTMLButtonElement) {
@@ -1240,10 +1269,8 @@ async function saveRecord() {
   }
 
   try {
-    const [appliancePhoto, labelPhoto] = await Promise.all([
-      compressDataUrl(scan.appliancePhotoDataUrl),
-      compressDataUrl(scan.labelPhotoDataUrl),
-    ]);
+    const appliancePhoto = await compressDataUrl(scan.appliancePhotoDataUrl);
+    const labelPhoto = scan.labelPhotoDataUrl ? await compressDataUrl(scan.labelPhotoDataUrl) : null;
     const receiptPhoto = scan.receiptPhotoDataUrl
       ? await compressDataUrl(scan.receiptPhotoDataUrl)
       : null;
@@ -1290,6 +1317,7 @@ async function saveRecord() {
 function renderSettings() {
   const key = loadApiKey();
   if (els.fieldTheme) els.fieldTheme.value = loadThemePreference();
+  if (els.fieldRoomChips) els.fieldRoomChips.checked = loadRoomChipsEnabled();
   if (els.apiKeyStatus) {
     if (key) {
       els.apiKeyStatus.hidden = false;
@@ -1432,14 +1460,38 @@ async function renderHome() {
   }
   if (!els.applianceList || !els.emptyState) return;
 
+  const chipsEnabled = loadRoomChipsEnabled();
+  const grouped = groupByRoom(list);
+
+  if (els.roomFilterChips) {
+    els.roomFilterChips.hidden = !chipsEnabled || list.length === 0;
+  }
+
+  if (chipsEnabled && list.length > 0) {
+    if (homeRoomFilter !== "all" && !grouped.some(([room]) => room === homeRoomFilter)) {
+      homeRoomFilter = "all";
+    }
+    renderRoomFilterChips(grouped, list.length);
+  } else {
+    homeRoomFilter = "all";
+  }
+
   els.applianceList.innerHTML = "";
   els.emptyState.hidden = list.length > 0;
 
-  for (const [room, items] of groupByRoom(list)) {
-    const heading = document.createElement("h3");
-    heading.className = "category-heading";
-    heading.textContent = roomDisplayName(room);
-    els.applianceList.append(heading);
+  const showHeadings = !chipsEnabled || homeRoomFilter === "all";
+  const entries =
+    chipsEnabled && homeRoomFilter !== "all"
+      ? grouped.filter(([room]) => room === homeRoomFilter)
+      : grouped;
+
+  for (const [room, items] of entries) {
+    if (showHeadings) {
+      const heading = document.createElement("h3");
+      heading.className = "category-heading";
+      heading.textContent = roomDisplayName(room);
+      els.applianceList.append(heading);
+    }
 
     for (const item of items) {
       const btn = document.createElement("button");
@@ -1467,6 +1519,39 @@ async function renderHome() {
       els.applianceList.append(btn);
     }
   }
+}
+
+/** @param {[string, import("./storage.js").ApplianceRecord[]][]} grouped */
+function renderRoomFilterChips(grouped, totalCount) {
+  const container = els.roomFilterChips;
+  if (!container) return;
+
+  container.innerHTML = "";
+  container.append(
+    makeRoomFilterChip("all", `All · ${totalCount}`, homeRoomFilter === "all"),
+  );
+
+  for (const [room, items] of grouped) {
+    container.append(
+      makeRoomFilterChip(room, `${roomDisplayName(room)} · ${items.length}`, homeRoomFilter === room),
+    );
+  }
+}
+
+/** @param {"all" | string} roomId */
+function makeRoomFilterChip(roomId, label, selected) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `room-filter-chip${selected ? " room-filter-chip--selected" : ""}`;
+  btn.setAttribute("role", "tab");
+  btn.setAttribute("aria-selected", String(selected));
+  btn.textContent = label;
+  btn.addEventListener("click", () => {
+    if (homeRoomFilter === roomId) return;
+    homeRoomFilter = roomId;
+    void renderHome();
+  });
+  return btn;
 }
 
 /** @param {import("./storage.js").ApplianceRecord[]} appliances */
@@ -1504,6 +1589,7 @@ async function openDetail(id) {
   const item = await getAppliance(id);
   if (!item) return;
   detailId = id;
+  resetDetailLabelCapture();
 
   if (els.detailTitle) els.detailTitle.textContent = item.nickname;
   if (!els.detailBody) return;
@@ -1541,9 +1627,57 @@ async function openDetail(id) {
     </dl>
   `;
 
+  if (els.detailLabelLede) {
+    els.detailLabelLede.textContent = item.labelPhotoDataUrl
+      ? "Take a new close-up to replace the model/serial label photo."
+      : "No label yet — snap a close-up of the manufacturer sticker or rating plate.";
+  }
+  setCaptureLabelText(
+    els.labelDetailLabelPhoto,
+    item.labelPhotoDataUrl ? "Retake label photo" : "Take label photo"
+  );
+  if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
+
   renderDetailManualLinks(item);
   renderDetailRepair(item);
   showView("detail");
+}
+
+function resetDetailLabelCapture() {
+  if (els.inputDetailLabelPhoto) els.inputDetailLabelPhoto.value = "";
+  setPreview(els.previewDetailLabelPhoto, null);
+  if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
+  if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.remove("capture-btn--busy");
+}
+
+function clearDetailLabelPhoto() {
+  resetDetailLabelCapture();
+  toast("Photo cleared");
+}
+
+async function onDetailLabelPhotoSelected() {
+  const file = els.inputDetailLabelPhoto?.files?.[0];
+  if (!file || !detailId) return;
+
+  if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.add("capture-btn--busy");
+
+  try {
+    const dataUrl = await readFileAsDataUrl(file);
+    setPreview(els.previewDetailLabelPhoto, dataUrl);
+    if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = false;
+
+    const labelPhoto = await compressDataUrl(dataUrl, { maxEdge: 960, quality: 0.72 });
+    await updateAppliance(detailId, { labelPhotoDataUrl: labelPhoto });
+    resetDetailLabelCapture();
+    await renderHome();
+    await openDetail(detailId);
+    toast("Label photo saved");
+  } catch (err) {
+    resetDetailLabelCapture();
+    toast(err instanceof Error ? err.message : "Could not save label photo");
+  } finally {
+    if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.remove("capture-btn--busy");
+  }
 }
 
 async function openEditAppliance() {

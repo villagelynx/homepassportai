@@ -57,7 +57,7 @@ function formatAnalyzeError(text, res) {
 }
 
 /**
- * @param {{ appliancePhotoDataUrl: string, labelPhotoDataUrl: string }} photos
+ * @param {{ appliancePhotoDataUrl: string, labelPhotoDataUrl?: string | null }} photos
  * @returns {Promise<AnalysisResult>}
  */
 export async function analyzeAppliancePhotos(photos) {
@@ -68,12 +68,18 @@ export async function analyzeAppliancePhotos(photos) {
     headers["X-OpenAI-Api-Key"] = apiKey;
   }
 
+  /** @type {Record<string, string>} */
+  const body = { appliancePhotoDataUrl: photos.appliancePhotoDataUrl };
+  if (photos.labelPhotoDataUrl) {
+    body.labelPhotoDataUrl = photos.labelPhotoDataUrl;
+  }
+
   let res;
   try {
     res = await fetch(config.analyzeApiUrl, {
       method: "POST",
       headers,
-      body: JSON.stringify(photos),
+      body: JSON.stringify(body),
     });
   } catch {
     throw new Error(
