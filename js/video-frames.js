@@ -23,7 +23,10 @@ export async function extractVideoFrames(videoFile, opts = {}) {
     video.muted = true;
     video.playsInline = true;
     video.preload = "auto";
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
     video.src = url;
+    video.load();
 
     await waitForVideoReady(video);
 
@@ -61,19 +64,51 @@ function sampleTimes(duration, count) {
 
 /** @param {HTMLVideoElement} video */
 function waitForVideoReady(video) {
+  if (video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) {
+    return Promise.resolve();
+  }
   return new Promise((resolve, reject) => {
-    const onError = () => reject(new Error("Could not read this video — try recording again in Safari"));
-    video.addEventListener("error", onError, { once: true });
-    video.addEventListener(
-      "loadedmetadata",
-      () => {
-        if (video.readyState >= 1) resolve();
-        else {
-          video.addEventListener("loadeddata", () => resolve(), { once: true });
-        }
-      },
-      { once: true }
-    );
+    let done = false;
+    const timeout = window.setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error("Video is taking too long to load — try a shorter clip (10-20s)"));
+    }, 12000);
+    const finish = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      resolve();
+    };
+    const fail = () => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error("Could not read this video — try recording again in Safari"));
+    };
+    const cleanup = () => {
+      window.clearTimeout(timeout);
+      video.removeEventListener("loadedmetadata", onMeta);
+      video.removeEventListener("loadeddata", onData);
+      video.removeEventListener("canplay", onData);
+      video.removeEventListener("error", fail);
+    };
+    const onMeta = () => {
+      if (video.readyState >= 1) finish();
+    };
+    const onData = () => {
+      if (video.readyState >= 1) finish();
+    };
+
+    if (video.readyState >= 1 && Number.isFinite(video.duration) && video.duration > 0) {
+      finish();
+      return;
+    }
+    video.addEventListener("error", fail, { once: true });
+    video.addEventListener("loadedmetadata", onMeta);
+    video.addEventListener("loadeddata", onData);
+    video.addEventListener("canplay", onData);
   });
 }
 
@@ -82,16 +117,32 @@ function waitForVideoReady(video) {
  * @param {number} time
  */
 function seekVideo(video, time) {
+  if (Math.abs(video.currentTime - time) < 0.04) {
+    return Promise.resolve();
+  }
   return new Promise((resolve, reject) => {
+    let done = false;
+    const timeout = window.setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      // Continue by resolving instead of failing hard; some iPhone codecs can skip seek events.
+      resolve();
+    }, 3500);
     const onSeeked = () => {
+      if (done) return;
+      done = true;
       cleanup();
       resolve();
     };
     const onError = () => {
+      if (done) return;
+      done = true;
       cleanup();
       reject(new Error("Could not scrub video frames"));
     };
     const cleanup = () => {
+      window.clearTimeout(timeout);
       video.removeEventListener("seeked", onSeeked);
       video.removeEventListener("error", onError);
     };
