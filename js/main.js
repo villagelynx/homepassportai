@@ -19,7 +19,14 @@ import { analyzeAppliancePhotos, checkAnalyzeServer, readFileAsDataUrl } from ".
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
-import { dismissInstallPrompt, shouldShowInstallPrompt } from "./install-prompt.js";
+import {
+  dismissInstallPrompt,
+  installHintMode,
+  isInstallDismissed,
+  isStandaloneApp,
+  resetInstallPrompt,
+  shouldShowInstallPrompt,
+} from "./install-prompt.js";
 import { generateInsurancePdf } from "./insurance-report.js";
 import {
   addAppliance,
@@ -53,6 +60,9 @@ const els = {
   emptyState: document.getElementById("empty-state"),
   syncBanner: document.getElementById("sync-banner"),
   installBanner: document.getElementById("install-banner"),
+  installBannerTitle: document.getElementById("install-banner-title"),
+  installBannerLede: document.getElementById("install-banner-lede"),
+  installBannerSteps: document.getElementById("install-banner-steps"),
   btnDismissInstall: document.getElementById("btn-dismiss-install"),
   btnAdd: document.getElementById("btn-add-appliance"),
   inputAppliance: document.getElementById("input-appliance-photo"),
@@ -96,6 +106,11 @@ const els = {
   settingsEmail: document.getElementById("settings-email"),
   btnSignOut: document.getElementById("btn-sign-out"),
   btnGoSignIn: document.getElementById("btn-go-sign-in"),
+  settingsInstall: document.getElementById("settings-install"),
+  settingsInstallNote: document.getElementById("settings-install-note"),
+  settingsInstallSteps: document.getElementById("settings-install-steps"),
+  settingsInstallStandalone: document.getElementById("settings-install-standalone"),
+  btnShowInstallCard: document.getElementById("btn-show-install-card"),
   authForm: document.getElementById("auth-form"),
   authEmail: document.getElementById("auth-email"),
   authPassword: document.getElementById("auth-password"),
@@ -153,6 +168,12 @@ function isLocalNetworkDev() {
 async function boot() {
   try {
     initTheme();
+    try {
+      const params = new URLSearchParams(location.search);
+      if (params.get("install") === "1") resetInstallPrompt();
+    } catch {
+      // ignore
+    }
     init();
     clearBootError();
     document.documentElement.dataset.hpReady = "1";
@@ -324,6 +345,14 @@ function init() {
   els.btnDismissInstall?.addEventListener("click", () => {
     dismissInstallPrompt();
     updateInstallBanner();
+    renderInstallSettings();
+  });
+  els.btnShowInstallCard?.addEventListener("click", () => {
+    resetInstallPrompt();
+    updateInstallBanner();
+    renderInstallSettings();
+    toast("Tip will show on home");
+    void renderHome().then(() => showView("home"));
   });
 
   for (const btn of document.querySelectorAll("[data-nav]")) {
@@ -483,9 +512,68 @@ function updateSyncBanner() {
   els.syncBanner.querySelector("#banner-sign-in")?.addEventListener("click", () => showView("auth"));
 }
 
+function installInstructionsHtml() {
+  if (installHintMode() === "ios") {
+    return [
+      'Tap <strong>Share</strong> <span class="install-banner__share" aria-hidden="true">□↑</span> in Safari',
+      "Tap <strong>Add to Home Screen</strong>",
+      "Tap <strong>Add</strong>",
+    ];
+  }
+  return [
+    "On your iPhone, open this site in <strong>Safari</strong>",
+    'Tap <strong>Share</strong> <span class="install-banner__share" aria-hidden="true">□↑</span>',
+    "Tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>",
+  ];
+}
+
+function fillInstallSteps(listEl, steps) {
+  if (!listEl) return;
+  listEl.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
+}
+
 function updateInstallBanner() {
   if (!els.installBanner) return;
-  els.installBanner.hidden = !shouldShowInstallPrompt();
+  const show = shouldShowInstallPrompt();
+  els.installBanner.hidden = !show;
+  if (!show) return;
+
+  const ios = installHintMode() === "ios";
+  if (els.installBannerTitle) {
+    els.installBannerTitle.textContent = ios
+      ? "Add HomePassportAI to your iPhone"
+      : "Add HomePassportAI on iPhone";
+  }
+  if (els.installBannerLede) {
+    els.installBannerLede.textContent = ios
+      ? "Open like an app from your home screen — same blue house icon."
+      : "Use Safari on your iPhone to add the blue house icon to your home screen.";
+  }
+  fillInstallSteps(els.installBannerSteps, installInstructionsHtml());
+}
+
+function renderInstallSettings() {
+  const standalone = isStandaloneApp();
+  const ios = installHintMode() === "ios";
+
+  if (els.settingsInstallStandalone) {
+    els.settingsInstallStandalone.hidden = !standalone;
+  }
+  if (els.settingsInstallNote) {
+    els.settingsInstallNote.hidden = standalone;
+    if (!standalone) {
+      els.settingsInstallNote.textContent = ios
+        ? "Open HomePassportAI like an app — same blue house icon on your home screen."
+        : "On your iPhone, open HomePassportAI in Safari, then add it to your home screen.";
+    }
+  }
+  if (els.settingsInstallSteps) {
+    els.settingsInstallSteps.hidden = standalone;
+    if (!standalone) fillInstallSteps(els.settingsInstallSteps, installInstructionsHtml());
+  }
+  if (els.btnShowInstallCard) {
+    els.btnShowInstallCard.hidden = standalone || !ios || !isInstallDismissed();
+  }
 }
 
 function requireCloudSave() {
@@ -793,6 +881,7 @@ function renderSettings() {
   if (els.btnGoSignIn) els.btnGoSignIn.hidden = !cloud || signedIn;
   if (els.settingsEmail && signedIn) els.settingsEmail.textContent = getUserEmail();
   if (els.btnAuthOffline) els.btnAuthOffline.hidden = !cloud;
+  renderInstallSettings();
 }
 
 function saveSettingsApiKey() {

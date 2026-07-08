@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=22" />
+    <link rel="stylesheet" href="./css/app.css?v=24" />
   </head>
   <body>
     <div id="app" class="app">
@@ -72,9 +72,9 @@
               <img src="./icons/apple-touch-icon.png" alt="" width="56" height="56" />
             </div>
             <div class="install-banner__body">
-              <strong>Add HomePassportAI to your iPhone</strong>
-              <p>Open like an app from your home screen — same blue house icon.</p>
-              <ol class="install-banner__steps">
+              <strong id="install-banner-title">Add HomePassportAI to your iPhone</strong>
+              <p id="install-banner-lede">Open like an app from your home screen — same blue house icon.</p>
+              <ol class="install-banner__steps" id="install-banner-steps">
                 <li>Tap <strong>Share</strong> <span class="install-banner__share" aria-hidden="true">□↑</span> in Safari</li>
                 <li>Tap <strong>Add to Home Screen</strong></li>
                 <li>Tap <strong>Add</strong></li>
@@ -449,6 +449,20 @@
             <button type="button" class="btn btn--secondary btn--block" id="btn-sign-out">Sign out</button>
           </div>
           <button type="button" class="btn btn--primary btn--block" id="btn-go-sign-in" hidden>Sign in to sync</button>
+          <div class="settings-account settings-backup" id="settings-install">
+            <h3 class="detail-section-title">Add to iPhone home screen</h3>
+            <div class="settings-install__preview">
+              <img src="./icons/apple-touch-icon.png" alt="" width="56" height="56" />
+            </div>
+            <p id="settings-install-note" class="settings-note"></p>
+            <ol id="settings-install-steps" class="install-banner__steps settings-install__steps"></ol>
+            <p id="settings-install-standalone" class="settings-note" hidden>
+              You opened HomePassportAI from your home screen — you are all set.
+            </p>
+            <button type="button" class="btn btn--secondary btn--block" id="btn-show-install-card" hidden>
+              Show tip on home again
+            </button>
+          </div>
           <div class="settings-account settings-backup">
             <h3 class="detail-section-title">Insurance report</h3>
             <p class="settings-note">
@@ -519,6 +533,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=30"></script>
+    <script type="module" src="./js/main.js?v=31"></script>
   </body>
 </html>
