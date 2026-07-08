@@ -134,6 +134,7 @@ const els = {
   settingsEmail: document.getElementById("settings-email"),
   btnSignOut: document.getElementById("btn-sign-out"),
   btnGoSignIn: document.getElementById("btn-go-sign-in"),
+  btnRefreshVersion: document.getElementById("btn-refresh-version"),
   settingsInstall: document.getElementById("settings-install"),
   settingsInstallNote: document.getElementById("settings-install-note"),
   settingsInstallSteps: document.getElementById("settings-install-steps"),
@@ -377,6 +378,7 @@ function init() {
     showView("auth");
   });
   els.btnGoSignIn?.addEventListener("click", () => showView("auth"));
+  els.btnRefreshVersion?.addEventListener("click", () => refreshToLatestVersion());
   els.authForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     void handleAuthSubmit();
@@ -1303,6 +1305,16 @@ function saveSettingsApiKey() {
   saveApiKey(key);
   renderSettings();
   toast("API key saved on this device");
+}
+
+function refreshToLatestVersion() {
+  try {
+    const url = new URL(location.href);
+    url.searchParams.set("update", String(Date.now()));
+    location.replace(url.toString());
+  } catch {
+    location.reload();
+  }
 }
 
 function clearSettingsApiKey() {
