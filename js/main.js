@@ -881,17 +881,52 @@ function renderRoomReview() {
       item.applianceType = type.value;
     });
 
+    const brand = document.createElement("input");
+    brand.type = "text";
+    brand.className = "input";
+    brand.value = item.brand;
+    brand.placeholder = "Brand (optional)";
+    brand.addEventListener("input", () => {
+      item.brand = brand.value;
+      updateRoomMeta(meta, item);
+    });
+
+    const model = document.createElement("input");
+    model.type = "text";
+    model.className = "input";
+    model.value = item.modelNumber;
+    model.placeholder = "Model number (optional)";
+    model.addEventListener("input", () => {
+      item.modelNumber = model.value;
+      updateRoomMeta(meta, item);
+    });
+
+    const serial = document.createElement("input");
+    serial.type = "text";
+    serial.className = "input";
+    serial.value = item.serialNumber;
+    serial.placeholder = "Serial number (optional)";
+    serial.addEventListener("input", () => {
+      item.serialNumber = serial.value;
+      updateRoomMeta(meta, item);
+    });
+
     const meta = document.createElement("p");
     meta.className = "room-review-card__meta";
-    const bits = [item.brand, item.modelNumber, item.confidence ? `${item.confidence} confidence` : ""]
-      .filter(Boolean)
-      .join(" · ");
-    meta.textContent = bits || "From room video";
+    updateRoomMeta(meta, item);
 
-    body.append(nickname, type, meta);
+    body.append(nickname, type, brand, model, serial, meta);
     card.append(check, img, body);
     list.append(card);
   }
+}
+
+/** @param {HTMLElement} meta @param {RoomCandidate} item */
+function updateRoomMeta(meta, item) {
+  const bits = [item.brand, item.modelNumber, item.serialNumber, item.confidence ? `${item.confidence} confidence` : ""]
+    .filter(Boolean)
+    .join(" · ");
+  meta.textContent = bits || "From room video";
 }
 
 /** @param {boolean} keep */

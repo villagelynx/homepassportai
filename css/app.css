@@ -709,6 +709,10 @@ body {
 }
 
 .fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
@@ -727,6 +731,13 @@ body {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   z-index: 20;
+}
+
+.fab__icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+  flex-shrink: 0;
 }
 
 .home-actions {
@@ -1030,5 +1041,52 @@ body {
     width: 100%;
     margin-top: 0.75rem;
     box-shadow: none;
+  }
+}
+
+@media (min-width: 720px) {
+  .app {
+    max-width: 1200px;
+  }
+
+  .appliance-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    align-items: start;
+  }
+
+  .category-heading {
+    grid-column: 1 / -1;
+    margin: 1.25rem 0 0.1rem;
+  }
+
+  .category-heading:first-child {
+    margin-top: 0;
+  }
+
+  .appliance-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.55rem;
+    min-height: 100%;
+  }
+
+  .appliance-card__thumb {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (min-width: 960px) {
+  .appliance-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .appliance-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
