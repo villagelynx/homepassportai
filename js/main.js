@@ -15,7 +15,7 @@ import {
   signUp,
   updateUserPassword,
 } from "./auth.js";
-import { analyzeAppliancePhotos, analyzeRoomFrames, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
+import { analyzeAppliancePhotos, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
@@ -73,8 +73,12 @@ const ROOM_ORDER = [
 const els = {
   buildTag: document.getElementById("build-tag"),
   applianceList: document.getElementById("appliance-list"),
+  homeSearch: document.getElementById("home-search"),
+  inputHomeSearch: document.getElementById("input-home-search"),
+  btnClearHomeSearch: document.getElementById("btn-clear-home-search"),
   roomFilterChips: document.getElementById("room-filter-chips"),
   emptyState: document.getElementById("empty-state"),
+  searchNoResults: document.getElementById("search-no-results"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
   installBanner: document.getElementById("install-banner"),
   installBannerTitle: document.getElementById("install-banner-title"),
@@ -133,6 +137,18 @@ const els = {
   labelDetailLabelPhoto: document.getElementById("label-detail-label-photo"),
   inputDetailLabelPhoto: document.getElementById("input-detail-label-photo"),
   btnClearDetailLabelPhoto: document.getElementById("btn-clear-detail-label-photo"),
+  detailLabelReview: document.getElementById("detail-label-review"),
+  detailLabelAnalyzeStatus: document.getElementById("detail-label-analyze-status"),
+  detailLabelReviewForm: document.getElementById("detail-label-review-form"),
+  detailLabelBrand: document.getElementById("detail-label-brand"),
+  detailLabelModel: document.getElementById("detail-label-model"),
+  detailLabelSerial: document.getElementById("detail-label-serial"),
+  detailLabelBrandHint: document.getElementById("detail-label-brand-hint"),
+  detailLabelModelHint: document.getElementById("detail-label-model-hint"),
+  detailLabelSerialHint: document.getElementById("detail-label-serial-hint"),
+  detailLabelConfidence: document.getElementById("detail-label-confidence"),
+  btnCancelDetailLabelReview: document.getElementById("btn-cancel-detail-label-review"),
+  btnShareAppliance: document.getElementById("btn-share-appliance"),
   btnEdit: document.getElementById("btn-edit-appliance"),
   btnDelete: document.getElementById("btn-delete-appliance"),
   editForm: document.getElementById("edit-appliance-form"),
@@ -213,6 +229,13 @@ let authMode = "signin";
 let allowOfflineUse = false;
 /** @type {"all" | string} */
 let homeRoomFilter = "all";
+let homeSearchQuery = "";
+
+/** @type {{ dataUrl: string | null, suggestions: { brand: string, modelNumber: string, serialNumber: string } | null }} */
+const detailLabelPending = {
+  dataUrl: null,
+  suggestions: null,
+};
 
 /** Secure contexts only (HTTPS / localhost). HTTP on iPhone needs a fallback. */
 function newRecordId() {
@@ -386,6 +409,24 @@ function init() {
   els.btnDelete?.addEventListener("click", () => void removeDetail());
   els.inputDetailLabelPhoto?.addEventListener("change", () => void onDetailLabelPhotoSelected());
   els.btnClearDetailLabelPhoto?.addEventListener("click", () => clearDetailLabelPhoto());
+  els.detailLabelReviewForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void saveDetailLabelReview();
+  });
+  els.btnCancelDetailLabelReview?.addEventListener("click", () => cancelDetailLabelReview());
+  els.btnShareAppliance?.addEventListener("click", () => void shareCurrentAppliance());
+  els.inputHomeSearch?.addEventListener("input", () => {
+    homeSearchQuery = els.inputHomeSearch?.value.trim() ?? "";
+    updateHomeSearchClearButton();
+    void renderHome();
+  });
+  els.btnClearHomeSearch?.addEventListener("click", () => {
+    homeSearchQuery = "";
+    if (els.inputHomeSearch) els.inputHomeSearch.value = "";
+    updateHomeSearchClearButton();
+    void renderHome();
+    els.inputHomeSearch?.focus();
+  });
   els.btnEdit?.addEventListener("click", () => void openEditAppliance());
   els.btnEditBack?.addEventListener("click", () => {
     if (detailId) void openDetail(detailId);
@@ -1461,23 +1502,38 @@ async function renderHome() {
   if (!els.applianceList || !els.emptyState) return;
 
   const chipsEnabled = loadRoomChipsEnabled();
-  const grouped = groupByRoom(list);
+  const hasInventory = list.length > 0;
+
+  if (els.homeSearch) {
+    els.homeSearch.hidden = !hasInventory;
+  }
+  if (els.inputHomeSearch && els.inputHomeSearch.value !== homeSearchQuery) {
+    els.inputHomeSearch.value = homeSearchQuery;
+  }
+  updateHomeSearchClearButton();
+
+  const filtered = homeSearchQuery ? list.filter((item) => applianceMatchesSearch(item, homeSearchQuery)) : list;
+  const grouped = groupByRoom(filtered);
 
   if (els.roomFilterChips) {
-    els.roomFilterChips.hidden = !chipsEnabled || list.length === 0;
+    els.roomFilterChips.hidden = !chipsEnabled || !hasInventory;
   }
 
-  if (chipsEnabled && list.length > 0) {
-    if (homeRoomFilter !== "all" && !grouped.some(([room]) => room === homeRoomFilter)) {
+  if (chipsEnabled && hasInventory) {
+    const allGrouped = groupByRoom(list);
+    if (homeRoomFilter !== "all" && !allGrouped.some(([room]) => room === homeRoomFilter)) {
       homeRoomFilter = "all";
     }
-    renderRoomFilterChips(grouped, list.length);
+    renderRoomFilterChips(allGrouped, list.length);
   } else {
     homeRoomFilter = "all";
   }
 
   els.applianceList.innerHTML = "";
-  els.emptyState.hidden = list.length > 0;
+  els.emptyState.hidden = hasInventory;
+  if (els.searchNoResults) {
+    els.searchNoResults.hidden = !hasInventory || filtered.length > 0 || !homeSearchQuery;
+  }
 
   const showHeadings = !chipsEnabled || homeRoomFilter === "all";
   const entries =
@@ -1519,6 +1575,28 @@ async function renderHome() {
       els.applianceList.append(btn);
     }
   }
+}
+
+/** @param {import("./storage.js").ApplianceRecord} item @param {string} query */
+function applianceMatchesSearch(item, query) {
+  const haystack = [
+    item.nickname,
+    item.brand,
+    item.modelNumber,
+    item.serialNumber,
+    item.room,
+    item.applianceType,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return terms.every((term) => haystack.includes(term));
+}
+
+function updateHomeSearchClearButton() {
+  if (!els.btnClearHomeSearch) return;
+  els.btnClearHomeSearch.hidden = !homeSearchQuery;
 }
 
 /** @param {[string, import("./storage.js").ApplianceRecord[]][]} grouped */
@@ -1637,6 +1715,13 @@ async function openDetail(id) {
     item.labelPhotoDataUrl ? "Retake label photo" : "Take label photo"
   );
   if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
+  if (els.btnShareAppliance) {
+    els.btnShareAppliance.hidden = false;
+    els.btnShareAppliance.textContent =
+      typeof navigator !== "undefined" && typeof navigator.share === "function"
+        ? "Share item"
+        : "Copy item info";
+  }
 
   renderDetailManualLinks(item);
   renderDetailRepair(item);
@@ -1644,10 +1729,37 @@ async function openDetail(id) {
 }
 
 function resetDetailLabelCapture() {
+  detailLabelPending.dataUrl = null;
+  detailLabelPending.suggestions = null;
   if (els.inputDetailLabelPhoto) els.inputDetailLabelPhoto.value = "";
   setPreview(els.previewDetailLabelPhoto, null);
   if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
   if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.remove("capture-btn--busy");
+  hideDetailLabelReview();
+}
+
+function hideDetailLabelReview() {
+  if (els.detailLabelReview) els.detailLabelReview.hidden = true;
+  if (els.detailLabelAnalyzeStatus) {
+    els.detailLabelAnalyzeStatus.hidden = true;
+    els.detailLabelAnalyzeStatus.textContent = "";
+  }
+  if (els.detailLabelReviewForm) els.detailLabelReviewForm.hidden = false;
+  if (els.detailLabelConfidence) {
+    els.detailLabelConfidence.hidden = true;
+    els.detailLabelConfidence.textContent = "";
+  }
+  for (const hint of [
+    els.detailLabelBrandHint,
+    els.detailLabelModelHint,
+    els.detailLabelSerialHint,
+  ]) {
+    if (hint) {
+      hint.hidden = true;
+      hint.textContent = "";
+      hint.replaceChildren();
+    }
+  }
 }
 
 function clearDetailLabelPhoto() {
@@ -1655,29 +1767,205 @@ function clearDetailLabelPhoto() {
   toast("Photo cleared");
 }
 
+function cancelDetailLabelReview() {
+  resetDetailLabelCapture();
+  toast("Label capture cancelled");
+}
+
+/** @param {HTMLElement | null} hintEl @param {string} current @param {string} suggested */
+function setLabelFieldHint(hintEl, current, suggested) {
+  if (!hintEl) return;
+  if (!current || !suggested || current === suggested) {
+    hintEl.hidden = true;
+    hintEl.replaceChildren();
+    return;
+  }
+  hintEl.hidden = false;
+  hintEl.textContent = `AI suggests: ${suggested} `;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "Use suggestion";
+  btn.addEventListener("click", () => {
+    const fieldId = hintEl.id;
+    const input =
+      fieldId === "detail-label-brand-hint"
+        ? els.detailLabelBrand
+        : fieldId === "detail-label-model-hint"
+          ? els.detailLabelModel
+          : els.detailLabelSerial;
+    if (input instanceof HTMLInputElement) input.value = suggested;
+    hintEl.hidden = true;
+    hintEl.replaceChildren();
+  });
+  hintEl.append(btn);
+}
+
 async function onDetailLabelPhotoSelected() {
   const file = els.inputDetailLabelPhoto?.files?.[0];
   if (!file || !detailId) return;
 
+  const item = await getAppliance(detailId);
+  if (!item) return;
+
   if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.add("capture-btn--busy");
+  hideDetailLabelReview();
 
   try {
     const dataUrl = await readFileAsDataUrl(file);
+    detailLabelPending.dataUrl = dataUrl;
     setPreview(els.previewDetailLabelPhoto, dataUrl);
     if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = false;
 
+    if (els.detailLabelReview) els.detailLabelReview.hidden = false;
+    if (els.detailLabelAnalyzeStatus) {
+      els.detailLabelAnalyzeStatus.hidden = false;
+      els.detailLabelAnalyzeStatus.textContent = "Analyzing label…";
+    }
+    if (els.detailLabelReviewForm) els.detailLabelReviewForm.hidden = true;
+
     const labelPhoto = await compressDataUrl(dataUrl, { maxEdge: 960, quality: 0.72 });
-    await updateAppliance(detailId, { labelPhotoDataUrl: labelPhoto });
-    resetDetailLabelCapture();
-    await renderHome();
-    await openDetail(detailId);
-    toast("Label photo saved");
+    const result = await analyzeLabelPhoto(labelPhoto);
+
+    detailLabelPending.suggestions = {
+      brand: result.brand || "",
+      modelNumber: result.modelNumber || "",
+      serialNumber: result.serialNumber || "",
+    };
+
+    if (els.detailLabelBrand) {
+      els.detailLabelBrand.value = item.brand?.trim() || result.brand || "";
+    }
+    if (els.detailLabelModel) {
+      els.detailLabelModel.value = item.modelNumber?.trim() || result.modelNumber || "";
+    }
+    if (els.detailLabelSerial) {
+      els.detailLabelSerial.value = item.serialNumber?.trim() || result.serialNumber || "";
+    }
+
+    setLabelFieldHint(els.detailLabelBrandHint, item.brand?.trim() || "", result.brand || "");
+    setLabelFieldHint(els.detailLabelModelHint, item.modelNumber?.trim() || "", result.modelNumber || "");
+    setLabelFieldHint(els.detailLabelSerialHint, item.serialNumber?.trim() || "", result.serialNumber || "");
+
+    if (els.detailLabelConfidence) {
+      els.detailLabelConfidence.hidden = false;
+      if (result.demoMode) {
+        els.detailLabelConfidence.textContent =
+          "Demo mode — add your OpenAI key in Settings (⚙) to enable label analysis.";
+      } else {
+        els.detailLabelConfidence.textContent = `Extraction confidence: ${result.confidence || "low"}. Review before saving.`;
+      }
+    }
+
+    if (els.detailLabelAnalyzeStatus) els.detailLabelAnalyzeStatus.hidden = true;
+    if (els.detailLabelReviewForm) els.detailLabelReviewForm.hidden = false;
   } catch (err) {
     resetDetailLabelCapture();
-    toast(err instanceof Error ? err.message : "Could not save label photo");
+    toast(err instanceof Error ? err.message : "Could not analyze label photo");
   } finally {
     if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.remove("capture-btn--busy");
   }
+}
+
+async function saveDetailLabelReview() {
+  if (!detailId || !detailLabelPending.dataUrl) return;
+
+  const submitBtn = els.detailLabelReviewForm?.querySelector('button[type="submit"]');
+  if (submitBtn instanceof HTMLButtonElement) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+  }
+
+  try {
+    const labelPhoto = await compressDataUrl(detailLabelPending.dataUrl);
+    const updates = {
+      labelPhotoDataUrl: labelPhoto,
+      brand: els.detailLabelBrand?.value.trim() ?? "",
+      modelNumber: els.detailLabelModel?.value.trim() ?? "",
+      serialNumber: els.detailLabelSerial?.value.trim() ?? "",
+    };
+
+    await updateAppliance(detailId, updates);
+    resetDetailLabelCapture();
+    await renderHome();
+    await openDetail(detailId);
+    toast("Label photo and details saved");
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not save label photo");
+  } finally {
+    if (submitBtn instanceof HTMLButtonElement) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Save label photo & details";
+    }
+  }
+}
+
+/** @param {import("./storage.js").ApplianceRecord} item */
+function formatApplianceShareText(item) {
+  const lines = [
+    item.nickname,
+    item.room ? `Room: ${item.room}` : "",
+    item.applianceType ? `Type: ${item.applianceType}` : "",
+    item.brand ? `Brand: ${item.brand}` : "",
+    item.modelNumber ? `Model: ${item.modelNumber}` : "",
+    item.serialNumber ? `Serial: ${item.serialNumber}` : "",
+    "— HomePassportAI",
+  ].filter(Boolean);
+  return lines.join("\n");
+}
+
+/** @param {string} dataUrl @param {string} filename */
+async function dataUrlToFile(dataUrl, filename) {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  const type = blob.type || "image/jpeg";
+  return new File([blob], filename, { type });
+}
+
+async function shareCurrentAppliance() {
+  if (!detailId) return;
+  const item = await getAppliance(detailId);
+  if (!item) return;
+
+  const text = formatApplianceShareText(item);
+  const photoUrl = item.appliancePhotoDataUrl || item.labelPhotoDataUrl;
+  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  if (canShare) {
+    try {
+      /** @type {ShareData} */
+      const shareData = { text, title: item.nickname };
+      if (photoUrl) {
+        const ext = photoUrl.startsWith("data:image/png") ? "png" : "jpg";
+        const file = await dataUrlToFile(photoUrl, `${sanitizeFilename(item.nickname)}.${ext}`);
+        if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+          shareData.files = [file];
+        }
+      }
+      await navigator.share(shareData);
+      return;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+    }
+  }
+
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      toast("Item details copied — paste into Messages");
+      return;
+    }
+  } catch {
+    // fall through
+  }
+
+  const subject = encodeURIComponent(item.nickname);
+  const body = encodeURIComponent(text);
+  location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+/** @param {string} name */
+function sanitizeFilename(name) {
+  return name.replace(/[^\w.-]+/g, "-").replace(/^-+|-+$/g, "") || "appliance";
 }
 
 async function openEditAppliance() {
