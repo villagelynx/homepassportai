@@ -15,7 +15,7 @@ import {
   signUp,
   updateUserPassword,
 } from "./auth.js";
-import { analyzeAppliancePhotos, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
+import { analyzeAppliancePhotos, analyzeRoomFrames, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
@@ -28,6 +28,7 @@ import {
   shouldShowInstallPrompt,
 } from "./install-prompt.js";
 import { generateInsurancePdf } from "./insurance-report.js";
+import { extractVideoFrames, ROOM_SCAN_MAX_SECONDS } from "./video-frames.js";
 import {
   addAppliance,
   deleteAppliance,
@@ -44,6 +45,8 @@ const views = {
   home: document.getElementById("view-home"),
   auth: document.getElementById("view-auth"),
   updatePassword: document.getElementById("view-update-password"),
+  scanRoom: document.getElementById("view-scan-room"),
+  roomReview: document.getElementById("view-room-review"),
   scan1: document.getElementById("view-scan-1"),
   scan2: document.getElementById("view-scan-2"),
   scan3: document.getElementById("view-scan-3"),
@@ -52,7 +55,18 @@ const views = {
   detail: document.getElementById("view-detail"),
 };
 
-const ROOM_ORDER = ["Kitchen", "Laundry", "Garage", "Basement", "Utility", "Other"];
+const ROOM_ORDER = [
+  "Kitchen",
+  "Laundry",
+  "Garage",
+  "Basement",
+  "Utility",
+  "Living room",
+  "Bedroom",
+  "Bathroom",
+  "Office",
+  "Other",
+];
 
 const els = {
   buildTag: document.getElementById("build-tag"),
@@ -65,6 +79,20 @@ const els = {
   installBannerSteps: document.getElementById("install-banner-steps"),
   btnDismissInstall: document.getElementById("btn-dismiss-install"),
   btnAdd: document.getElementById("btn-add-appliance"),
+  btnScanRoom: document.getElementById("btn-scan-room"),
+  inputRoomVideo: document.getElementById("input-room-video"),
+  previewRoomVideo: document.getElementById("preview-room-video"),
+  roomScanStatus: document.getElementById("room-scan-status"),
+  labelRoomVideo: document.getElementById("label-room-video"),
+  btnClearRoomVideo: document.getElementById("btn-clear-room-video"),
+  btnAnalyzeRoom: document.getElementById("btn-analyze-room"),
+  fieldRoomScan: document.getElementById("field-room-scan"),
+  roomReviewLede: document.getElementById("room-review-lede"),
+  roomReviewList: document.getElementById("room-review-list"),
+  roomReviewEmpty: document.getElementById("room-review-empty"),
+  btnRoomSelectAll: document.getElementById("btn-room-select-all"),
+  btnRoomSelectNone: document.getElementById("btn-room-select-none"),
+  btnSaveRoomItems: document.getElementById("btn-save-room-items"),
   inputAppliance: document.getElementById("input-appliance-photo"),
   inputLabel: document.getElementById("input-label-photo"),
   previewAppliance: document.getElementById("preview-appliance"),
@@ -135,6 +163,28 @@ const scan = {
   appliancePhotoDataUrl: null,
   labelPhotoDataUrl: null,
   receiptPhotoDataUrl: null,
+};
+
+/**
+ * @typedef {object} RoomCandidate
+ * @property {string} id
+ * @property {boolean} keep
+ * @property {string} nickname
+ * @property {string} applianceType
+ * @property {string} brand
+ * @property {string} modelNumber
+ * @property {string} serialNumber
+ * @property {string} confidence
+ * @property {number} frameIndex
+ * @property {string} photoDataUrl
+ */
+
+/** @type {{ videoUrl: string | null, frames: string[], candidates: RoomCandidate[], roomGuess: string }} */
+const roomScan = {
+  videoUrl: null,
+  frames: [],
+  candidates: [],
+  roomGuess: "Other",
 };
 
 let detailId = null;
@@ -267,6 +317,13 @@ async function onAuthChanged() {
 
 function init() {
   els.btnAdd?.addEventListener("click", () => startScan());
+  els.btnScanRoom?.addEventListener("click", () => startRoomScan());
+  els.inputRoomVideo?.addEventListener("change", () => void onRoomVideoSelected());
+  els.btnClearRoomVideo?.addEventListener("click", () => clearRoomVideo());
+  els.btnAnalyzeRoom?.addEventListener("click", () => void runRoomAnalysis());
+  els.btnRoomSelectAll?.addEventListener("click", () => setAllRoomKeep(true));
+  els.btnRoomSelectNone?.addEventListener("click", () => setAllRoomKeep(false));
+  els.btnSaveRoomItems?.addEventListener("click", () => void saveRoomItems());
   els.inputAppliance?.addEventListener("change", () => void onAppliancePhoto());
   els.btnRetakeAppliance?.addEventListener("click", () => clearAppliancePhoto());
   els.btnToStep2?.addEventListener("click", () => {
@@ -372,10 +429,13 @@ function init() {
       const target = btn.getAttribute("data-nav");
       if (target === "home") {
         resetScan();
+        resetRoomScan();
         void renderHome().then(() => {
           updateSyncBanner();
           showView("home");
         });
+      } else if (target === "scan-room") {
+        showView("scanRoom");
       } else if (target === "scan-1") {
         showView("scan1");
       } else if (target === "scan-2") {
@@ -604,6 +664,302 @@ function startScan() {
   if (!requireCloudSave()) return;
   resetScan();
   showView("scan1");
+}
+
+function startRoomScan() {
+  if (!requireCloudSave()) return;
+  resetRoomScan();
+  showView("scanRoom");
+}
+
+function resetRoomScan() {
+  if (roomScan.videoUrl) {
+    URL.revokeObjectURL(roomScan.videoUrl);
+  }
+  roomScan.videoUrl = null;
+  roomScan.frames = [];
+  roomScan.candidates = [];
+  roomScan.roomGuess = "Other";
+  if (els.inputRoomVideo) els.inputRoomVideo.value = "";
+  setRoomVideoPreview(null);
+  setRoomScanStatus("");
+  if (els.btnAnalyzeRoom) els.btnAnalyzeRoom.disabled = true;
+  if (els.btnClearRoomVideo) els.btnClearRoomVideo.hidden = true;
+  setCaptureLabelText(els.labelRoomVideo, "Record room video");
+  if (els.roomReviewList) els.roomReviewList.innerHTML = "";
+  if (els.btnSaveRoomItems) els.btnSaveRoomItems.disabled = true;
+}
+
+/** @param {string | null} url */
+function setRoomVideoPreview(url) {
+  const container = els.previewRoomVideo;
+  if (!container) return;
+  container.innerHTML = "";
+  if (!url) {
+    container.classList.add("capture-card__preview--empty");
+    const span = document.createElement("span");
+    span.textContent = "No video yet";
+    container.append(span);
+    return;
+  }
+  container.classList.remove("capture-card__preview--empty");
+  const video = document.createElement("video");
+  video.src = url;
+  video.controls = true;
+  video.playsInline = true;
+  video.muted = true;
+  video.setAttribute("playsinline", "");
+  container.append(video);
+}
+
+/** @param {string} text */
+function setRoomScanStatus(text) {
+  if (!els.roomScanStatus) return;
+  if (!text) {
+    els.roomScanStatus.hidden = true;
+    els.roomScanStatus.textContent = "";
+    return;
+  }
+  els.roomScanStatus.hidden = false;
+  els.roomScanStatus.textContent = text;
+}
+
+function clearRoomVideo() {
+  resetRoomScan();
+  toast("Video cleared");
+}
+
+async function onRoomVideoSelected() {
+  const file = els.inputRoomVideo?.files?.[0];
+  if (!file) return;
+
+  if (roomScan.videoUrl) URL.revokeObjectURL(roomScan.videoUrl);
+  roomScan.videoUrl = URL.createObjectURL(file);
+  roomScan.frames = [];
+  roomScan.candidates = [];
+  setRoomVideoPreview(roomScan.videoUrl);
+  if (els.btnClearRoomVideo) els.btnClearRoomVideo.hidden = false;
+  setCaptureLabelText(els.labelRoomVideo, "Re-record room video");
+  if (els.btnAnalyzeRoom) els.btnAnalyzeRoom.disabled = true;
+  setRoomScanStatus("Pulling still frames from your video…");
+
+  try {
+    const { frames, durationSeconds, truncated } = await extractVideoFrames(file);
+    roomScan.frames = frames;
+    if (els.btnAnalyzeRoom) els.btnAnalyzeRoom.disabled = frames.length < 2;
+    const seconds = Math.round(durationSeconds);
+    setRoomScanStatus(
+      truncated
+        ? `Using first ${ROOM_SCAN_MAX_SECONDS}s · ${frames.length} frames ready`
+        : `${seconds}s video · ${frames.length} frames ready`
+    );
+  } catch (err) {
+    roomScan.frames = [];
+    if (els.btnAnalyzeRoom) els.btnAnalyzeRoom.disabled = true;
+    setRoomScanStatus("");
+    toast(err instanceof Error ? err.message : "Could not read video");
+  }
+}
+
+async function runRoomAnalysis() {
+  if (roomScan.frames.length < 2) {
+    toast("Record a short room video first");
+    return;
+  }
+
+  const btn = els.btnAnalyzeRoom;
+  if (btn instanceof HTMLButtonElement) {
+    btn.disabled = true;
+    btn.textContent = "Analyzing room…";
+  }
+  setRoomScanStatus("AI is spotting items in your room…");
+
+  try {
+    const result = await analyzeRoomFrames(roomScan.frames);
+    roomScan.roomGuess = mapRoomGuess(result.roomGuess);
+    roomScan.candidates = result.items.map((item, i) => {
+      const frameIndex = Math.max(0, Math.min(roomScan.frames.length - 1, item.frameIndex || 0));
+      return {
+        id: `room-${i}-${newRecordId()}`,
+        keep: true,
+        nickname: item.nickname,
+        applianceType: item.applianceType,
+        brand: item.brand,
+        modelNumber: item.modelNumber,
+        serialNumber: item.serialNumber,
+        confidence: item.confidence,
+        frameIndex,
+        photoDataUrl: roomScan.frames[frameIndex],
+      };
+    });
+
+    if (els.fieldRoomScan) els.fieldRoomScan.value = roomScan.roomGuess;
+    if (els.roomReviewLede) {
+      els.roomReviewLede.textContent = result.demoMode
+        ? "Demo mode (no OpenAI key) — sample items shown. Check ones to keep, then save."
+        : `Found ${roomScan.candidates.length} item${roomScan.candidates.length === 1 ? "" : "s"}. Check the ones to keep.`;
+    }
+    renderRoomReview();
+    showView("roomReview");
+    if (result.demoMode) toast("Demo mode — add an OpenAI key in Settings for real room scans");
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Room analysis failed");
+  } finally {
+    if (btn instanceof HTMLButtonElement) {
+      btn.disabled = roomScan.frames.length < 2;
+      btn.textContent = "Analyze room video";
+    }
+  }
+}
+
+/** @param {string} guess */
+function mapRoomGuess(guess) {
+  const g = String(guess || "").trim().toLowerCase();
+  const map = {
+    kitchen: "Kitchen",
+    laundry: "Laundry",
+    garage: "Garage",
+    basement: "Basement",
+    utility: "Utility",
+    "utility / mechanical": "Utility",
+    "living room": "Living room",
+    living: "Living room",
+    bedroom: "Bedroom",
+    bathroom: "Bathroom",
+    office: "Office",
+    other: "Other",
+  };
+  return map[g] || "Other";
+}
+
+function renderRoomReview() {
+  const list = els.roomReviewList;
+  if (!list) return;
+  list.innerHTML = "";
+
+  const hasItems = roomScan.candidates.length > 0;
+  if (els.roomReviewEmpty) els.roomReviewEmpty.hidden = hasItems;
+  updateRoomSaveButton();
+
+  for (const item of roomScan.candidates) {
+    const card = document.createElement("label");
+    card.className = "room-review-card";
+    card.setAttribute("role", "listitem");
+
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.className = "room-review-card__check";
+    check.checked = item.keep;
+    check.addEventListener("change", () => {
+      item.keep = check.checked;
+      updateRoomSaveButton();
+    });
+
+    const img = document.createElement("img");
+    img.className = "room-review-card__thumb";
+    img.src = item.photoDataUrl;
+    img.alt = "";
+
+    const body = document.createElement("div");
+    body.className = "room-review-card__body";
+
+    const nickname = document.createElement("input");
+    nickname.type = "text";
+    nickname.className = "input";
+    nickname.value = item.nickname;
+    nickname.placeholder = "Nickname";
+    nickname.addEventListener("input", () => {
+      item.nickname = nickname.value;
+    });
+
+    const type = document.createElement("input");
+    type.type = "text";
+    type.className = "input";
+    type.value = item.applianceType;
+    type.placeholder = "Type";
+    type.addEventListener("input", () => {
+      item.applianceType = type.value;
+    });
+
+    const meta = document.createElement("p");
+    meta.className = "room-review-card__meta";
+    const bits = [item.brand, item.modelNumber, item.confidence ? `${item.confidence} confidence` : ""]
+      .filter(Boolean)
+      .join(" · ");
+    meta.textContent = bits || "From room video";
+
+    body.append(nickname, type, meta);
+    card.append(check, img, body);
+    list.append(card);
+  }
+}
+
+/** @param {boolean} keep */
+function setAllRoomKeep(keep) {
+  for (const item of roomScan.candidates) item.keep = keep;
+  renderRoomReview();
+}
+
+function updateRoomSaveButton() {
+  if (!els.btnSaveRoomItems) return;
+  const count = roomScan.candidates.filter((c) => c.keep).length;
+  els.btnSaveRoomItems.disabled = count === 0;
+  els.btnSaveRoomItems.textContent =
+    count === 0 ? "Save selected items" : `Save ${count} selected item${count === 1 ? "" : "s"}`;
+}
+
+async function saveRoomItems() {
+  const kept = roomScan.candidates.filter((c) => c.keep);
+  if (kept.length === 0) {
+    toast("Check at least one item to keep");
+    return;
+  }
+
+  const room = els.fieldRoomScan?.value || roomScan.roomGuess || "Other";
+  const btn = els.btnSaveRoomItems;
+  if (btn instanceof HTMLButtonElement) {
+    btn.disabled = true;
+    btn.textContent = "Saving…";
+  }
+
+  try {
+    let saved = 0;
+    for (const item of kept) {
+      const photo = await compressDataUrl(item.photoDataUrl);
+      const type = item.applianceType.trim() || "Item";
+      const brand = item.brand.trim();
+      const nickname =
+        item.nickname.trim() ||
+        [brand, type].filter(Boolean).join(" ").trim() ||
+        `${room} item`;
+
+      await addAppliance({
+        id: newRecordId(),
+        nickname,
+        room,
+        applianceType: type,
+        brand,
+        modelNumber: item.modelNumber.trim(),
+        serialNumber: item.serialNumber.trim(),
+        appliancePhotoDataUrl: photo,
+        labelPhotoDataUrl: photo,
+        receiptPhotoDataUrl: null,
+        confidence: item.confidence || "room-video",
+        scannedAt: new Date().toISOString(),
+        repairCompany: null,
+      });
+      saved += 1;
+    }
+
+    resetRoomScan();
+    await renderHome();
+    updateSyncBanner();
+    showView("home");
+    toast(`Saved ${saved} item${saved === 1 ? "" : "s"} from room scan`);
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not save room items");
+    updateRoomSaveButton();
+  }
 }
 
 /** @param {keyof typeof views} name */

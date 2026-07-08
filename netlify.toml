@@ -11,12 +11,20 @@
 [functions."analyze"]
   timeout = 26
 
+[functions."analyze-room"]
+  timeout = 26
+
 [functions."health"]
   timeout = 10
 
 [[redirects]]
   from = "/api/analyze"
   to = "/.netlify/functions/analyze"
+  status = 200
+
+[[redirects]]
+  from = "/api/analyze-room"
+  to = "/.netlify/functions/analyze-room"
   status = 200
 
 [[redirects]]

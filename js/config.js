@@ -1,7 +1,7 @@
 /** @readonly */
 import { runtimeConfig } from "./runtime-config.js";
 
-export const APP_VERSION = "0.4.6";
+export const APP_VERSION = "0.5.0";
 
 function resolveAnalyzeApiUrl() {
   if (typeof location === "undefined") return "/api/analyze";
@@ -17,6 +17,7 @@ export const config = {
   supabaseUrl: runtimeConfig.supabaseUrl,
   supabaseAnonKey: runtimeConfig.supabaseAnonKey,
   analyzeApiUrl: resolveAnalyzeApiUrl(),
+  analyzeRoomApiUrl: "/api/analyze-room",
 };
 
 export function isSupabaseConfigured() {

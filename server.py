@@ -40,6 +40,34 @@ Return JSON only with these keys:
 
 Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence."""
 
+ROOM_PROMPT = """You analyze still frames from a ~60 second smartphone video of a home room for an inventory app.
+
+The images are frames sampled across the room scan, in order.
+
+Identify distinct inventory-worthy items you can see — appliances, furniture, electronics, fixtures worth listing (TV, sofa, fridge, washer, microwave, lamp, etc.). Skip walls, floors, ceilings, and tiny clutter.
+
+Return JSON only:
+{
+  "room_guess": "Kitchen" | "Laundry" | "Garage" | "Basement" | "Utility" | "Living room" | "Bedroom" | "Bathroom" | "Office" | "Other",
+  "items": [
+    {
+      "nickname": "short friendly name",
+      "appliance_type": "item type (Refrigerator, TV, Sofa, etc.)",
+      "brand": "brand if readable else empty string",
+      "model_number": "model if readable else empty string",
+      "serial_number": "",
+      "confidence": "high" | "medium" | "low",
+      "frame_index": 0
+    }
+  ]
+}
+
+Rules:
+- Deduplicate the same physical item across frames.
+- frame_index is the 0-based index of the best frame showing that item.
+- Prefer 3–20 items; do not invent items you cannot see.
+- model_number / serial_number will usually be empty from a room walk-through."""
+
 
 def load_dotenv() -> None:
     path = ROOT / ".env"
@@ -121,6 +149,98 @@ def analyze_with_openai(
     }
 
 
+def analyze_room_with_openai(api_key: str, frames: list[str]) -> dict[str, Any]:
+    if not api_key:
+        raise RuntimeError("No OpenAI API key provided.")
+
+    from openai import OpenAI
+
+    client = OpenAI(api_key=api_key)
+    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
+    prompt = ROOM_PROMPT + f"\n\nThere are {len(frames)} frames (indices 0–{len(frames) - 1})."
+    content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
+    for url in frames:
+        content.append({"type": "image_url", "image_url": {"url": url, "detail": "low"}})
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": content}],
+        response_format={"type": "json_object"},
+        max_tokens=2000,
+    )
+
+    raw = response.choices[0].message.content or "{}"
+    data = json.loads(raw)
+    items_raw = data.get("items") if isinstance(data.get("items"), list) else []
+    items: list[dict[str, Any]] = []
+    for i, item in enumerate(items_raw[:30]):
+        if not isinstance(item, dict):
+            continue
+        try:
+            frame_index = int(item.get("frame_index", item.get("frameIndex", 0)))
+        except (TypeError, ValueError):
+            frame_index = min(i, len(frames) - 1)
+        frame_index = max(0, min(len(frames) - 1, frame_index))
+        appliance_type = str(item.get("appliance_type") or item.get("applianceType") or item.get("type") or "").strip()
+        brand = str(item.get("brand") or "").strip()
+        nickname = (
+            str(item.get("nickname") or "").strip()
+            or " ".join(p for p in (brand, appliance_type) if p).strip()
+            or f"Item {i + 1}"
+        )
+        items.append(
+            {
+                "nickname": nickname,
+                "applianceType": appliance_type or "Item",
+                "brand": brand,
+                "modelNumber": str(item.get("model_number") or item.get("modelNumber") or "").strip(),
+                "serialNumber": str(item.get("serial_number") or item.get("serialNumber") or "").strip(),
+                "confidence": str(item.get("confidence") or "medium").strip().lower(),
+                "frameIndex": frame_index,
+            }
+        )
+
+    return {
+        "roomGuess": str(data.get("room_guess") or data.get("roomGuess") or "Other").strip() or "Other",
+        "items": items,
+        "demoMode": False,
+    }
+
+
+def demo_room_items(frame_count: int) -> list[dict[str, Any]]:
+    mid = min(1, max(0, frame_count - 1))
+    last = max(0, frame_count - 1)
+    return [
+        {
+            "nickname": "Living room TV",
+            "applianceType": "Television",
+            "brand": "",
+            "modelNumber": "",
+            "serialNumber": "",
+            "confidence": "low",
+            "frameIndex": 0,
+        },
+        {
+            "nickname": "Sofa",
+            "applianceType": "Sofa",
+            "brand": "",
+            "modelNumber": "",
+            "serialNumber": "",
+            "confidence": "low",
+            "frameIndex": mid,
+        },
+        {
+            "nickname": "Lamp",
+            "applianceType": "Lamp",
+            "brand": "",
+            "modelNumber": "",
+            "serialNumber": "",
+            "confidence": "low",
+            "frameIndex": last,
+        },
+    ]
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt: str, *args: Any) -> None:
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
@@ -172,6 +292,7 @@ class Handler(BaseHTTPRequestHandler):
                     "openai": server_openai_configured(),
                     "userKeySupported": True,
                     "analyzePath": "/api/analyze",
+                    "analyzeRoomPath": "/api/analyze-room",
                     "root": str(ROOT),
                     "port": resolve_port(),
                 },
@@ -196,6 +317,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         path = urlparse(self.path).path
+        if path == "/api/analyze-room":
+            self._handle_analyze_room()
+            return
         if path != "/api/analyze":
             self.send_error(404)
             return
@@ -238,6 +362,49 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, result)
         except Exception as exc:
             print(f"Analyze error: {exc}", file=sys.stderr)
+            self._json(500, {"error": str(exc)})
+
+    def _handle_analyze_room(self) -> None:
+        length = int(self.headers.get("Content-Length") or 0)
+        if length <= 0 or length > 25_000_000:
+            self._json(400, {"error": "Invalid request size"})
+            return
+
+        try:
+            body = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            self._json(400, {"error": "Invalid JSON"})
+            return
+
+        frames_raw = body.get("frames")
+        if not isinstance(frames_raw, list):
+            self._json(400, {"error": "frames must be an array of data URLs"})
+            return
+        frames = [str(f) for f in frames_raw if isinstance(f, str) and f]
+        if len(frames) < 2:
+            self._json(400, {"error": "Send at least 2 video frames to analyze the room"})
+            return
+        if len(frames) > 10:
+            self._json(400, {"error": "Too many frames (max 10)"})
+            return
+
+        api_key = resolve_api_key(self)
+        if not api_key:
+            self._json(
+                200,
+                {
+                    "roomGuess": "Other",
+                    "demoMode": True,
+                    "items": demo_room_items(len(frames)),
+                },
+            )
+            return
+
+        try:
+            result = analyze_room_with_openai(api_key, frames)
+            self._json(200, result)
+        except Exception as exc:
+            print(f"Analyze room error: {exc}", file=sys.stderr)
             self._json(500, {"error": str(exc)})
 
     def _json(self, code: int, payload: dict[str, Any]) -> None:

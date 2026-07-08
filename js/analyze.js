@@ -11,6 +11,24 @@ import { config } from "./config.js";
  * @property {string} [nickname]
  */
 
+/**
+ * @typedef {object} RoomItemResult
+ * @property {string} nickname
+ * @property {string} applianceType
+ * @property {string} brand
+ * @property {string} modelNumber
+ * @property {string} serialNumber
+ * @property {string} confidence
+ * @property {number} frameIndex
+ */
+
+/**
+ * @typedef {object} RoomAnalysisResult
+ * @property {string} roomGuess
+ * @property {RoomItemResult[]} items
+ * @property {boolean} [demoMode]
+ */
+
 /** @param {string} text @param {Response} res */
 function formatAnalyzeError(text, res) {
   const trimmed = text.trim();
@@ -76,6 +94,60 @@ export async function analyzeAppliancePhotos(photos) {
   }
 
   return /** @type {AnalysisResult} */ (data);
+}
+
+/**
+ * Analyze still frames extracted from a room-scan video.
+ * @param {string[]} frames data URLs
+ * @returns {Promise<RoomAnalysisResult>}
+ */
+export async function analyzeRoomFrames(frames) {
+  /** @type {Record<string, string>} */
+  const headers = { "Content-Type": "application/json" };
+  const apiKey = loadApiKey();
+  if (apiKey) {
+    headers["X-OpenAI-Api-Key"] = apiKey;
+  }
+
+  let res;
+  try {
+    res = await fetch(config.analyzeRoomApiUrl || "/api/analyze-room", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ frames }),
+    });
+  } catch {
+    throw new Error(
+      "Cannot reach the Mac server. Same Wi-Fi? Run ./serve.sh and use the http:// address shown (port 8080)."
+    );
+  }
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(formatAnalyzeError(text, res));
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || formatAnalyzeError(text, res));
+  }
+
+  const items = Array.isArray(data.items) ? data.items : [];
+  return {
+    roomGuess: String(data.roomGuess || data.room_guess || "Other"),
+    demoMode: Boolean(data.demoMode),
+    items: items.map((item, i) => ({
+      nickname: String(item.nickname || `Item ${i + 1}`),
+      applianceType: String(item.applianceType || item.appliance_type || "Item"),
+      brand: String(item.brand || ""),
+      modelNumber: String(item.modelNumber || item.model_number || ""),
+      serialNumber: String(item.serialNumber || item.serial_number || ""),
+      confidence: String(item.confidence || "medium").toLowerCase(),
+      frameIndex: Number(item.frameIndex ?? item.frame_index ?? 0) || 0,
+    })),
+  };
 }
 
 /**

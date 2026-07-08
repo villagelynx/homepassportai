@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=25" />
+    <link rel="stylesheet" href="./css/app.css?v=26" />
   </head>
   <body>
     <div id="app" class="app">
@@ -99,6 +99,11 @@
           No appliances at this address yet.
           <button type="button" class="linkish" id="btn-restore-inventory">Restore saved data</button>
         </p>
+        <div class="home-actions">
+          <button type="button" class="btn btn--secondary btn--block" id="btn-scan-room">
+            Scan room (60s video)
+          </button>
+        </div>
         <button type="button" class="fab" id="btn-add-appliance" aria-label="Add appliance or item">
           + Add appliance or item
         </button>
@@ -259,6 +264,70 @@
           </label>
           <button type="submit" class="btn btn--primary btn--block" id="btn-update-password">Update password</button>
         </form>
+      </main>
+
+      <!-- Room video scan -->
+      <main id="view-scan-room" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
+          <p class="step-header__label">Room scan</p>
+          <h2>Walk the room on video</h2>
+          <p class="step-header__lede">
+            Record up to 60 seconds while slowly panning each wall and large item. We’ll pull still
+            frames and list everything AI can see so you can keep or discard each one.
+          </p>
+        </div>
+        <div class="capture-card">
+          <div id="preview-room-video" class="capture-card__preview capture-card__preview--empty capture-card__preview--video">
+            <span>No video yet</span>
+          </div>
+          <p id="room-scan-status" class="room-scan-status" hidden></p>
+          <label class="btn btn--primary btn--block capture-btn" id="label-room-video">
+            <input type="file" id="input-room-video" accept="video/*" capture="environment" hidden />
+            Record room video
+          </label>
+          <button type="button" class="btn btn--secondary btn--block" id="btn-clear-room-video" hidden>
+            Clear &amp; re-record
+          </button>
+        </div>
+        <button type="button" class="btn btn--primary btn--block" id="btn-analyze-room" disabled>
+          Analyze room video
+        </button>
+      </main>
+
+      <!-- Room scan review: keep checkboxes -->
+      <main id="view-room-review" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="scan-room">← Back</button>
+          <h2>Choose what to keep</h2>
+          <p class="step-header__lede" id="room-review-lede">
+            Check the items you want in your inventory. Unchecked items are discarded.
+          </p>
+        </div>
+        <label class="field">
+          <span>Room</span>
+          <select id="field-room-scan" class="input">
+            <option value="Kitchen">Kitchen</option>
+            <option value="Laundry">Laundry</option>
+            <option value="Garage">Garage</option>
+            <option value="Basement">Basement</option>
+            <option value="Utility">Utility / mechanical</option>
+            <option value="Living room">Living room</option>
+            <option value="Bedroom">Bedroom</option>
+            <option value="Bathroom">Bathroom</option>
+            <option value="Office">Office</option>
+            <option value="Other">Other</option>
+          </select>
+        </label>
+        <div class="room-review-toolbar">
+          <button type="button" class="btn btn--ghost" id="btn-room-select-all">Select all</button>
+          <button type="button" class="btn btn--ghost" id="btn-room-select-none">Select none</button>
+        </div>
+        <div id="room-review-list" class="room-review-list" role="list"></div>
+        <p id="room-review-empty" class="empty-state" hidden>No items detected — try a slower pan or brighter room.</p>
+        <button type="button" class="btn btn--primary btn--block" id="btn-save-room-items" disabled>
+          Save selected items
+        </button>
       </main>
 
       <!-- Step 1: whole appliance photo -->
@@ -542,6 +611,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=32"></script>
+    <script type="module" src="./js/main.js?v=33"></script>
   </body>
 </html>
