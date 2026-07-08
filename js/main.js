@@ -640,9 +640,14 @@ async function runAnalysis() {
   }
 
   try {
+    const [appliancePhoto, labelPhoto] = await Promise.all([
+      compressDataUrl(scan.appliancePhotoDataUrl, { maxEdge: 960, quality: 0.72 }),
+      compressDataUrl(scan.labelPhotoDataUrl, { maxEdge: 960, quality: 0.72 }),
+    ]);
+
     const result = await analyzeAppliancePhotos({
-      appliancePhotoDataUrl: scan.appliancePhotoDataUrl,
-      labelPhotoDataUrl: scan.labelPhotoDataUrl,
+      appliancePhotoDataUrl: appliancePhoto,
+      labelPhotoDataUrl: labelPhoto,
     });
 
     if (els.labelHintText) {

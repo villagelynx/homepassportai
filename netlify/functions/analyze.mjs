@@ -13,63 +13,74 @@ Return JSON only with these keys:
 
 Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence.`;
 
-const cors = {
+const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, X-OpenAI-Api-Key",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
+const MAX_BODY_BYTES = 5_500_000;
+
 /** @param {number} code @param {object} payload */
-function json(code, payload) {
-  return new Response(JSON.stringify(payload), {
-    status: code,
-    headers: { "Content-Type": "application/json", ...cors },
-  });
+function respond(code, payload) {
+  return {
+    statusCode: code,
+    headers: { "Content-Type": "application/json", ...CORS },
+    body: JSON.stringify(payload),
+  };
 }
 
 /** @param {import("@netlify/functions").HandlerEvent} event */
 export async function handler(event) {
-  if (event.httpMethod === "OPTIONS") {
-    return new Response(null, { status: 204, headers: cors });
-  }
-
-  if (event.httpMethod !== "POST") {
-    return json(405, { error: "Method not allowed" });
-  }
-
-  let body;
   try {
-    body = JSON.parse(event.body || "{}");
-  } catch {
-    return json(400, { error: "Invalid JSON" });
-  }
+    if (event.httpMethod === "OPTIONS") {
+      return { statusCode: 204, headers: CORS, body: "" };
+    }
 
-  const appliance = body.appliancePhotoDataUrl || body.appliance_photo;
-  const label = body.labelPhotoDataUrl || body.label_photo;
-  if (!appliance || !label) {
-    return json(400, { error: "Both appliancePhotoDataUrl and labelPhotoDataUrl are required" });
-  }
+    if (event.httpMethod !== "POST") {
+      return respond(405, { error: "Method not allowed" });
+    }
 
-  const apiKey = (
-    event.headers["x-openai-api-key"] ||
-    event.headers["X-OpenAI-Api-Key"] ||
-    process.env.OPENAI_API_KEY ||
-    ""
-  ).trim();
-  if (!apiKey) {
-    return json(200, {
-      applianceType: "Appliance",
-      brand: "",
-      modelNumber: "",
-      serialNumber: "",
-      confidence: "low",
-      nickname: "",
-      demoMode: true,
-    });
-  }
+    const rawBody = event.body || "";
+    if (rawBody.length > MAX_BODY_BYTES) {
+      return respond(413, {
+        error: "Photos are too large for upload. Retake closer photos or try again on Wi-Fi.",
+      });
+    }
 
-  try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return respond(400, { error: "Invalid JSON" });
+    }
+
+    const appliance = body.appliancePhotoDataUrl || body.appliance_photo;
+    const label = body.labelPhotoDataUrl || body.label_photo;
+    if (!appliance || !label) {
+      return respond(400, { error: "Both appliancePhotoDataUrl and labelPhotoDataUrl are required" });
+    }
+
+    const apiKey = (
+      event.headers["x-openai-api-key"] ||
+      event.headers["X-OpenAI-Api-Key"] ||
+      process.env.OPENAI_API_KEY ||
+      ""
+    ).trim();
+
+    if (!apiKey) {
+      return respond(200, {
+        applianceType: "Appliance",
+        brand: "",
+        modelNumber: "",
+        serialNumber: "",
+        confidence: "low",
+        nickname: "",
+        demoMode: true,
+      });
+    }
+
+    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -92,16 +103,16 @@ export async function handler(event) {
       }),
     });
 
-    const data = await res.json();
-    if (!res.ok) {
+    const data = await openaiRes.json();
+    if (!openaiRes.ok) {
       const msg = data?.error?.message || "OpenAI request failed";
-      return json(500, { error: msg });
+      return respond(500, { error: msg });
     }
 
     const raw = data.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(raw);
 
-    return json(200, {
+    return respond(200, {
       applianceType: String(parsed.appliance_type || parsed.applianceType || "").trim(),
       brand: String(parsed.brand || "").trim(),
       modelNumber: String(parsed.model_number || parsed.modelNumber || "").trim(),
@@ -110,6 +121,9 @@ export async function handler(event) {
       nickname: String(parsed.nickname || "").trim(),
     });
   } catch (err) {
-    return json(500, { error: err instanceof Error ? err.message : "Analysis failed" });
+    console.error("analyze error:", err);
+    return respond(500, {
+      error: err instanceof Error ? err.message : "Analysis failed",
+    });
   }
 }

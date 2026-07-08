@@ -6,6 +6,13 @@
 
 [functions]
   directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+[functions."analyze"]
+  timeout = 26
+
+[functions."health"]
+  timeout = 10
 
 [[redirects]]
   from = "/api/analyze"

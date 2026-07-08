@@ -15,6 +15,13 @@ import { config } from "./config.js";
 function formatAnalyzeError(text, res) {
   const trimmed = text.trim();
   if (
+    trimmed.includes("lambda") ||
+    trimmed.includes("decoding") ||
+    trimmed.includes("status code returned")
+  ) {
+    return "Photo analysis timed out or photos were too large. Try again on Wi-Fi, or add your OpenAI key in Settings.";
+  }
+  if (
     trimmed.includes("Error response") ||
     trimmed.includes("<title>Error") ||
     trimmed.startsWith("<!DOCTYPE") ||
