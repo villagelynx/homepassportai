@@ -730,11 +730,17 @@ body {
 }
 
 .home-actions {
-  margin: 0.75rem 0 5.5rem;
+  margin: 0.55rem 0 10.75rem;
 }
 
-.home-actions .btn {
-  margin-top: 0;
+.home-actions .fab {
+  position: fixed;
+  bottom: calc(1rem + var(--safe-bottom) + 3.95rem);
+}
+
+.fab--room {
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+  box-shadow: 0 8px 28px rgba(185, 28, 28, 0.4);
 }
 
 .capture-card__preview--video video {
@@ -1015,6 +1021,14 @@ body {
   }
 
   .home-actions {
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+  }
+
+  .home-actions .fab {
+    position: static;
+    transform: none;
+    width: 100%;
+    margin-top: 0.75rem;
+    box-shadow: none;
   }
 }
