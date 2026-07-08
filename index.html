@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=24" />
+    <link rel="stylesheet" href="./css/app.css?v=25" />
   </head>
   <body>
     <div id="app" class="app">
@@ -56,6 +56,16 @@
             <p class="topbar__tag" id="build-tag">Phase A · build …</p>
           </div>
         </div>
+        <button
+          type="button"
+          class="topbar__sync"
+          id="btn-sync-status"
+          aria-label="Sync status"
+          title="Sync status"
+          hidden
+        >
+          <span class="topbar__sync-dot" id="sync-status-dot" aria-hidden="true"></span>
+        </button>
         <button type="button" class="topbar__settings" id="btn-settings" data-nav="settings" aria-label="Settings">
           ⚙
         </button>
@@ -66,7 +76,6 @@
         <section class="hero">
           <h2>Your home inventory</h2>
           <p>Scan appliances in a few quick photos — whole unit, model label, and an optional receipt.</p>
-          <p id="sync-banner" class="sync-banner" hidden></p>
           <div id="install-banner" class="install-banner" hidden>
             <div class="install-banner__icon" aria-hidden="true">
               <img src="./icons/apple-touch-icon.png" alt="" width="56" height="56" />
@@ -533,6 +542,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=31"></script>
+    <script type="module" src="./js/main.js?v=32"></script>
   </body>
 </html>

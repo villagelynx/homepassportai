@@ -58,7 +58,7 @@ const els = {
   buildTag: document.getElementById("build-tag"),
   applianceList: document.getElementById("appliance-list"),
   emptyState: document.getElementById("empty-state"),
-  syncBanner: document.getElementById("sync-banner"),
+  btnSyncStatus: document.getElementById("btn-sync-status"),
   installBanner: document.getElementById("install-banner"),
   installBannerTitle: document.getElementById("install-banner-title"),
   installBannerLede: document.getElementById("install-banner-lede"),
@@ -237,6 +237,7 @@ function clearBootError() {
 async function enterApp() {
   if (isSupabaseConfigured() && !isSignedIn() && !allowOfflineUse) {
     if (els.btnAuthOffline) els.btnAuthOffline.hidden = false;
+    updateSyncBanner();
     showView("auth");
     return;
   }
@@ -259,7 +260,9 @@ async function onAuthChanged() {
     await renderHome();
     updateSyncBanner();
     updateInstallBanner();
+    return;
   }
+  updateSyncBanner();
 }
 
 function init() {
@@ -307,6 +310,15 @@ function init() {
   });
   els.btnClearApiKey?.addEventListener("click", () => clearSettingsApiKey());
   els.btnSignOut?.addEventListener("click", () => void handleSignOut());
+  els.btnSyncStatus?.addEventListener("click", () => {
+    if (!isSupabaseConfigured()) return;
+    if (isSignedIn()) {
+      renderSettings();
+      showView("settings");
+      return;
+    }
+    showView("auth");
+  });
   els.btnGoSignIn?.addEventListener("click", () => showView("auth"));
   els.authForm?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -496,20 +508,23 @@ async function handleSignOut() {
 }
 
 function updateSyncBanner() {
-  if (!els.syncBanner) return;
+  if (!els.btnSyncStatus) return;
   if (!isSupabaseConfigured()) {
-    els.syncBanner.hidden = true;
+    els.btnSyncStatus.hidden = true;
     return;
   }
+  els.btnSyncStatus.hidden = false;
+  els.btnSyncStatus.classList.remove("is-online", "is-offline");
   if (isSignedIn()) {
-    els.syncBanner.hidden = false;
-    els.syncBanner.textContent = `Synced as ${getUserEmail()}`;
+    els.btnSyncStatus.classList.add("is-online");
+    const email = getUserEmail();
+    els.btnSyncStatus.setAttribute("aria-label", `Synced as ${email}`);
+    els.btnSyncStatus.title = `Synced as ${email}`;
     return;
   }
-  els.syncBanner.hidden = false;
-  els.syncBanner.innerHTML =
-    'Offline on this device — <button type="button" class="linkish" id="banner-sign-in">Sign in to sync</button>';
-  els.syncBanner.querySelector("#banner-sign-in")?.addEventListener("click", () => showView("auth"));
+  els.btnSyncStatus.classList.add("is-offline");
+  els.btnSyncStatus.setAttribute("aria-label", "Offline on this device. Tap to sign in.");
+  els.btnSyncStatus.title = "Offline on this device. Tap to sign in.";
 }
 
 function installInstructionsHtml() {
