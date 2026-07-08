@@ -13,6 +13,20 @@ Return JSON only with these keys:
 
 Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence.`;
 
+const ANALYZE_LABEL_ONLY_PROMPT = `You analyze a close-up photo of a manufacturer label or rating plate for a home appliance inventory app.
+
+Image 1: close-up of the manufacturer label / rating plate.
+
+Return JSON only with these keys:
+- appliance_type: short type if visible on the label (e.g. Dishwasher, Refrigerator), else empty string
+- brand: manufacturer brand from the label or empty string
+- model_number: model number from the label or empty string
+- serial_number: serial number from the label or empty string
+- confidence: "high", "medium", or "low" based on label readability
+- nickname: empty string
+
+Read the label image carefully for brand, model, and serial. If unreadable, use empty strings and low confidence.`;
+
 const ANALYZE_APPLIANCE_ONLY_PROMPT = `You analyze a photo for a home appliance inventory app.
 
 Image 1: the whole appliance.
@@ -69,7 +83,13 @@ export async function handler(event) {
 
     const appliance = body.appliancePhotoDataUrl || body.appliance_photo;
     const label = body.labelPhotoDataUrl || body.label_photo;
-    if (!appliance) {
+    const labelOnly = body.mode === "labelOnly";
+
+    if (labelOnly) {
+      if (!label) {
+        return respond(400, { error: "labelPhotoDataUrl is required for label-only analysis" });
+      }
+    } else if (!appliance) {
       return respond(400, { error: "appliancePhotoDataUrl is required" });
     }
 
@@ -82,7 +102,7 @@ export async function handler(event) {
 
     if (!apiKey) {
       return respond(200, {
-        applianceType: "Appliance",
+        applianceType: "",
         brand: "",
         modelNumber: "",
         serialNumber: "",
@@ -92,13 +112,16 @@ export async function handler(event) {
       });
     }
 
-    const content = [
-      { type: "text", text: label ? ANALYZE_PROMPT : ANALYZE_APPLIANCE_ONLY_PROMPT },
-      { type: "image_url", image_url: { url: appliance } },
-    ];
-    if (label) {
-      content.push({ type: "image_url", image_url: { url: label } });
-    }
+    const content = labelOnly
+      ? [
+          { type: "text", text: ANALYZE_LABEL_ONLY_PROMPT },
+          { type: "image_url", image_url: { url: label } },
+        ]
+      : [
+          { type: "text", text: label ? ANALYZE_PROMPT : ANALYZE_APPLIANCE_ONLY_PROMPT },
+          { type: "image_url", image_url: { url: appliance } },
+          ...(label ? [{ type: "image_url", image_url: { url: label } }] : []),
+        ];
 
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",

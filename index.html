@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=33" />
+    <link rel="stylesheet" href="./css/app.css?v=34" />
   </head>
   <body>
     <div id="app" class="app">
@@ -73,6 +73,23 @@
 
       <!-- Home: appliance list -->
       <main id="view-home" class="view view--active">
+        <div id="home-search" class="home-search" hidden>
+          <div class="home-search__field">
+            <input
+              type="search"
+              id="input-home-search"
+              class="input home-search__input"
+              placeholder="Search nickname, brand, model, serial…"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="search"
+            />
+            <button type="button" class="home-search__clear" id="btn-clear-home-search" aria-label="Clear search" hidden>
+              ×
+            </button>
+          </div>
+        </div>
         <div id="room-filter-chips" class="room-filter-chips" role="tablist" aria-label="Filter by room" hidden></div>
         <section class="hero">
           <h2>Your home inventory</h2>
@@ -100,6 +117,7 @@
           No appliances at this address yet.
           <button type="button" class="linkish" id="btn-restore-inventory">Restore saved data</button>
         </p>
+        <p id="search-no-results" class="empty-state" hidden>No matches for your search.</p>
         <button type="button" class="fab" id="btn-add-appliance" aria-label="Add appliance or item">
           <svg class="fab__icon" viewBox="0 0 24 24" aria-hidden="true">
             <path
@@ -624,7 +642,35 @@
               Clear &amp; retake
             </button>
           </div>
+          <div id="detail-label-review" class="detail-label-review" hidden>
+            <p id="detail-label-analyze-status" class="hint" hidden>Analyzing label…</p>
+            <form id="detail-label-review-form" class="form">
+              <label class="field">
+                <span>Brand</span>
+                <input type="text" id="detail-label-brand" class="input" autocomplete="off" />
+                <p id="detail-label-brand-hint" class="field-hint" hidden></p>
+              </label>
+              <label class="field">
+                <span>Model number</span>
+                <input type="text" id="detail-label-model" class="input" autocomplete="off" />
+                <p id="detail-label-model-hint" class="field-hint" hidden></p>
+              </label>
+              <label class="field">
+                <span>Serial number</span>
+                <input type="text" id="detail-label-serial" class="input" autocomplete="off" />
+                <p id="detail-label-serial-hint" class="field-hint" hidden></p>
+              </label>
+              <p id="detail-label-confidence" class="confidence-note" hidden></p>
+              <button type="submit" class="btn btn--primary btn--block" id="btn-save-detail-label">
+                Save label photo &amp; details
+              </button>
+              <button type="button" class="btn btn--ghost btn--block" id="btn-cancel-detail-label-review">
+                Cancel
+              </button>
+            </form>
+          </div>
         </div>
+        <button type="button" class="btn btn--secondary btn--block" id="btn-share-appliance">Share item</button>
         <div id="detail-manuals" class="detail-manuals" hidden></div>
         <div id="detail-repair" class="detail-repair"></div>
         <button type="button" class="btn btn--secondary btn--block" id="btn-edit-appliance">Edit item</button>
@@ -710,6 +756,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=41"></script>
+    <script type="module" src="./js/main.js?v=42"></script>
   </body>
 </html>

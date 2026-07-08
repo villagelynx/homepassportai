@@ -40,6 +40,20 @@ Return JSON only with these keys:
 
 Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence."""
 
+ANALYZE_LABEL_ONLY_PROMPT = """You analyze a close-up photo of a manufacturer label or rating plate for a home appliance inventory app.
+
+Image 1: close-up of the manufacturer label / rating plate.
+
+Return JSON only with these keys:
+- appliance_type: short type if visible on the label (e.g. Dishwasher, Refrigerator), else empty string
+- brand: manufacturer brand from the label or empty string
+- model_number: model number from the label or empty string
+- serial_number: serial number from the label or empty string
+- confidence: "high", "medium", or "low" based on label readability
+- nickname: empty string
+
+Read the label image carefully for brand, model, and serial. If unreadable, use empty strings and low confidence."""
+
 ANALYZE_APPLIANCE_ONLY_PROMPT = """You analyze a photo for a home appliance inventory app.
 
 Image 1: the whole appliance.
@@ -122,7 +136,11 @@ def resolve_api_key(handler: BaseHTTPRequestHandler) -> str:
 
 
 def analyze_with_openai(
-    api_key: str, appliance_data_url: str, label_data_url: str | None = None
+    api_key: str,
+    appliance_data_url: str | None = None,
+    label_data_url: str | None = None,
+    *,
+    label_only: bool = False,
 ) -> dict[str, Any]:
     if not api_key:
         raise RuntimeError("No OpenAI API key provided.")
@@ -132,15 +150,25 @@ def analyze_with_openai(
     client = OpenAI(api_key=api_key)
     model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
 
-    content: list[dict[str, Any]] = [
-        {
-            "type": "text",
-            "text": ANALYZE_PROMPT if label_data_url else ANALYZE_APPLIANCE_ONLY_PROMPT,
-        },
-        {"type": "image_url", "image_url": {"url": appliance_data_url}},
-    ]
-    if label_data_url:
-        content.append({"type": "image_url", "image_url": {"url": label_data_url}})
+    if label_only:
+        if not label_data_url:
+            raise RuntimeError("labelPhotoDataUrl is required for label-only analysis")
+        content: list[dict[str, Any]] = [
+            {"type": "text", "text": ANALYZE_LABEL_ONLY_PROMPT},
+            {"type": "image_url", "image_url": {"url": label_data_url}},
+        ]
+    else:
+        if not appliance_data_url:
+            raise RuntimeError("appliancePhotoDataUrl is required")
+        content = [
+            {
+                "type": "text",
+                "text": ANALYZE_PROMPT if label_data_url else ANALYZE_APPLIANCE_ONLY_PROMPT,
+            },
+            {"type": "image_url", "image_url": {"url": appliance_data_url}},
+        ]
+        if label_data_url:
+            content.append({"type": "image_url", "image_url": {"url": label_data_url}})
 
     response = client.chat.completions.create(
         model=model,
@@ -350,7 +378,14 @@ class Handler(BaseHTTPRequestHandler):
 
         appliance = body.get("appliancePhotoDataUrl") or body.get("appliance_photo")
         label = body.get("labelPhotoDataUrl") or body.get("label_photo")
-        if not appliance:
+        mode = str(body.get("mode") or "").strip()
+        label_only = mode == "labelOnly"
+
+        if label_only:
+            if not label:
+                self._json(400, {"error": "labelPhotoDataUrl is required for label-only analysis"})
+                return
+        elif not appliance:
             self._json(400, {"error": "appliancePhotoDataUrl is required"})
             return
 
@@ -359,7 +394,7 @@ class Handler(BaseHTTPRequestHandler):
             self._json(
                 200,
                 {
-                    "applianceType": "Appliance",
+                    "applianceType": "",
                     "brand": "",
                     "modelNumber": "",
                     "serialNumber": "",
@@ -371,7 +406,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         try:
-            result = analyze_with_openai(api_key, str(appliance), str(label) if label else None)
+            if label_only:
+                result = analyze_with_openai(api_key, label_data_url=str(label), label_only=True)
+            else:
+                result = analyze_with_openai(
+                    api_key, str(appliance), str(label) if label else None
+                )
             self._json(200, result)
         except Exception as exc:
             print(f"Analyze error: {exc}", file=sys.stderr)

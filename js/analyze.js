@@ -57,7 +57,7 @@ function formatAnalyzeError(text, res) {
 }
 
 /**
- * @param {{ appliancePhotoDataUrl: string, labelPhotoDataUrl?: string | null }} photos
+ * @param {{ appliancePhotoDataUrl?: string, labelPhotoDataUrl?: string | null, mode?: "labelOnly" }} photos
  * @returns {Promise<AnalysisResult>}
  */
 export async function analyzeAppliancePhotos(photos) {
@@ -69,9 +69,21 @@ export async function analyzeAppliancePhotos(photos) {
   }
 
   /** @type {Record<string, string>} */
-  const body = { appliancePhotoDataUrl: photos.appliancePhotoDataUrl };
-  if (photos.labelPhotoDataUrl) {
+  const body = {};
+  if (photos.mode === "labelOnly") {
+    if (!photos.labelPhotoDataUrl) {
+      throw new Error("labelPhotoDataUrl is required for label-only analysis");
+    }
+    body.mode = "labelOnly";
     body.labelPhotoDataUrl = photos.labelPhotoDataUrl;
+  } else {
+    if (!photos.appliancePhotoDataUrl) {
+      throw new Error("appliancePhotoDataUrl is required");
+    }
+    body.appliancePhotoDataUrl = photos.appliancePhotoDataUrl;
+    if (photos.labelPhotoDataUrl) {
+      body.labelPhotoDataUrl = photos.labelPhotoDataUrl;
+    }
   }
 
   let res;
@@ -100,6 +112,15 @@ export async function analyzeAppliancePhotos(photos) {
   }
 
   return /** @type {AnalysisResult} */ (data);
+}
+
+/**
+ * Analyze a close-up label photo for brand, model, and serial.
+ * @param {string} labelPhotoDataUrl
+ * @returns {Promise<AnalysisResult>}
+ */
+export async function analyzeLabelPhoto(labelPhotoDataUrl) {
+  return analyzeAppliancePhotos({ labelPhotoDataUrl, mode: "labelOnly" });
 }
 
 /**
