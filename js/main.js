@@ -29,7 +29,7 @@ import {
   shouldShowInstallPrompt,
 } from "./install-prompt.js";
 import { generateInsurancePdf } from "./insurance-report.js";
-import { extractVideoFrames, extractLabelFrameFromVideo, ROOM_SCAN_MAX_SECONDS } from "./video-frames.js";
+import { extractVideoFrames, ROOM_SCAN_MAX_SECONDS } from "./video-frames.js";
 import {
   addAppliance,
   deleteAppliance,
@@ -129,11 +129,10 @@ const els = {
   detailManuals: document.getElementById("detail-manuals"),
   detailRepair: document.getElementById("detail-repair"),
   detailLabelLede: document.getElementById("detail-label-lede"),
-  previewDetailLabelVideo: document.getElementById("preview-detail-label-video"),
-  detailLabelStatus: document.getElementById("detail-label-status"),
-  labelDetailLabelVideo: document.getElementById("label-detail-label-video"),
-  inputDetailLabelVideo: document.getElementById("input-detail-label-video"),
-  btnClearDetailLabelVideo: document.getElementById("btn-clear-detail-label-video"),
+  previewDetailLabelPhoto: document.getElementById("preview-detail-label-photo"),
+  labelDetailLabelPhoto: document.getElementById("label-detail-label-photo"),
+  inputDetailLabelPhoto: document.getElementById("input-detail-label-photo"),
+  btnClearDetailLabelPhoto: document.getElementById("btn-clear-detail-label-photo"),
   btnEdit: document.getElementById("btn-edit-appliance"),
   btnDelete: document.getElementById("btn-delete-appliance"),
   editForm: document.getElementById("edit-appliance-form"),
@@ -209,7 +208,6 @@ const roomScan = {
 };
 
 let detailId = null;
-let detailLabelVideoUrl = null;
 let toastTimer = 0;
 let authMode = "signin";
 let allowOfflineUse = false;
@@ -386,8 +384,8 @@ function init() {
     void saveRecord();
   });
   els.btnDelete?.addEventListener("click", () => void removeDetail());
-  els.inputDetailLabelVideo?.addEventListener("change", () => void onDetailLabelVideoSelected());
-  els.btnClearDetailLabelVideo?.addEventListener("click", () => clearDetailLabelVideo());
+  els.inputDetailLabelPhoto?.addEventListener("change", () => void onDetailLabelPhotoSelected());
+  els.btnClearDetailLabelPhoto?.addEventListener("click", () => clearDetailLabelPhoto());
   els.btnEdit?.addEventListener("click", () => void openEditAppliance());
   els.btnEditBack?.addEventListener("click", () => {
     if (detailId) void openDetail(detailId);
@@ -1631,13 +1629,14 @@ async function openDetail(id) {
 
   if (els.detailLabelLede) {
     els.detailLabelLede.textContent = item.labelPhotoDataUrl
-      ? "Record a new short video to replace the model/serial label still."
-      : "No label yet — record a short video panning across the manufacturer sticker or rating plate. We’ll pull a still for your inventory.";
+      ? "Take a new close-up to replace the model/serial label photo."
+      : "No label yet — snap a close-up of the manufacturer sticker or rating plate.";
   }
   setCaptureLabelText(
-    els.labelDetailLabelVideo,
-    item.labelPhotoDataUrl ? "Re-record label video" : "Record label video"
+    els.labelDetailLabelPhoto,
+    item.labelPhotoDataUrl ? "Retake label photo" : "Take label photo"
   );
+  if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
 
   renderDetailManualLinks(item);
   renderDetailRepair(item);
@@ -1645,80 +1644,39 @@ async function openDetail(id) {
 }
 
 function resetDetailLabelCapture() {
-  if (detailLabelVideoUrl) {
-    URL.revokeObjectURL(detailLabelVideoUrl);
-  }
-  detailLabelVideoUrl = null;
-  if (els.inputDetailLabelVideo) els.inputDetailLabelVideo.value = "";
-  setDetailLabelVideoPreview(null);
-  setDetailLabelStatus("");
-  if (els.btnClearDetailLabelVideo) els.btnClearDetailLabelVideo.hidden = true;
-  if (els.labelDetailLabelVideo) els.labelDetailLabelVideo.classList.remove("capture-btn--busy");
+  if (els.inputDetailLabelPhoto) els.inputDetailLabelPhoto.value = "";
+  setPreview(els.previewDetailLabelPhoto, null);
+  if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
+  if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.remove("capture-btn--busy");
 }
 
-/** @param {string | null} url */
-function setDetailLabelVideoPreview(url) {
-  const container = els.previewDetailLabelVideo;
-  if (!container) return;
-  container.innerHTML = "";
-  if (!url) {
-    container.classList.add("capture-card__preview--empty");
-    const span = document.createElement("span");
-    span.textContent = "No video yet";
-    container.append(span);
-    return;
-  }
-  container.classList.remove("capture-card__preview--empty");
-  const video = document.createElement("video");
-  video.src = url;
-  video.controls = true;
-  video.playsInline = true;
-  video.muted = true;
-  video.setAttribute("playsinline", "");
-  container.append(video);
-}
-
-/** @param {string} text */
-function setDetailLabelStatus(text) {
-  if (!els.detailLabelStatus) return;
-  if (!text) {
-    els.detailLabelStatus.hidden = true;
-    els.detailLabelStatus.textContent = "";
-    return;
-  }
-  els.detailLabelStatus.hidden = false;
-  els.detailLabelStatus.textContent = text;
-}
-
-function clearDetailLabelVideo() {
+function clearDetailLabelPhoto() {
   resetDetailLabelCapture();
-  toast("Video cleared");
+  toast("Photo cleared");
 }
 
-async function onDetailLabelVideoSelected() {
-  const file = els.inputDetailLabelVideo?.files?.[0];
+async function onDetailLabelPhotoSelected() {
+  const file = els.inputDetailLabelPhoto?.files?.[0];
   if (!file || !detailId) return;
 
-  if (detailLabelVideoUrl) URL.revokeObjectURL(detailLabelVideoUrl);
-  detailLabelVideoUrl = URL.createObjectURL(file);
-  setDetailLabelVideoPreview(detailLabelVideoUrl);
-  if (els.btnClearDetailLabelVideo) els.btnClearDetailLabelVideo.hidden = false;
-  setDetailLabelStatus("Pulling a still from your label video…");
-  if (els.labelDetailLabelVideo) els.labelDetailLabelVideo.classList.add("capture-btn--busy");
+  if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.add("capture-btn--busy");
 
   try {
-    const frame = await extractLabelFrameFromVideo(file);
-    const labelPhoto = await compressDataUrl(frame);
+    const dataUrl = await readFileAsDataUrl(file);
+    setPreview(els.previewDetailLabelPhoto, dataUrl);
+    if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = false;
+
+    const labelPhoto = await compressDataUrl(dataUrl, { maxEdge: 960, quality: 0.72 });
     await updateAppliance(detailId, { labelPhotoDataUrl: labelPhoto });
     resetDetailLabelCapture();
     await renderHome();
     await openDetail(detailId);
-    toast("Label photo saved from video");
+    toast("Label photo saved");
   } catch (err) {
-    setDetailLabelStatus("");
-    toast(err instanceof Error ? err.message : "Could not save label video");
+    resetDetailLabelCapture();
+    toast(err instanceof Error ? err.message : "Could not save label photo");
   } finally {
-    if (els.labelDetailLabelVideo) els.labelDetailLabelVideo.classList.remove("capture-btn--busy");
+    if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.remove("capture-btn--busy");
   }
 }
 

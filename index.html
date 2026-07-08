@@ -382,7 +382,7 @@
           <p class="step-header__label">Step 2 of 3 · optional</p>
           <h2>Model / serial label</h2>
           <p class="step-header__lede">
-            Optional close-up photo now, or skip and record a label video later from the item detail page.
+            Optional close-up photo now, or skip and add a label photo later from the item detail page.
           </p>
         </div>
         <aside id="label-hint" class="hint-card" role="status">
@@ -610,23 +610,18 @@
         <div id="detail-label-capture" class="detail-label-capture">
           <h3 class="detail-section-title">Model / serial label</h3>
           <p id="detail-label-lede" class="hint">
-            Record a short video panning across the manufacturer sticker or rating plate. We’ll pull a still
-            for your inventory.
+            Snap a close-up of the manufacturer sticker or rating plate for model and serial numbers.
           </p>
           <div class="capture-card">
-            <div
-              id="preview-detail-label-video"
-              class="capture-card__preview capture-card__preview--empty capture-card__preview--video"
-            >
-              <span>No video yet</span>
+            <div id="preview-detail-label-photo" class="capture-card__preview capture-card__preview--empty">
+              <span>No photo yet</span>
             </div>
-            <p id="detail-label-status" class="room-scan-status" hidden></p>
-            <label class="btn btn--primary btn--block capture-btn" id="label-detail-label-video">
-              <input type="file" id="input-detail-label-video" accept="video/*" capture="environment" hidden />
-              Record label video
+            <label class="btn btn--primary btn--block capture-btn" id="label-detail-label-photo">
+              <input type="file" id="input-detail-label-photo" accept="image/*" capture="environment" hidden />
+              Take label photo
             </label>
-            <button type="button" class="btn btn--secondary btn--block" id="btn-clear-detail-label-video" hidden>
-              Clear video
+            <button type="button" class="btn btn--secondary btn--block" id="btn-clear-detail-label-photo" hidden>
+              Clear &amp; retake
             </button>
           </div>
         </div>
@@ -715,6 +710,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=40"></script>
+    <script type="module" src="./js/main.js?v=41"></script>
   </body>
 </html>
