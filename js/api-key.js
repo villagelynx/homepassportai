@@ -1,17 +1,53 @@
-import { migrateLegacyStorageKey } from "./storage-keys.js";
+const STORAGE_KEY = "homepassport-ai:openai-api-key";
 
-const STORAGE_KEY = "homepassport-ai:openai-api-key:v1";
-const LEGACY_KEY = "home-passport:openai-api-key:v1";
+/** Older keys — migrated on load; cleared only when user removes the key. */
+const LEGACY_KEYS = [
+  "homepassport-ai:openai-api-key:v1",
+  "home-passport:openai-api-key:v1",
+  "home-passport:openai-api-key",
+  "openai-api-key",
+];
 
-migrateLegacyStorageKey(STORAGE_KEY, LEGACY_KEY);
-
-/** @returns {string} */
-export function loadApiKey() {
+function readStoredKey(storage, key) {
   try {
-    return localStorage.getItem(STORAGE_KEY)?.trim() ?? "";
+    return storage.getItem(key)?.trim() ?? "";
   } catch {
     return "";
   }
+}
+
+function migrateApiKeyStorage() {
+  try {
+    const current = readStoredKey(localStorage, STORAGE_KEY);
+    if (current) return;
+
+    for (const key of LEGACY_KEYS) {
+      const legacy = readStoredKey(localStorage, key);
+      if (legacy) {
+        localStorage.setItem(STORAGE_KEY, legacy);
+        return;
+      }
+    }
+
+    for (const key of [STORAGE_KEY, ...LEGACY_KEYS]) {
+      const legacy = readStoredKey(sessionStorage, key);
+      if (legacy) {
+        localStorage.setItem(STORAGE_KEY, legacy);
+        sessionStorage.removeItem(key);
+        return;
+      }
+    }
+  } catch {
+    // private mode / quota
+  }
+}
+
+migrateApiKeyStorage();
+
+/** @returns {string} */
+export function loadApiKey() {
+  migrateApiKeyStorage();
+  return readStoredKey(localStorage, STORAGE_KEY);
 }
 
 /** @param {string} key */
@@ -21,11 +57,25 @@ export function saveApiKey(key) {
     clearApiKey();
     return;
   }
-  localStorage.setItem(STORAGE_KEY, trimmed);
+  try {
+    localStorage.setItem(STORAGE_KEY, trimmed);
+  } catch {
+    // private mode / quota
+  }
 }
 
 export function clearApiKey() {
-  localStorage.removeItem(STORAGE_KEY);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    for (const key of LEGACY_KEYS) {
+      localStorage.removeItem(key);
+    }
+    for (const key of [STORAGE_KEY, ...LEGACY_KEYS]) {
+      sessionStorage.removeItem(key);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 /** @returns {boolean} */
