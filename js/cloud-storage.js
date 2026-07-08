@@ -22,9 +22,13 @@ async function signedPhotoUrl(path) {
   if (!path) return null;
   const supabase = await getSupabase();
   if (!supabase) return null;
-  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
-  if (error) throw error;
-  return data.signedUrl;
+  try {
+    const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (error) return null;
+    return data.signedUrl;
+  } catch {
+    return null;
+  }
 }
 
 /** @param {object} row */
@@ -104,7 +108,9 @@ export async function addCloudAppliance(record) {
   if (!supabase || !userId) throw new Error("Sign in to save to the cloud.");
 
   const appliancePath = await uploadPhoto(userId, record.id, "appliance", record.appliancePhotoDataUrl);
-  const labelPath = await uploadPhoto(userId, record.id, "label", record.labelPhotoDataUrl);
+  const labelPath = record.labelPhotoDataUrl
+    ? await uploadPhoto(userId, record.id, "label", record.labelPhotoDataUrl)
+    : null;
   const receiptPath = record.receiptPhotoDataUrl
     ? await uploadPhoto(userId, record.id, "receipt", record.receiptPhotoDataUrl)
     : null;
@@ -135,6 +141,12 @@ export async function updateCloudAppliance(id, updates) {
   const supabase = await getSupabase();
   if (!supabase) throw new Error("Cloud sync is not configured.");
 
+  const existing = await getCloudAppliance(id);
+  if (!existing) return null;
+
+  const session = getSession();
+  const userId = session?.user?.id;
+
   const payload = {};
   if (updates.nickname != null) payload.nickname = updates.nickname;
   if (updates.room != null) payload.room = updates.room;
@@ -145,9 +157,18 @@ export async function updateCloudAppliance(id, updates) {
   if (updates.confidence != null) payload.confidence = updates.confidence;
   if (updates.repairCompany !== undefined) payload.repair_company = updates.repairCompany;
 
+  if (updates.labelPhotoDataUrl && userId) {
+    payload.label_photo_path = await uploadPhoto(userId, id, "label", updates.labelPhotoDataUrl);
+  }
+
   const { error } = await supabase.from("appliances").update(payload).eq("id", id);
   if (error) throw error;
-  return getCloudAppliance(id);
+
+  if (updates.labelPhotoDataUrl) {
+    return getCloudAppliance(id);
+  }
+
+  return { ...existing, ...updates };
 }
 
 /** @param {string} id */

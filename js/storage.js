@@ -31,7 +31,7 @@ import {
  * @property {string} modelNumber
  * @property {string} serialNumber
  * @property {string} appliancePhotoDataUrl
- * @property {string} labelPhotoDataUrl
+ * @property {string | null} labelPhotoDataUrl
  * @property {string | null} [receiptPhotoDataUrl]
  * @property {string} confidence
  * @property {string} scannedAt ISO timestamp
@@ -70,7 +70,11 @@ export async function deleteAppliance(id) {
 
 /** @param {string} id @returns {Promise<ApplianceRecord | undefined>} */
 export async function getAppliance(id) {
-  if (useCloud()) return getCloudAppliance(id);
+  if (useCloud()) {
+    const cloud = await getCloudAppliance(id);
+    if (cloud) return cloud;
+    return getLocalAppliance(id);
+  }
   return getLocalAppliance(id);
 }
 
@@ -78,10 +82,14 @@ export async function getAppliance(id) {
 export async function updateAppliance(id, updates) {
   if (useCloud()) {
     const saved = await updateCloudAppliance(id, updates);
-    if (!saved) throw new Error("Could not update appliance.");
-    return saved;
+    if (saved) return saved;
+    const local = updateLocalAppliance(id, updates);
+    if (!local) throw new Error("Could not update appliance.");
+    return local;
   }
-  return updateLocalAppliance(id, updates);
+  const saved = updateLocalAppliance(id, updates);
+  if (!saved) throw new Error("Could not update appliance.");
+  return saved;
 }
 
 /** Migrate device-only inventory after sign-in. @returns {Promise<number>} */
@@ -107,7 +115,7 @@ export async function importApplianceBackup(jsonText) {
   if (useCloud()) {
     let count = 0;
     for (const item of parsed) {
-      if (!item?.id || !item.appliancePhotoDataUrl || !item.labelPhotoDataUrl) continue;
+      if (!item?.id || !item.appliancePhotoDataUrl) continue;
       await addCloudAppliance(item);
       count++;
     }

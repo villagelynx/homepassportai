@@ -40,6 +40,18 @@ Return JSON only with these keys:
 
 Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence."""
 
+ANALYZE_APPLIANCE_ONLY_PROMPT = """You analyze a photo for a home appliance inventory app.
+
+Image 1: the whole appliance.
+
+Return JSON only with these keys:
+- appliance_type: short type (e.g. Dishwasher, Refrigerator, Range)
+- brand: manufacturer brand if visible on the appliance, else empty string
+- model_number: empty string (no label photo provided)
+- serial_number: empty string (no label photo provided)
+- confidence: "high", "medium", or "low" based on how clearly you can identify type and brand
+- nickname: short friendly label like "KitchenAid dishwasher" combining brand + type"""
+
 ROOM_PROMPT = """You analyze still frames from a ~60 second smartphone video of a home room for an inventory app.
 
 The images are frames sampled across the room scan, in order.
@@ -110,7 +122,7 @@ def resolve_api_key(handler: BaseHTTPRequestHandler) -> str:
 
 
 def analyze_with_openai(
-    api_key: str, appliance_data_url: str, label_data_url: str
+    api_key: str, appliance_data_url: str, label_data_url: str | None = None
 ) -> dict[str, Any]:
     if not api_key:
         raise RuntimeError("No OpenAI API key provided.")
@@ -120,18 +132,19 @@ def analyze_with_openai(
     client = OpenAI(api_key=api_key)
     model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
 
+    content: list[dict[str, Any]] = [
+        {
+            "type": "text",
+            "text": ANALYZE_PROMPT if label_data_url else ANALYZE_APPLIANCE_ONLY_PROMPT,
+        },
+        {"type": "image_url", "image_url": {"url": appliance_data_url}},
+    ]
+    if label_data_url:
+        content.append({"type": "image_url", "image_url": {"url": label_data_url}})
+
     response = client.chat.completions.create(
         model=model,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": ANALYZE_PROMPT},
-                    {"type": "image_url", "image_url": {"url": appliance_data_url}},
-                    {"type": "image_url", "image_url": {"url": label_data_url}},
-                ],
-            }
-        ],
+        messages=[{"role": "user", "content": content}],
         response_format={"type": "json_object"},
         max_tokens=500,
     )
@@ -337,8 +350,8 @@ class Handler(BaseHTTPRequestHandler):
 
         appliance = body.get("appliancePhotoDataUrl") or body.get("appliance_photo")
         label = body.get("labelPhotoDataUrl") or body.get("label_photo")
-        if not appliance or not label:
-            self._json(400, {"error": "Both appliancePhotoDataUrl and labelPhotoDataUrl are required"})
+        if not appliance:
+            self._json(400, {"error": "appliancePhotoDataUrl is required"})
             return
 
         api_key = resolve_api_key(self)
@@ -358,7 +371,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         try:
-            result = analyze_with_openai(api_key, str(appliance), str(label))
+            result = analyze_with_openai(api_key, str(appliance), str(label) if label else None)
             self._json(200, result)
         except Exception as exc:
             print(f"Analyze error: {exc}", file=sys.stderr)

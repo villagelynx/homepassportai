@@ -13,6 +13,18 @@ Return JSON only with these keys:
 
 Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence.`;
 
+const ANALYZE_APPLIANCE_ONLY_PROMPT = `You analyze a photo for a home appliance inventory app.
+
+Image 1: the whole appliance.
+
+Return JSON only with these keys:
+- appliance_type: short type (e.g. Dishwasher, Refrigerator, Range)
+- brand: manufacturer brand if visible on the appliance, else empty string
+- model_number: empty string (no label photo provided)
+- serial_number: empty string (no label photo provided)
+- confidence: "high", "medium", or "low" based on how clearly you can identify type and brand
+- nickname: short friendly label like "KitchenAid dishwasher" combining brand + type`;
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, X-OpenAI-Api-Key",
@@ -57,8 +69,8 @@ export async function handler(event) {
 
     const appliance = body.appliancePhotoDataUrl || body.appliance_photo;
     const label = body.labelPhotoDataUrl || body.label_photo;
-    if (!appliance || !label) {
-      return respond(400, { error: "Both appliancePhotoDataUrl and labelPhotoDataUrl are required" });
+    if (!appliance) {
+      return respond(400, { error: "appliancePhotoDataUrl is required" });
     }
 
     const apiKey = (
@@ -80,6 +92,14 @@ export async function handler(event) {
       });
     }
 
+    const content = [
+      { type: "text", text: label ? ANALYZE_PROMPT : ANALYZE_APPLIANCE_ONLY_PROMPT },
+      { type: "image_url", image_url: { url: appliance } },
+    ];
+    if (label) {
+      content.push({ type: "image_url", image_url: { url: label } });
+    }
+
     const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -91,11 +111,7 @@ export async function handler(event) {
         messages: [
           {
             role: "user",
-            content: [
-              { type: "text", text: ANALYZE_PROMPT },
-              { type: "image_url", image_url: { url: appliance } },
-              { type: "image_url", image_url: { url: label } },
-            ],
+            content,
           },
         ],
         response_format: { type: "json_object" },

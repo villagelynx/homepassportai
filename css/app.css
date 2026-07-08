@@ -972,6 +972,21 @@ body {
   text-align: center;
 }
 
+.detail-label-capture {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.detail-label-capture .capture-card {
+  margin-top: 0.65rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
 .detail-manuals {
   display: flex;
   flex-direction: column;

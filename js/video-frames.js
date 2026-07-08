@@ -5,6 +5,24 @@
 
 export const ROOM_SCAN_MAX_SECONDS = 60;
 export const ROOM_SCAN_FRAME_COUNT = 8;
+export const LABEL_VIDEO_MAX_SECONDS = 30;
+export const LABEL_VIDEO_FRAME_COUNT = 3;
+
+/**
+ * Pull one still from a short label-tag video (middle of a few sampled frames).
+ * @param {File | Blob} videoFile
+ * @returns {Promise<string>} JPEG data URL
+ */
+export async function extractLabelFrameFromVideo(videoFile) {
+  const { frames } = await extractVideoFrames(videoFile, {
+    maxSeconds: LABEL_VIDEO_MAX_SECONDS,
+    frameCount: LABEL_VIDEO_FRAME_COUNT,
+    maxEdge: 960,
+    quality: 0.72,
+  });
+  if (!frames.length) throw new Error("Could not extract a frame from video");
+  return frames[Math.floor(frames.length / 2)];
+}
 
 /**
  * @param {File | Blob} videoFile
