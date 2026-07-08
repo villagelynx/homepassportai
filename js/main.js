@@ -7,10 +7,13 @@ import {
   getUserEmail,
   initAuth,
   isSignedIn,
+  sendPasswordReset,
   setAuthListener,
+  setRecoveryListener,
   signIn,
   signOut,
   signUp,
+  updateUserPassword,
 } from "./auth.js";
 import { analyzeAppliancePhotos, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
@@ -32,6 +35,7 @@ import {
 const views = {
   home: document.getElementById("view-home"),
   auth: document.getElementById("view-auth"),
+  updatePassword: document.getElementById("view-update-password"),
   scan1: document.getElementById("view-scan-1"),
   scan2: document.getElementById("view-scan-2"),
   scan3: document.getElementById("view-scan-3"),
@@ -94,7 +98,12 @@ const els = {
   authPassword: document.getElementById("auth-password"),
   btnAuthSubmit: document.getElementById("btn-auth-submit"),
   btnAuthToggle: document.getElementById("btn-auth-toggle"),
+  btnAuthForgot: document.getElementById("btn-auth-forgot"),
   btnAuthOffline: document.getElementById("btn-auth-offline"),
+  updatePasswordForm: document.getElementById("update-password-form"),
+  newPassword: document.getElementById("new-password"),
+  confirmPassword: document.getElementById("confirm-password"),
+  btnUpdatePassword: document.getElementById("btn-update-password"),
   btnExportBackup: document.getElementById("btn-export-backup"),
   btnInsurancePdf: document.getElementById("btn-insurance-pdf"),
   btnRestoreBackup: document.getElementById("btn-restore-backup"),
@@ -125,6 +134,9 @@ function newRecordId() {
 
 if (els.buildTag) els.buildTag.textContent = `Phase A · build ${APP_VERSION}`;
 
+const arrivedViaPasswordReset =
+  typeof location !== "undefined" && /(?:[#&?])type=recovery(?:&|$)/.test(location.hash + location.search);
+
 void boot();
 
 document.documentElement.dataset.hpReady = "pending";
@@ -147,6 +159,7 @@ async function boot() {
 
     if (isSupabaseConfigured()) {
       try {
+        setRecoveryListener(() => showView("updatePassword"));
         await initAuth();
         setAuthListener(() => {
           void onAuthChanged();
@@ -156,6 +169,11 @@ async function boot() {
         toast(err instanceof Error ? err.message : "Could not connect to cloud");
         allowOfflineUse = true;
       }
+    }
+
+    if (arrivedViaPasswordReset && isSupabaseConfigured()) {
+      showView("updatePassword");
+      return;
     }
 
     await enterApp();
@@ -269,10 +287,30 @@ function init() {
     void handleAuthSubmit();
   });
   els.btnAuthToggle?.addEventListener("click", () => toggleAuthMode());
+  els.btnAuthForgot?.addEventListener("click", () => void handleForgotPassword());
+  els.updatePasswordForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void handleUpdatePassword();
+  });
   els.btnAuthOffline?.addEventListener("click", () => {
     allowOfflineUse = true;
     void enterApp();
   });
+
+  for (const toggle of document.querySelectorAll("[data-toggle-password]")) {
+    toggle.addEventListener("click", () => {
+      const targetId = toggle.getAttribute("data-toggle-password");
+      const input = targetId ? document.getElementById(targetId) : null;
+      if (!(input instanceof HTMLInputElement)) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      toggle.classList.toggle("is-visible", show);
+      toggle.setAttribute("aria-pressed", String(show));
+      const label = toggle.getAttribute("aria-label") || "";
+      if (label.startsWith("Show")) toggle.setAttribute("aria-label", label.replace("Show", "Hide"));
+      else if (label.startsWith("Hide")) toggle.setAttribute("aria-label", label.replace("Hide", "Show"));
+    });
+  }
   els.btnExportBackup?.addEventListener("click", () => exportBackup());
   els.btnInsurancePdf?.addEventListener("click", () => void exportInsuranceReport());
   els.btnRestoreBackup?.addEventListener("click", () => void restoreInventory());
@@ -345,6 +383,66 @@ async function handleAuthSubmit() {
     if (submit instanceof HTMLButtonElement) {
       submit.disabled = false;
       submit.textContent = authMode === "signin" ? "Sign in" : "Create account";
+    }
+  }
+}
+
+async function handleForgotPassword() {
+  const email = els.authEmail?.value.trim() ?? "";
+  if (!email) {
+    toast("Enter your email above, then tap Forgot password");
+    els.authEmail?.focus();
+    return;
+  }
+
+  const btn = els.btnAuthForgot;
+  if (btn instanceof HTMLButtonElement) btn.disabled = true;
+
+  try {
+    await sendPasswordReset(email);
+    toast("Password reset email sent — check your inbox");
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not send reset email");
+  } finally {
+    if (btn instanceof HTMLButtonElement) btn.disabled = false;
+  }
+}
+
+async function handleUpdatePassword() {
+  const password = els.newPassword?.value ?? "";
+  const confirm = els.confirmPassword?.value ?? "";
+
+  if (password.length < 6) {
+    toast("Password must be at least 6 characters");
+    return;
+  }
+  if (password !== confirm) {
+    toast("Passwords do not match");
+    return;
+  }
+
+  const btn = els.btnUpdatePassword;
+  if (btn instanceof HTMLButtonElement) {
+    btn.disabled = true;
+    btn.textContent = "Updating…";
+  }
+
+  try {
+    await updateUserPassword(password);
+    if (els.newPassword) els.newPassword.value = "";
+    if (els.confirmPassword) els.confirmPassword.value = "";
+    if (typeof history !== "undefined" && history.replaceState) {
+      history.replaceState(null, "", location.pathname + location.search.replace(/[?&]type=recovery/, ""));
+    }
+    toast("Password updated — you're signed in");
+    allowOfflineUse = false;
+    await enterApp();
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not update password");
+  } finally {
+    if (btn instanceof HTMLButtonElement) {
+      btn.disabled = false;
+      btn.textContent = "Update password";
     }
   }
 }
@@ -752,8 +850,16 @@ async function restoreInventory() {
     toast(`Restored ${count} appliance(s)`);
     return;
   }
+
+  if (isLocalNetworkDev()) {
+    toast(
+      "Nothing found here. Your items may be saved under a different port — try http://YOUR_MAC_IP:8080, then Settings → Export appliances (JSON)."
+    );
+    return;
+  }
+
   toast(
-    "No data at this address. Try http://YOUR_MAC_IP:8765 in Safari, export backup, then import here."
+    "No saved data on this device. On your Mac app, open Settings → Export appliances (JSON), then use Import backup file here."
   );
 }
 

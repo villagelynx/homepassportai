@@ -444,6 +444,68 @@ body {
   outline-offset: 1px;
 }
 
+.password-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field .input {
+  padding-right: 3rem;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 8px;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.password-toggle:hover {
+  color: var(--text);
+}
+
+.password-toggle svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: block;
+}
+
+.password-toggle .icon-eye-off {
+  display: none;
+}
+
+.password-toggle.is-visible {
+  color: var(--accent);
+}
+
+.password-toggle.is-visible .icon-eye {
+  display: none;
+}
+
+.password-toggle.is-visible .icon-eye-off {
+  display: block;
+}
+
+.auth-forgot {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
 .confidence-note {
   margin: 0;
   font-size: 0.82rem;
