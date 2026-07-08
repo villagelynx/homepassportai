@@ -534,6 +534,58 @@ body {
   letter-spacing: 0.04em;
 }
 
+.field--switch {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.field--switch span {
+  flex: 1;
+}
+
+.switch-input {
+  width: 2.75rem;
+  height: 1.55rem;
+  margin: 0;
+  appearance: none;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.switch-input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.15s ease;
+}
+
+.switch-input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch-input:checked::after {
+  transform: translateX(1.15rem);
+  background: #fff;
+}
+
+.switch-input:focus-visible {
+  outline: 2px solid rgba(59, 158, 255, 0.5);
+  outline-offset: 2px;
+}
+
 .input {
   width: 100%;
   padding: 0.65rem 0.75rem;
@@ -637,6 +689,54 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+
+.room-filter-chips {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding: 0.55rem 1rem 0.15rem;
+  margin: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.room-filter-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.room-filter-chip {
+  flex: 0 0 auto;
+  padding: 0.42rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.room-filter-chip:hover {
+  border-color: var(--accent);
+}
+
+.room-filter-chip--selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.room-filter-chip--selected:hover {
+  border-color: var(--accent);
+}
+
+.room-filter-chip:focus-visible {
+  outline: 2px solid rgba(59, 158, 255, 0.5);
+  outline-offset: 2px;
 }
 
 .category-heading {

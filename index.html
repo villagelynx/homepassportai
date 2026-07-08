@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=31" />
+    <link rel="stylesheet" href="./css/app.css?v=32" />
   </head>
   <body>
     <div id="app" class="app">
@@ -73,6 +73,7 @@
 
       <!-- Home: appliance list -->
       <main id="view-home" class="view view--active">
+        <div id="room-filter-chips" class="room-filter-chips" role="tablist" aria-label="Filter by room" hidden></div>
         <section class="hero">
           <h2>Your home inventory</h2>
           <p>Scan appliances in a few quick photos — whole unit, model label, and an optional receipt.</p>
@@ -489,6 +490,11 @@
               <option value="dark">Dark</option>
             </select>
           </label>
+          <label class="field field--switch">
+            <span>Room filter chips</span>
+            <input type="checkbox" id="field-room-chips" class="switch-input" checked />
+          </label>
+          <p class="settings-note">Show room filter pills on the home inventory list.</p>
           <p class="settings-note">
             Your key is stored only on this device and sent to the HomePassportAI server when you analyze
             photos. You pay OpenAI directly for usage.
@@ -683,6 +689,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=37"></script>
+    <script type="module" src="./js/main.js?v=39"></script>
   </body>
 </html>

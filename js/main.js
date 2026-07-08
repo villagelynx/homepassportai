@@ -19,6 +19,7 @@ import { analyzeAppliancePhotos, analyzeRoomFrames, checkAnalyzeServer, readFile
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
+import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
 import {
   dismissInstallPrompt,
   installHintMode,
@@ -72,6 +73,7 @@ const ROOM_ORDER = [
 const els = {
   buildTag: document.getElementById("build-tag"),
   applianceList: document.getElementById("appliance-list"),
+  roomFilterChips: document.getElementById("room-filter-chips"),
   emptyState: document.getElementById("empty-state"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
   installBanner: document.getElementById("install-banner"),
@@ -138,6 +140,7 @@ const els = {
   settingsForm: document.getElementById("settings-form"),
   fieldApiKey: document.getElementById("field-api-key"),
   fieldTheme: document.getElementById("field-theme"),
+  fieldRoomChips: document.getElementById("field-room-chips"),
   apiKeyStatus: document.getElementById("api-key-status"),
   btnClearApiKey: document.getElementById("btn-clear-api-key"),
   settingsAccount: document.getElementById("settings-account"),
@@ -202,6 +205,8 @@ let detailId = null;
 let toastTimer = 0;
 let authMode = "signin";
 let allowOfflineUse = false;
+/** @type {"all" | string} */
+let homeRoomFilter = "all";
 
 /** Secure contexts only (HTTPS / localhost). HTTP on iPhone needs a fallback. */
 function newRecordId() {
@@ -384,6 +389,13 @@ function init() {
       saveThemePreference(value);
       toast(value === "light" ? "Daylight mode on" : value === "dark" ? "Dark mode on" : "Using system appearance");
     }
+  });
+  els.fieldRoomChips?.addEventListener("change", () => {
+    const enabled = els.fieldRoomChips?.checked ?? true;
+    saveRoomChipsEnabled(enabled);
+    if (!enabled) homeRoomFilter = "all";
+    toast(enabled ? "Room filter chips on" : "Room filter chips off");
+    void renderHome();
   });
   els.btnClearApiKey?.addEventListener("click", () => clearSettingsApiKey());
   els.btnSignOut?.addEventListener("click", () => void handleSignOut());
@@ -1290,6 +1302,7 @@ async function saveRecord() {
 function renderSettings() {
   const key = loadApiKey();
   if (els.fieldTheme) els.fieldTheme.value = loadThemePreference();
+  if (els.fieldRoomChips) els.fieldRoomChips.checked = loadRoomChipsEnabled();
   if (els.apiKeyStatus) {
     if (key) {
       els.apiKeyStatus.hidden = false;
@@ -1432,14 +1445,38 @@ async function renderHome() {
   }
   if (!els.applianceList || !els.emptyState) return;
 
+  const chipsEnabled = loadRoomChipsEnabled();
+  const grouped = groupByRoom(list);
+
+  if (els.roomFilterChips) {
+    els.roomFilterChips.hidden = !chipsEnabled || list.length === 0;
+  }
+
+  if (chipsEnabled && list.length > 0) {
+    if (homeRoomFilter !== "all" && !grouped.some(([room]) => room === homeRoomFilter)) {
+      homeRoomFilter = "all";
+    }
+    renderRoomFilterChips(grouped, list.length);
+  } else {
+    homeRoomFilter = "all";
+  }
+
   els.applianceList.innerHTML = "";
   els.emptyState.hidden = list.length > 0;
 
-  for (const [room, items] of groupByRoom(list)) {
-    const heading = document.createElement("h3");
-    heading.className = "category-heading";
-    heading.textContent = roomDisplayName(room);
-    els.applianceList.append(heading);
+  const showHeadings = !chipsEnabled || homeRoomFilter === "all";
+  const entries =
+    chipsEnabled && homeRoomFilter !== "all"
+      ? grouped.filter(([room]) => room === homeRoomFilter)
+      : grouped;
+
+  for (const [room, items] of entries) {
+    if (showHeadings) {
+      const heading = document.createElement("h3");
+      heading.className = "category-heading";
+      heading.textContent = roomDisplayName(room);
+      els.applianceList.append(heading);
+    }
 
     for (const item of items) {
       const btn = document.createElement("button");
@@ -1467,6 +1504,39 @@ async function renderHome() {
       els.applianceList.append(btn);
     }
   }
+}
+
+/** @param {[string, import("./storage.js").ApplianceRecord[]][]} grouped */
+function renderRoomFilterChips(grouped, totalCount) {
+  const container = els.roomFilterChips;
+  if (!container) return;
+
+  container.innerHTML = "";
+  container.append(
+    makeRoomFilterChip("all", `All · ${totalCount}`, homeRoomFilter === "all"),
+  );
+
+  for (const [room, items] of grouped) {
+    container.append(
+      makeRoomFilterChip(room, `${roomDisplayName(room)} · ${items.length}`, homeRoomFilter === room),
+    );
+  }
+}
+
+/** @param {"all" | string} roomId */
+function makeRoomFilterChip(roomId, label, selected) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = `room-filter-chip${selected ? " room-filter-chip--selected" : ""}`;
+  btn.setAttribute("role", "tab");
+  btn.setAttribute("aria-selected", String(selected));
+  btn.textContent = label;
+  btn.addEventListener("click", () => {
+    if (homeRoomFilter === roomId) return;
+    homeRoomFilter = roomId;
+    void renderHome();
+  });
+  return btn;
 }
 
 /** @param {import("./storage.js").ApplianceRecord[]} appliances */
