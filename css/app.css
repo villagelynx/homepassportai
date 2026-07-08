@@ -247,6 +247,79 @@ body {
   text-decoration: underline;
 }
 
+.install-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+  padding: 0.85rem 2.25rem 0.85rem 0.85rem;
+  border-radius: var(--radius);
+  background: var(--accent-dim);
+  border: 1px solid var(--hint-border);
+}
+
+.install-banner[hidden] {
+  display: none !important;
+}
+
+.install-banner__icon img {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 14px;
+  display: block;
+  box-shadow: 0 4px 14px var(--accent-shadow);
+}
+
+.install-banner__body strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.install-banner__body p {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.install-banner__steps {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.install-banner__steps li {
+  margin-bottom: 0.2rem;
+}
+
+.install-banner__share {
+  display: inline-block;
+  font-weight: 700;
+}
+
+.install-banner__close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.55rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.install-banner__close:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .settings-account {
   margin-top: 1rem;
   padding-top: 1rem;

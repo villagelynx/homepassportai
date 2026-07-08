@@ -19,6 +19,7 @@ import { analyzeAppliancePhotos, checkAnalyzeServer, readFileAsDataUrl } from ".
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
+import { dismissInstallPrompt, shouldShowInstallPrompt } from "./install-prompt.js";
 import { generateInsurancePdf } from "./insurance-report.js";
 import {
   addAppliance,
@@ -51,6 +52,8 @@ const els = {
   applianceList: document.getElementById("appliance-list"),
   emptyState: document.getElementById("empty-state"),
   syncBanner: document.getElementById("sync-banner"),
+  installBanner: document.getElementById("install-banner"),
+  btnDismissInstall: document.getElementById("btn-dismiss-install"),
   btnAdd: document.getElementById("btn-add-appliance"),
   inputAppliance: document.getElementById("input-appliance-photo"),
   inputLabel: document.getElementById("input-label-photo"),
@@ -224,6 +227,7 @@ async function enterApp() {
 
   await renderHome();
   updateSyncBanner();
+  updateInstallBanner();
   showView("home");
 }
 
@@ -233,6 +237,7 @@ async function onAuthChanged() {
     if (migrated > 0) toast(`Synced ${migrated} appliance(s) to the cloud`);
     await renderHome();
     updateSyncBanner();
+    updateInstallBanner();
   }
 }
 
@@ -316,6 +321,10 @@ function init() {
   els.btnRestoreBackup?.addEventListener("click", () => void restoreInventory());
   els.btnRestoreInventory?.addEventListener("click", () => void restoreInventory());
   els.inputImportBackup?.addEventListener("change", () => void importBackupFile());
+  els.btnDismissInstall?.addEventListener("click", () => {
+    dismissInstallPrompt();
+    updateInstallBanner();
+  });
 
   for (const btn of document.querySelectorAll("[data-nav]")) {
     btn.addEventListener("click", () => {
@@ -472,6 +481,11 @@ function updateSyncBanner() {
   els.syncBanner.innerHTML =
     'Offline on this device — <button type="button" class="linkish" id="banner-sign-in">Sign in to sync</button>';
   els.syncBanner.querySelector("#banner-sign-in")?.addEventListener("click", () => showView("auth"));
+}
+
+function updateInstallBanner() {
+  if (!els.installBanner) return;
+  els.installBanner.hidden = !shouldShowInstallPrompt();
 }
 
 function requireCloudSave() {
@@ -1256,6 +1270,7 @@ async function removeDetail() {
   detailId = null;
   await renderHome();
   updateSyncBanner();
+  updateInstallBanner();
   showView("home");
   toast("Appliance removed");
 }
