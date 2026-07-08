@@ -1,0 +1,10 @@
+{
+  "name": "HomePassportAI",
+  "short_name": "HomePassportAI",
+  "description": "Scan appliances — smart inventory for your home.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c1222",
+  "theme_color": "#1d6fd8",
+  "icons": []
+}

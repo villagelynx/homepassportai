@@ -1,0 +1,180 @@
+import { getSession } from "./auth.js";
+import { getSupabase } from "./supabase-client.js";
+
+const BUCKET = "appliance-photos";
+
+/**
+ * @typedef {import("./storage.js").ApplianceRecord} ApplianceRecord
+ */
+
+/** @param {string} dataUrl */
+function dataUrlToBlob(dataUrl) {
+  const [meta, b64] = dataUrl.split(",");
+  const mime = /data:(.*?);/.exec(meta)?.[1] || "image/jpeg";
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type: mime });
+}
+
+/** @param {string | null | undefined} path */
+async function signedPhotoUrl(path) {
+  if (!path) return null;
+  const supabase = await getSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+/** @param {object} row */
+async function rowToRecord(row) {
+  const [appliancePhotoDataUrl, labelPhotoDataUrl, receiptPhotoDataUrl] = await Promise.all([
+    signedPhotoUrl(row.appliance_photo_path),
+    signedPhotoUrl(row.label_photo_path),
+    signedPhotoUrl(row.receipt_photo_path),
+  ]);
+
+  return /** @type {ApplianceRecord} */ ({
+    id: row.id,
+    nickname: row.nickname || "Appliance",
+    room: row.room || "Other",
+    applianceType: row.appliance_type || "",
+    brand: row.brand || "",
+    modelNumber: row.model_number || "",
+    serialNumber: row.serial_number || "",
+    appliancePhotoDataUrl: appliancePhotoDataUrl || "",
+    labelPhotoDataUrl: labelPhotoDataUrl || "",
+    receiptPhotoDataUrl: receiptPhotoDataUrl,
+    confidence: row.confidence || "",
+    scannedAt: row.scanned_at || new Date().toISOString(),
+    repairCompany: row.repair_company || null,
+    _photoPaths: {
+      appliance: row.appliance_photo_path,
+      label: row.label_photo_path,
+      receipt: row.receipt_photo_path,
+    },
+  });
+}
+
+/** @param {string} userId @param {string} applianceId @param {string} name @param {string} dataUrl */
+async function uploadPhoto(userId, applianceId, name, dataUrl) {
+  const supabase = await getSupabase();
+  if (!supabase) throw new Error("Cloud sync is not configured.");
+  const path = `${userId}/${applianceId}/${name}.jpg`;
+  const blob = dataUrlToBlob(dataUrl);
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+    upsert: true,
+    contentType: "image/jpeg",
+  });
+  if (error) throw error;
+  return path;
+}
+
+/** @returns {Promise<ApplianceRecord[]>} */
+export async function loadCloudAppliances() {
+  const supabase = await getSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("appliances")
+    .select("*")
+    .order("scanned_at", { ascending: false });
+
+  if (error) throw error;
+  return Promise.all((data || []).map((row) => rowToRecord(row)));
+}
+
+/** @param {string} id @returns {Promise<ApplianceRecord | undefined>} */
+export async function getCloudAppliance(id) {
+  const supabase = await getSupabase();
+  if (!supabase) return undefined;
+
+  const { data, error } = await supabase.from("appliances").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  if (!data) return undefined;
+  return rowToRecord(data);
+}
+
+/** @param {ApplianceRecord} record */
+export async function addCloudAppliance(record) {
+  const supabase = await getSupabase();
+  const session = getSession();
+  const userId = session?.user?.id;
+  if (!supabase || !userId) throw new Error("Sign in to save to the cloud.");
+
+  const appliancePath = await uploadPhoto(userId, record.id, "appliance", record.appliancePhotoDataUrl);
+  const labelPath = await uploadPhoto(userId, record.id, "label", record.labelPhotoDataUrl);
+  const receiptPath = record.receiptPhotoDataUrl
+    ? await uploadPhoto(userId, record.id, "receipt", record.receiptPhotoDataUrl)
+    : null;
+
+  const { error } = await supabase.from("appliances").insert({
+    id: record.id,
+    user_id: userId,
+    nickname: record.nickname,
+    room: record.room,
+    appliance_type: record.applianceType,
+    brand: record.brand,
+    model_number: record.modelNumber,
+    serial_number: record.serialNumber,
+    appliance_photo_path: appliancePath,
+    label_photo_path: labelPath,
+    receipt_photo_path: receiptPath,
+    confidence: record.confidence,
+    repair_company: record.repairCompany,
+    scanned_at: record.scannedAt,
+  });
+
+  if (error) throw error;
+  return getCloudAppliance(record.id);
+}
+
+/** @param {string} id @param {Partial<ApplianceRecord>} updates */
+export async function updateCloudAppliance(id, updates) {
+  const supabase = await getSupabase();
+  if (!supabase) throw new Error("Cloud sync is not configured.");
+
+  const payload = {};
+  if (updates.nickname != null) payload.nickname = updates.nickname;
+  if (updates.room != null) payload.room = updates.room;
+  if (updates.applianceType != null) payload.appliance_type = updates.applianceType;
+  if (updates.brand != null) payload.brand = updates.brand;
+  if (updates.modelNumber != null) payload.model_number = updates.modelNumber;
+  if (updates.serialNumber != null) payload.serial_number = updates.serialNumber;
+  if (updates.confidence != null) payload.confidence = updates.confidence;
+  if (updates.repairCompany !== undefined) payload.repair_company = updates.repairCompany;
+
+  const { error } = await supabase.from("appliances").update(payload).eq("id", id);
+  if (error) throw error;
+  return getCloudAppliance(id);
+}
+
+/** @param {string} id */
+export async function deleteCloudAppliance(id) {
+  const supabase = await getSupabase();
+  const session = getSession();
+  const userId = session?.user?.id;
+  if (!supabase || !userId) throw new Error("Sign in to delete from the cloud.");
+
+  const existing = await getCloudAppliance(id);
+  const paths = [
+    existing?._photoPaths?.appliance,
+    existing?._photoPaths?.label,
+    existing?._photoPaths?.receipt,
+  ].filter(Boolean);
+
+  if (paths.length) {
+    await supabase.storage.from(BUCKET).remove(paths);
+  }
+
+  const { error } = await supabase.from("appliances").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** @param {ApplianceRecord[]} localRecords */
+export async function migrateLocalToCloud(localRecords) {
+  for (const record of localRecords) {
+    await addCloudAppliance(record);
+  }
+}

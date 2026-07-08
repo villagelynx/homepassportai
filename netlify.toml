@@ -1,0 +1,31 @@
+[build]
+  command = "npm run build"
+  publish = "."
+
+# Custom domain: homepassportai.com (configure in Netlify Domain management)
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/analyze"
+  to = "/.netlify/functions/analyze"
+  status = 200
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type, X-OpenAI-Api-Key"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"

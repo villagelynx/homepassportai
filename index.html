@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="HomePassportAI — scan appliances, save model numbers, and build your smart home inventory."
+    />
+    <meta name="theme-color" content="#1d6fd8" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem("homepassport-ai:theme") || "system";
+          if (theme === "light" || theme === "dark") {
+            document.documentElement.dataset.theme = theme;
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="HomePassportAI" />
+    <title>HomePassportAI</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="canonical" href="https://homepassportai.com/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/app.css?v=20" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="topbar">
+        <div class="topbar__brand">
+          <button type="button" class="topbar__logo" id="btn-home" data-nav="home" aria-label="Home">
+            <svg class="topbar__logo-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M4 10.5 12 4l8 6.5V20a1.5 1.5 0 0 1-1.5 1.5H15v-6.5H9V21.5H5.5A1.5 1.5 0 0 1 4 20v-9.5Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.25"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </button>
+          <div>
+            <h1 class="topbar__title">HomePassportAI</h1>
+            <p class="topbar__tag" id="build-tag">Phase A · build …</p>
+          </div>
+        </div>
+        <button type="button" class="topbar__settings" id="btn-settings" data-nav="settings" aria-label="Settings">
+          ⚙
+        </button>
+      </header>
+
+      <!-- Home: appliance list -->
+      <main id="view-home" class="view view--active">
+        <section class="hero">
+          <h2>Your home inventory</h2>
+          <p>Scan appliances in a few quick photos — whole unit, model label, and an optional receipt.</p>
+          <p id="sync-banner" class="sync-banner" hidden></p>
+        </section>
+        <div id="appliance-list" class="appliance-list" role="list"></div>
+        <p id="empty-state" class="empty-state" hidden>
+          No appliances at this address yet.
+          <button type="button" class="linkish" id="btn-restore-inventory">Restore saved data</button>
+        </p>
+        <button type="button" class="fab" id="btn-add-appliance" aria-label="Add appliance or item">
+          + Add appliance or item
+        </button>
+      </main>
+
+      <!-- Auth -->
+      <main id="view-auth" class="view" hidden>
+        <section class="hero">
+          <h2>Sign in to sync</h2>
+          <p>Save your inventory in the cloud and open it on any phone or computer.</p>
+        </section>
+        <form id="auth-form" class="form">
+          <label class="field">
+            <span>Email</span>
+            <input type="email" id="auth-email" class="input" autocomplete="email" required />
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input
+              type="password"
+              id="auth-password"
+              class="input"
+              autocomplete="current-password"
+              minlength="6"
+              required
+            />
+          </label>
+          <button type="submit" class="btn btn--primary btn--block" id="btn-auth-submit">Sign in</button>
+          <button type="button" class="btn btn--secondary btn--block" id="btn-auth-toggle">Create an account</button>
+          <button type="button" class="btn btn--ghost btn--block" id="btn-auth-offline">
+            Continue offline (this device only)
+          </button>
+        </form>
+      </main>
+
+      <!-- Step 1: whole appliance photo -->
+      <main id="view-scan-1" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
+          <p class="step-header__label">Step 1 of 3</p>
+          <h2>Appliance photo</h2>
+          <p class="step-header__lede">Capture the whole appliance so we can identify type and brand.</p>
+        </div>
+        <div class="capture-card">
+          <div id="preview-appliance" class="capture-card__preview capture-card__preview--empty">
+            <span>No photo yet</span>
+          </div>
+          <label class="btn btn--primary btn--block capture-btn" id="label-appliance-photo">
+            <input type="file" id="input-appliance-photo" accept="image/*" capture="environment" hidden />
+            Take appliance photo
+          </label>
+          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-appliance" hidden>
+            Clear &amp; retake
+          </button>
+        </div>
+        <button type="button" class="btn btn--primary btn--block" id="btn-to-step-2" disabled>Continue</button>
+      </main>
+
+      <!-- Step 2: label photo -->
+      <main id="view-scan-2" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="scan-1">← Back</button>
+          <p class="step-header__label">Step 2 of 3</p>
+          <h2>Model / serial label</h2>
+          <p class="step-header__lede">Take a close-up of the manufacturer’s sticker or rating plate.</p>
+        </div>
+        <aside id="label-hint" class="hint-card" role="status">
+          <strong>Tip</strong>
+          <p id="label-hint-text">After your appliance photo, we’ll show where the label is usually located.</p>
+        </aside>
+        <div class="capture-card">
+          <div id="preview-label" class="capture-card__preview capture-card__preview--empty">
+            <span>No photo yet</span>
+          </div>
+          <label class="btn btn--primary btn--block capture-btn" id="label-label-photo">
+            <input type="file" id="input-label-photo" accept="image/*" capture="environment" hidden />
+            Take label photo
+          </label>
+          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-label" hidden>
+            Clear &amp; retake
+          </button>
+        </div>
+        <button type="button" class="btn btn--primary btn--block" id="btn-to-step-3" disabled>Continue</button>
+      </main>
+
+      <!-- Step 3: receipt photo (optional) -->
+      <main id="view-scan-3" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="scan-2">← Back</button>
+          <p class="step-header__label">Step 3 of 3 · optional</p>
+          <h2>Purchase receipt</h2>
+          <p class="step-header__lede">Snap the receipt if you have it — handy for warranty and repair. You can skip this step.</p>
+        </div>
+        <div class="capture-card">
+          <div id="preview-receipt" class="capture-card__preview capture-card__preview--empty">
+            <span>No photo yet</span>
+          </div>
+          <label class="btn btn--primary btn--block capture-btn" id="label-receipt-photo">
+            <input type="file" id="input-receipt-photo" accept="image/*" capture="environment" hidden />
+            Take receipt photo
+          </label>
+          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-receipt" hidden>
+            Clear &amp; retake
+          </button>
+        </div>
+        <button type="button" class="btn btn--primary btn--block" id="btn-analyze">Analyze photos</button>
+        <button type="button" class="btn btn--ghost btn--block" id="btn-skip-receipt">Skip receipt</button>
+      </main>
+
+      <!-- Review & save -->
+      <main id="view-review" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="scan-3">← Back</button>
+          <h2>Confirm details</h2>
+          <p class="step-header__lede">Check the extracted info. Edit anything that looks wrong.</p>
+        </div>
+        <div id="review-photos" class="review-photos"></div>
+        <button type="button" class="btn btn--secondary btn--block" id="btn-retake-both">
+          Retake all photos
+        </button>
+        <form id="review-form" class="form">
+          <label class="field">
+            <span>Nickname</span>
+            <input type="text" id="field-nickname" class="input" placeholder="Kitchen dishwasher" />
+          </label>
+          <label class="field">
+            <span>Room</span>
+            <select id="field-room" class="input">
+              <option value="Kitchen">Kitchen</option>
+              <option value="Laundry">Laundry</option>
+              <option value="Garage">Garage</option>
+              <option value="Basement">Basement</option>
+              <option value="Utility">Utility / mechanical</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Appliance type</span>
+            <input type="text" id="field-type" class="input" placeholder="Dishwasher" />
+          </label>
+          <label class="field">
+            <span>Brand</span>
+            <input type="text" id="field-brand" class="input" placeholder="KitchenAid" />
+          </label>
+          <label class="field">
+            <span>Model number</span>
+            <input type="text" id="field-model" class="input" placeholder="KDTE334GPS0" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Serial number</span>
+            <input type="text" id="field-serial" class="input" placeholder="Optional" autocomplete="off" />
+          </label>
+          <p id="confidence-note" class="confidence-note" hidden></p>
+          <button type="submit" class="btn btn--primary btn--block">Save to HomePassportAI</button>
+        </form>
+      </main>
+
+      <!-- Settings -->
+      <main id="view-settings" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
+          <h2>Settings</h2>
+          <p class="step-header__lede">Add your own OpenAI key for photo analysis (BYOK).</p>
+        </div>
+        <form id="settings-form" class="form settings-form">
+          <label class="field">
+            <span>Appearance</span>
+            <select id="field-theme" class="input">
+              <option value="system">Match system (day / night)</option>
+              <option value="light">Daylight</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <p class="settings-note">
+            Your key is stored only on this device and sent to the HomePassportAI server when you analyze
+            photos. You pay OpenAI directly for usage.
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
+              >Get an API key</a
+            >
+          </p>
+          <p id="api-key-status" class="api-key-status" hidden></p>
+          <label class="field">
+            <span>OpenAI API key</span>
+            <input
+              type="password"
+              id="field-api-key"
+              class="input"
+              placeholder="sk-…"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+            />
+          </label>
+          <button type="submit" class="btn btn--primary btn--block">Save API key</button>
+          <button type="button" class="btn btn--ghost btn--block" id="btn-clear-api-key">Remove saved key</button>
+          <div id="settings-account" class="settings-account" hidden>
+            <h3 class="detail-section-title">Account</h3>
+            <p id="settings-email" class="settings-email"></p>
+            <button type="button" class="btn btn--secondary btn--block" id="btn-sign-out">Sign out</button>
+          </div>
+          <button type="button" class="btn btn--primary btn--block" id="btn-go-sign-in" hidden>Sign in to sync</button>
+          <div class="settings-account settings-backup">
+            <h3 class="detail-section-title">Insurance report</h3>
+            <p class="settings-note">
+              Download a PDF inventory with rooms, brands, model numbers, serials, and saved repair contractors for your insurer.
+            </p>
+            <button type="button" class="btn btn--secondary btn--block" id="btn-insurance-pdf">
+              Download insurance PDF
+            </button>
+          </div>
+          <div class="settings-account settings-backup">
+            <h3 class="detail-section-title">Backup</h3>
+            <p class="settings-note">Export a copy or import appliances from another port/device.</p>
+            <button type="button" class="btn btn--secondary btn--block" id="btn-restore-backup">
+              Restore saved data on this device
+            </button>
+            <button type="button" class="btn btn--secondary btn--block" id="btn-export-backup">
+              Export appliances (JSON)
+            </button>
+            <label class="btn btn--secondary btn--block capture-btn" id="label-import-backup">
+              <input type="file" id="input-import-backup" accept="application/json,.json" hidden />
+              Import backup file
+            </label>
+          </div>
+        </form>
+      </main>
+
+      <!-- Detail -->
+      <main id="view-detail" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Home</button>
+          <h2 id="detail-title">Appliance</h2>
+        </div>
+        <div id="detail-body" class="detail-body"></div>
+        <div id="detail-manuals" class="detail-manuals" hidden></div>
+        <div id="detail-repair" class="detail-repair"></div>
+        <button type="button" class="btn btn--danger btn--block" id="btn-delete-appliance">Remove appliance</button>
+      </main>
+    </div>
+
+    <div id="boot-error" class="boot-error" role="alert" hidden></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script>
+      (function () {
+        function showLoadError(message) {
+          var el = document.getElementById("boot-error");
+          if (!el) return;
+          el.hidden = false;
+          el.textContent = message;
+        }
+
+        window.__hpClearLoadError = function () {
+          var el = document.getElementById("boot-error");
+          if (!el) return;
+          el.hidden = true;
+          el.textContent = "";
+        };
+
+        window.addEventListener("error", function (event) {
+          if (!event.message) return;
+          showLoadError("App failed to load: " + event.message);
+        });
+
+        window.addEventListener("unhandledrejection", function (event) {
+          var reason = event.reason;
+          var message = reason && reason.message ? reason.message : String(reason);
+          showLoadError("App error: " + message);
+        });
+      })();
+    </script>
+    <script type="module" src="./js/main.js?v=26"></script>
+  </body>
+</html>
