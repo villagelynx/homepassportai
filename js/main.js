@@ -53,6 +53,7 @@ const views = {
   review: document.getElementById("view-review"),
   settings: document.getElementById("view-settings"),
   detail: document.getElementById("view-detail"),
+  editAppliance: document.getElementById("view-edit-appliance"),
 };
 
 const ROOM_ORDER = [
@@ -124,7 +125,16 @@ const els = {
   detailBody: document.getElementById("detail-body"),
   detailManuals: document.getElementById("detail-manuals"),
   detailRepair: document.getElementById("detail-repair"),
+  btnEdit: document.getElementById("btn-edit-appliance"),
   btnDelete: document.getElementById("btn-delete-appliance"),
+  editForm: document.getElementById("edit-appliance-form"),
+  btnEditBack: document.getElementById("btn-edit-back"),
+  editFieldNickname: document.getElementById("edit-field-nickname"),
+  editFieldRoom: document.getElementById("edit-field-room"),
+  editFieldType: document.getElementById("edit-field-type"),
+  editFieldBrand: document.getElementById("edit-field-brand"),
+  editFieldModel: document.getElementById("edit-field-model"),
+  editFieldSerial: document.getElementById("edit-field-serial"),
   settingsForm: document.getElementById("settings-form"),
   fieldApiKey: document.getElementById("field-api-key"),
   fieldTheme: document.getElementById("field-theme"),
@@ -355,6 +365,15 @@ function init() {
     void saveRecord();
   });
   els.btnDelete?.addEventListener("click", () => void removeDetail());
+  els.btnEdit?.addEventListener("click", () => void openEditAppliance());
+  els.btnEditBack?.addEventListener("click", () => {
+    if (detailId) void openDetail(detailId);
+    else showView("home");
+  });
+  els.editForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void saveEditAppliance();
+  });
   els.settingsForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     saveSettingsApiKey();
@@ -1525,6 +1544,64 @@ async function openDetail(id) {
   renderDetailManualLinks(item);
   renderDetailRepair(item);
   showView("detail");
+}
+
+async function openEditAppliance() {
+  if (!detailId) return;
+  const item = await getAppliance(detailId);
+  if (!item) return;
+
+  if (els.editFieldNickname) els.editFieldNickname.value = item.nickname || "";
+  if (els.editFieldRoom) els.editFieldRoom.value = item.room || "Other";
+  if (els.editFieldType) els.editFieldType.value = item.applianceType || "";
+  if (els.editFieldBrand) els.editFieldBrand.value = item.brand || "";
+  if (els.editFieldModel) els.editFieldModel.value = item.modelNumber || "";
+  if (els.editFieldSerial) els.editFieldSerial.value = item.serialNumber || "";
+
+  showView("editAppliance");
+}
+
+async function saveEditAppliance() {
+  if (!detailId) return;
+
+  const nickname = els.editFieldNickname?.value.trim() ?? "";
+  const room = els.editFieldRoom?.value || "Other";
+  const applianceType = els.editFieldType?.value.trim() ?? "";
+  const brand = els.editFieldBrand?.value.trim() ?? "";
+  const modelNumber = els.editFieldModel?.value.trim() ?? "";
+  const serialNumber = els.editFieldSerial?.value.trim() ?? "";
+
+  const submitBtn = els.editForm?.querySelector('button[type="submit"]');
+  if (submitBtn instanceof HTMLButtonElement) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+  }
+
+  try {
+    const defaultName =
+      [brand, applianceType].filter(Boolean).join(" ").trim() ||
+      (room !== "Other" ? `${room} item` : "Item");
+
+    await updateAppliance(detailId, {
+      nickname: nickname || defaultName,
+      room,
+      applianceType,
+      brand,
+      modelNumber,
+      serialNumber,
+    });
+
+    await renderHome();
+    await openDetail(detailId);
+    toast("Item updated");
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not save changes");
+  } finally {
+    if (submitBtn instanceof HTMLButtonElement) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Save changes";
+    }
+  }
 }
 
 function renderDetailManualLinks(item) {

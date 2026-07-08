@@ -600,7 +600,55 @@
         <div id="detail-body" class="detail-body"></div>
         <div id="detail-manuals" class="detail-manuals" hidden></div>
         <div id="detail-repair" class="detail-repair"></div>
+        <button type="button" class="btn btn--secondary btn--block" id="btn-edit-appliance">Edit item</button>
         <button type="button" class="btn btn--danger btn--block" id="btn-delete-appliance">Remove appliance</button>
+      </main>
+
+      <!-- Edit saved item -->
+      <main id="view-edit-appliance" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" id="btn-edit-back">← Back</button>
+          <h2>Edit item</h2>
+          <p class="step-header__lede">Update nickname, room, brand, model, and serial.</p>
+        </div>
+        <form id="edit-appliance-form" class="form">
+          <label class="field">
+            <span>Nickname</span>
+            <input type="text" id="edit-field-nickname" class="input" />
+          </label>
+          <label class="field">
+            <span>Room</span>
+            <select id="edit-field-room" class="input">
+              <option value="Kitchen">Kitchen</option>
+              <option value="Laundry">Laundry</option>
+              <option value="Garage">Garage</option>
+              <option value="Basement">Basement</option>
+              <option value="Utility">Utility / mechanical</option>
+              <option value="Living room">Living room</option>
+              <option value="Bedroom">Bedroom</option>
+              <option value="Bathroom">Bathroom</option>
+              <option value="Office">Office</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Appliance type</span>
+            <input type="text" id="edit-field-type" class="input" />
+          </label>
+          <label class="field">
+            <span>Brand</span>
+            <input type="text" id="edit-field-brand" class="input" />
+          </label>
+          <label class="field">
+            <span>Model number</span>
+            <input type="text" id="edit-field-model" class="input" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Serial number</span>
+            <input type="text" id="edit-field-serial" class="input" autocomplete="off" />
+          </label>
+          <button type="submit" class="btn btn--primary btn--block">Save changes</button>
+        </form>
       </main>
     </div>
 
@@ -635,6 +683,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=36"></script>
+    <script type="module" src="./js/main.js?v=37"></script>
   </body>
 </html>
