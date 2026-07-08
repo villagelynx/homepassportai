@@ -20,6 +20,7 @@ import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
 import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
+import { mapRoomGuess, populateRoomSelect, roomDisplayName, ROOM_ORDER } from "./rooms.js";
 import {
   dismissInstallPrompt,
   installHintMode,
@@ -56,19 +57,6 @@ const views = {
   detail: document.getElementById("view-detail"),
   editAppliance: document.getElementById("view-edit-appliance"),
 };
-
-const ROOM_ORDER = [
-  "Kitchen",
-  "Laundry",
-  "Garage",
-  "Basement",
-  "Utility",
-  "Living room",
-  "Bedroom",
-  "Bathroom",
-  "Office",
-  "Other",
-];
 
 const els = {
   buildTag: document.getElementById("build-tag"),
@@ -361,6 +349,9 @@ async function onAuthChanged() {
 }
 
 function init() {
+  populateRoomSelect(els.fieldRoomScan);
+  populateRoomSelect(els.fieldRoom);
+  populateRoomSelect(els.editFieldRoom);
   els.btnAdd?.addEventListener("click", () => startScan());
   els.btnScanRoom?.addEventListener("click", () => startRoomScan());
   els.inputRoomVideo?.addEventListener("change", () => void onRoomVideoSelected());
@@ -883,7 +874,7 @@ async function runRoomAnalysis() {
       };
     });
 
-    if (els.fieldRoomScan) els.fieldRoomScan.value = roomScan.roomGuess;
+    populateRoomSelect(els.fieldRoomScan, roomScan.roomGuess);
     if (els.roomReviewLede) {
       els.roomReviewLede.textContent = result.demoMode
         ? "Demo mode (no OpenAI key) — sample items shown. Check ones to keep, then save."
@@ -900,26 +891,6 @@ async function runRoomAnalysis() {
       btn.textContent = "Analyze room video";
     }
   }
-}
-
-/** @param {string} guess */
-function mapRoomGuess(guess) {
-  const g = String(guess || "").trim().toLowerCase();
-  const map = {
-    kitchen: "Kitchen",
-    laundry: "Laundry",
-    garage: "Garage",
-    basement: "Basement",
-    utility: "Utility",
-    "utility / mechanical": "Utility",
-    "living room": "Living room",
-    living: "Living room",
-    bedroom: "Bedroom",
-    bathroom: "Bathroom",
-    office: "Office",
-    other: "Other",
-  };
-  return map[g] || "Other";
 }
 
 function renderRoomReview() {
@@ -1657,12 +1628,6 @@ function groupByRoom(appliances) {
   return grouped;
 }
 
-/** @param {string} room */
-function roomDisplayName(room) {
-  if (room === "Utility") return "Utility / mechanical";
-  return room;
-}
-
 async function openDetail(id) {
   const item = await getAppliance(id);
   if (!item) return;
@@ -1974,7 +1939,7 @@ async function openEditAppliance() {
   if (!item) return;
 
   if (els.editFieldNickname) els.editFieldNickname.value = item.nickname || "";
-  if (els.editFieldRoom) els.editFieldRoom.value = item.room || "Other";
+  populateRoomSelect(els.editFieldRoom, item.room || "Other");
   if (els.editFieldType) els.editFieldType.value = item.applianceType || "";
   if (els.editFieldBrand) els.editFieldBrand.value = item.brand || "";
   if (els.editFieldModel) els.editFieldModel.value = item.modelNumber || "";

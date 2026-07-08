@@ -6,7 +6,7 @@ Identify distinct inventory-worthy items you can see — appliances, furniture, 
 
 Return JSON only:
 {
-  "room_guess": "Kitchen" | "Laundry" | "Garage" | "Basement" | "Utility" | "Living room" | "Bedroom" | "Bathroom" | "Office" | "Other",
+  "room_guess": "Kitchen" | "Pantry" | "Dining room" | "Living room" | "Den" | "Office" | "Bedroom 1" | "Bedroom 2" | "Bedroom 3" | "Bedroom 4" | "Bedroom 5" | "Bedroom" | "Bathroom" | "Primary bathroom" | "Half bath" | "Laundry" | "Mudroom" | "Garage" | "Basement" | "Attic" | "Utility" | "Outdoor" | "Other",
   "items": [
     {
       "nickname": "short friendly name",
