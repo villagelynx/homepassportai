@@ -157,6 +157,13 @@ body {
   font-weight: 700;
 }
 
+.topbar__tagline {
+  margin: 0.05rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
 .topbar__tag {
   margin: 0.1rem 0 0;
   font-size: 0.72rem;
@@ -840,6 +847,19 @@ body {
   color: var(--muted);
   font-size: 0.92rem;
   padding: 2rem 1rem;
+}
+
+.empty-state__tagline {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.empty-state__subline {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
 }
 
 .empty-state .linkish {

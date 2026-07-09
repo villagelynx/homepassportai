@@ -701,9 +701,7 @@ function updateInstallBanner() {
       : "Add HomePassportAI on iPhone";
   }
   if (els.installBannerLede) {
-    els.installBannerLede.textContent = ios
-      ? "Open like an app from your home screen — same blue house icon."
-      : "Use Safari on your iPhone to add the blue house icon to your home screen.";
+    els.installBannerLede.textContent = "Photos and serials, ready when you need them.";
   }
   fillInstallSteps(els.installBannerSteps, installInstructionsHtml());
 }

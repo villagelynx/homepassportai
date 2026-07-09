@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=35" />
+    <link rel="stylesheet" href="./css/app.css?v=36" />
   </head>
   <body>
     <div id="app" class="app">
@@ -53,6 +53,7 @@
           </button>
           <div>
             <h1 class="topbar__title">HomePassportAI</h1>
+            <p class="topbar__tagline">Know what you own.</p>
             <p class="topbar__tag" id="build-tag">Phase A · build …</p>
           </div>
         </div>
@@ -100,7 +101,7 @@
             </div>
             <div class="install-banner__body">
               <strong id="install-banner-title">Add HomePassportAI to your iPhone</strong>
-              <p id="install-banner-lede">Open like an app from your home screen — same blue house icon.</p>
+              <p id="install-banner-lede">Photos and serials, ready when you need them.</p>
               <ol class="install-banner__steps" id="install-banner-steps">
                 <li>Tap <strong>Share</strong> <span class="install-banner__share" aria-hidden="true">□↑</span> in Safari</li>
                 <li>Tap <strong>Add to Home Screen</strong></li>
@@ -113,10 +114,11 @@
           </div>
         </section>
         <div id="appliance-list" class="appliance-list" role="list"></div>
-        <p id="empty-state" class="empty-state" hidden>
-          No appliances at this address yet.
+        <div id="empty-state" class="empty-state" hidden>
+          <p class="empty-state__tagline">Know what you own.</p>
+          <p class="empty-state__subline">Photos and serials, ready when you need them.</p>
           <button type="button" class="linkish" id="btn-restore-inventory">Restore saved data</button>
-        </p>
+        </div>
         <p id="search-no-results" class="empty-state" hidden>No matches for your search.</p>
         <button type="button" class="fab" id="btn-add-appliance" aria-label="Add appliance or item">
           <svg class="fab__icon" viewBox="0 0 24 24" aria-hidden="true">
