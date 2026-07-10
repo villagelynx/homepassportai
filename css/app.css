@@ -247,15 +247,53 @@ body {
   border: 1px solid var(--border);
   background: var(--surface);
   color: inherit;
-  font-size: 1.1rem;
   cursor: pointer;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
+.topbar__settings-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}
+
 .topbar__settings:active {
   transform: scale(0.94);
   background: var(--surface-2);
+}
+
+@media (min-width: 600px) {
+  .topbar__actions {
+    gap: 0.55rem;
+  }
+
+  .topbar__sync,
+  .topbar__info {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .topbar__info-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .topbar__sync-dot {
+    width: 0.78rem;
+    height: 0.78rem;
+  }
+
+  .topbar__settings {
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 12px;
+  }
+
+  .topbar__settings-icon {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
 }
 
 .settings-note {
