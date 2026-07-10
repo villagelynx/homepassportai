@@ -129,21 +129,11 @@ function roomIconKind(room) {
 
 /** @param {string} room */
 export function createRoomIcon(room) {
-  const kind = roomIconKind(room);
-  const paths = ROOM_ICON_PATHS[kind] ?? ROOM_ICON_PATHS.other;
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("class", "room-icon");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true");
-  for (const d of paths) {
-    const path = document.createElementNS(SVG_NS, "path");
-    path.setAttribute("d", d);
-    for (const [key, value] of Object.entries(ROOM_ICON_STROKE)) {
-      path.setAttribute(key, value);
-    }
-    svg.append(path);
-  }
-  return svg;
+  const icon = document.createElement("span");
+  icon.className = "room-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = room === "all" ? "🏠" : roomIcon(room);
+  return icon;
 }
 
 /** @param {HTMLElement} el @param {string} room @param {string} text */
