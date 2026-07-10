@@ -25,14 +25,7 @@ import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
 import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
 import { mapRoomGuess, populateRoomSelect, roomDisplayName, ROOM_ORDER } from "./rooms.js";
-import {
-  dismissInstallPrompt,
-  installHintMode,
-  isInstallDismissed,
-  isStandaloneApp,
-  resetInstallPrompt,
-  shouldShowInstallPrompt,
-} from "./install-prompt.js";
+import { installHintMode, isStandaloneApp } from "./install-prompt.js";
 import { generateInsurancePdf } from "./insurance-report.js";
 import { extractVideoFrames, ROOM_SCAN_MAX_SECONDS } from "./video-frames.js";
 import {
@@ -72,11 +65,6 @@ const els = {
   emptyState: document.getElementById("empty-state"),
   searchNoResults: document.getElementById("search-no-results"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
-  installBanner: document.getElementById("install-banner"),
-  installBannerTitle: document.getElementById("install-banner-title"),
-  installBannerLede: document.getElementById("install-banner-lede"),
-  installBannerSteps: document.getElementById("install-banner-steps"),
-  btnDismissInstall: document.getElementById("btn-dismiss-install"),
   btnAdd: document.getElementById("btn-add-appliance"),
   btnScanRoom: document.getElementById("btn-scan-room"),
   inputRoomVideo: document.getElementById("input-room-video"),
@@ -166,7 +154,6 @@ const els = {
   settingsInstallNote: document.getElementById("settings-install-note"),
   settingsInstallSteps: document.getElementById("settings-install-steps"),
   settingsInstallStandalone: document.getElementById("settings-install-standalone"),
-  btnShowInstallCard: document.getElementById("btn-show-install-card"),
   authForm: document.getElementById("auth-form"),
   authEmail: document.getElementById("auth-email"),
   authPassword: document.getElementById("auth-password"),
@@ -255,12 +242,6 @@ function isLocalNetworkDev() {
 async function boot() {
   try {
     initTheme();
-    try {
-      const params = new URLSearchParams(location.search);
-      if (params.get("install") === "1") resetInstallPrompt();
-    } catch {
-      // ignore
-    }
     init();
     clearBootError();
     document.documentElement.dataset.hpReady = "1";
@@ -339,7 +320,6 @@ async function enterApp(options = {}) {
 
   await renderHome();
   updateSyncBanner();
-  updateInstallBanner();
   showView("home");
 
   const aiStatus = await refreshApiKeyStatus();
@@ -354,7 +334,6 @@ async function onAuthChanged() {
     if (migrated > 0) toast(`Synced ${migrated} appliance(s) to the cloud`);
     await renderHome();
     updateSyncBanner();
-    updateInstallBanner();
     return;
   }
   updateSyncBanner();
@@ -523,18 +502,6 @@ function init() {
   els.btnRestoreBackup?.addEventListener("click", () => void restoreInventory());
   els.btnRestoreInventory?.addEventListener("click", () => void restoreInventory());
   els.inputImportBackup?.addEventListener("change", () => void importBackupFile());
-  els.btnDismissInstall?.addEventListener("click", () => {
-    dismissInstallPrompt();
-    updateInstallBanner();
-    renderInstallSettings();
-  });
-  els.btnShowInstallCard?.addEventListener("click", () => {
-    resetInstallPrompt();
-    updateInstallBanner();
-    renderInstallSettings();
-    toast("Tip will show on home");
-    void renderHome().then(() => showView("home"));
-  });
 
   for (const btn of document.querySelectorAll("[data-nav]")) {
     btn.addEventListener("click", () => {
@@ -719,24 +686,6 @@ function fillInstallSteps(listEl, steps) {
   listEl.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
 }
 
-function updateInstallBanner() {
-  if (!els.installBanner) return;
-  const show = shouldShowInstallPrompt();
-  els.installBanner.hidden = !show;
-  if (!show) return;
-
-  const ios = installHintMode() === "ios";
-  if (els.installBannerTitle) {
-    els.installBannerTitle.textContent = ios
-      ? "Add HomePassportAI to your iPhone"
-      : "Add HomePassportAI on iPhone";
-  }
-  if (els.installBannerLede) {
-    els.installBannerLede.textContent = "Photos and serials, ready when you need them.";
-  }
-  fillInstallSteps(els.installBannerSteps, installInstructionsHtml());
-}
-
 function renderInstallSettings() {
   const standalone = isStandaloneApp();
   const ios = installHintMode() === "ios";
@@ -755,9 +704,6 @@ function renderInstallSettings() {
   if (els.settingsInstallSteps) {
     els.settingsInstallSteps.hidden = standalone;
     if (!standalone) fillInstallSteps(els.settingsInstallSteps, installInstructionsHtml());
-  }
-  if (els.btnShowInstallCard) {
-    els.btnShowInstallCard.hidden = standalone || !ios || !isInstallDismissed();
   }
 }
 
@@ -2311,7 +2257,6 @@ async function removeDetail() {
   detailId = null;
   await renderHome();
   updateSyncBanner();
-  updateInstallBanner();
   showView("home");
   toast("Appliance removed");
 }
