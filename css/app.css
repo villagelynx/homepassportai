@@ -960,20 +960,17 @@ body {
 }
 
 .room-icon {
-  width: 0.95rem;
-  height: 0.95rem;
   flex-shrink: 0;
-  opacity: 0.88;
+  line-height: 1;
+  font-size: 0.95rem;
 }
 
 .room-filter-chip .room-icon {
-  width: 0.88rem;
-  height: 0.88rem;
+  font-size: 0.9rem;
 }
 
 .category-heading .room-icon {
-  width: 0.82rem;
-  height: 0.82rem;
+  font-size: 0.85rem;
 }
 
 .category-heading {
