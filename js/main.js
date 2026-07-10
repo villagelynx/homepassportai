@@ -1,5 +1,5 @@
 import { manualSearchUrl, manualsLibSearchUrl } from "./manual-links.js";
-import { clearApiKey, hasUserApiKey, loadApiKey, maskApiKey, saveApiKey } from "./api-key.js";
+import { clearApiKey, hasUserApiKey, saveApiKey } from "./api-key.js";
 import { detectCurrentLocation, loadLocation, locationDisplayLabel, saveLocation } from "./location.js";
 import { localRepairGoogleUrl, localRepairSearchUrl } from "./repair-links.js";
 import { APP_VERSION, config, isSupabaseConfigured } from "./config.js";
@@ -19,7 +19,7 @@ import {
   updateUserPassword,
   wasSessionExpired,
 } from "./auth.js";
-import { analyzeAppliancePhotos, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
+import { analyzeAppliancePhotos, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
@@ -323,7 +323,8 @@ function clearBootError() {
   }
 }
 
-async function enterApp() {
+async function enterApp(options = {}) {
+  const { notifyAiReady = false } = options;
   if (isSupabaseConfigured() && !isSignedIn() && !allowOfflineUse) {
     if (els.btnAuthOffline) els.btnAuthOffline.hidden = false;
     updateSyncBanner();
@@ -340,6 +341,11 @@ async function enterApp() {
   updateSyncBanner();
   updateInstallBanner();
   showView("home");
+
+  const aiStatus = await refreshApiKeyStatus();
+  if (notifyAiReady) {
+    notifyApiKeyStatus(aiStatus);
+  }
 }
 
 async function onAuthChanged() {
@@ -592,7 +598,7 @@ async function handleAuthSubmit() {
       toast("Account created — you are signed in");
     }
     allowOfflineUse = false;
-    await enterApp();
+    await enterApp({ notifyAiReady: true });
   } catch (err) {
     toast(err instanceof Error ? err.message : "Authentication failed");
   } finally {
@@ -652,7 +658,7 @@ async function handleUpdatePassword() {
     }
     toast("Password updated — you're signed in");
     allowOfflineUse = false;
-    await enterApp();
+    await enterApp({ notifyAiReady: true });
   } catch (err) {
     toast(err instanceof Error ? err.message : "Could not update password");
   } finally {
@@ -1350,20 +1356,11 @@ async function saveRecord() {
 }
 
 function renderSettings() {
-  const key = loadApiKey();
   if (els.fieldTheme) els.fieldTheme.value = loadThemePreference();
   if (els.fieldRoomChips) els.fieldRoomChips.checked = loadRoomChipsEnabled();
-  if (els.apiKeyStatus) {
-    if (key) {
-      els.apiKeyStatus.hidden = false;
-      els.apiKeyStatus.textContent = `Key saved on this device: ${maskApiKey(key)}`;
-    } else {
-      els.apiKeyStatus.hidden = true;
-      els.apiKeyStatus.textContent = "";
-    }
-  }
+  void refreshApiKeyStatus();
   if (els.fieldApiKey) els.fieldApiKey.value = "";
-  if (els.btnClearApiKey) els.btnClearApiKey.hidden = !key;
+  if (els.btnClearApiKey) els.btnClearApiKey.hidden = !hasUserApiKey();
 
   const cloud = isSupabaseConfigured();
   const signedIn = isSignedIn();
@@ -1374,7 +1371,57 @@ function renderSettings() {
   renderInstallSettings();
 }
 
-function saveSettingsApiKey() {
+/** @param {import("./analyze.js").ApiKeyStatus} status */
+function applyApiKeyStatus(status) {
+  if (!els.apiKeyStatus) return;
+  els.apiKeyStatus.hidden = false;
+  els.apiKeyStatus.classList.remove("is-ready", "is-warning", "is-missing");
+
+  if (status.ready && status.source === "user") {
+    els.apiKeyStatus.classList.add("is-ready");
+    els.apiKeyStatus.textContent = `AI analysis ready — key ${status.masked} verified`;
+    return;
+  }
+  if (status.ready && status.source === "server") {
+    els.apiKeyStatus.classList.add("is-ready");
+    els.apiKeyStatus.textContent = "AI analysis ready — site key active on server";
+    return;
+  }
+  if (status.source === "user" && status.masked) {
+    els.apiKeyStatus.classList.add("is-warning");
+    els.apiKeyStatus.textContent = `Key saved (${status.masked}) but not working — ${status.error || "check OpenAI dashboard"}`;
+    return;
+  }
+  els.apiKeyStatus.classList.add("is-missing");
+  els.apiKeyStatus.textContent = "No API key — add one below for photo analysis";
+}
+
+/** @param {import("./analyze.js").ApiKeyStatus} status */
+function notifyApiKeyStatus(status) {
+  if (status.ready && status.source === "user") {
+    toast(`AI analysis ready — ${status.masked}`);
+    return;
+  }
+  if (status.ready && status.source === "server") {
+    toast("AI analysis ready");
+    return;
+  }
+  if (status.source === "user" && status.masked) {
+    toast(status.error ? `API key issue — ${status.error}` : "API key saved but not verified — check Settings");
+    return;
+  }
+  if (!hasUserApiKey()) {
+    toast("Add an OpenAI API key in Settings for photo analysis");
+  }
+}
+
+async function refreshApiKeyStatus() {
+  const status = await checkApiKeyStatus();
+  applyApiKeyStatus(status);
+  return status;
+}
+
+async function saveSettingsApiKey() {
   const key = els.fieldApiKey?.value.trim() ?? "";
   if (!key) {
     toast("Paste your OpenAI API key");
@@ -1385,8 +1432,8 @@ function saveSettingsApiKey() {
     return;
   }
   saveApiKey(key);
-  renderSettings();
-  toast("API key saved on this device");
+  const status = await refreshApiKeyStatus();
+  notifyApiKeyStatus(status);
 }
 
 function refreshToLatestVersion() {
