@@ -12,6 +12,8 @@ create table if not exists appliances (
   brand text,
   model_number text,
   serial_number text,
+  color_description text,
+  dimensions_description text,
   appliance_photo_path text,
   label_photo_path text,
   receipt_photo_path text,
@@ -20,6 +22,10 @@ create table if not exists appliances (
   scanned_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+-- Run on existing projects:
+-- alter table appliances add column if not exists color_description text;
+-- alter table appliances add column if not exists dimensions_description text;
 
 alter table appliances enable row level security;
 

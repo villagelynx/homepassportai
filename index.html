@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=40" />
+    <link rel="stylesheet" href="./css/app.css?v=43" />
   </head>
   <body>
     <div id="app" class="app">
@@ -60,21 +60,19 @@
         <div class="topbar__actions">
           <button
             type="button"
-            class="topbar__sync"
+            class="topbar__sync topbar__tip"
             id="btn-sync-status"
             aria-label="Sync status"
-            title="Sync status"
             hidden
           >
             <span class="topbar__sync-dot" id="sync-status-dot" aria-hidden="true"></span>
           </button>
           <button
             type="button"
-            class="topbar__info"
+            class="topbar__info topbar__tip"
             id="btn-guide"
             data-nav="guide"
             aria-label="How to use HomePassportAI"
-            title="How to use"
           >
             <svg class="topbar__info-icon" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
@@ -88,8 +86,23 @@
             </svg>
           </button>
         </div>
-        <button type="button" class="topbar__settings" id="btn-settings" data-nav="settings" aria-label="Settings">
-          ⚙
+        <button type="button" class="topbar__settings topbar__tip" id="btn-settings" data-nav="settings" aria-label="Settings">
+          <svg class="topbar__settings-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+            <path
+              d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.05.05a2.12 2.12 0 0 1-1.5 3.62h-.09a1.7 1.7 0 0 0-1.68 1.4 2.12 2.12 0 0 1-4.1 0 1.7 1.7 0 0 0-1.68-1.4h-.09A2.12 2.12 0 0 1 4.2 16.9l.05-.05A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.4-1.68 2.12 2.12 0 0 1 0-4.1h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.05-.05A2.12 2.12 0 0 1 5.7 3.46h.09A1.7 1.7 0 0 0 7.47 2.06a2.12 2.12 0 0 1 4.1 0 1.7 1.7 0 0 0 1.68 1.4h.09a2.12 2.12 0 0 1 1.5 3.62l-.05.05A1.7 1.7 0 0 0 15 9c0 .62.17 1.2.46 1.7a1.7 1.7 0 0 0 1.4 1.68 2.12 2.12 0 0 1 0 4.1h-.09a1.7 1.7 0 0 0-1.57 1.52Z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
         </button>
       </header>
 
@@ -492,6 +505,14 @@
             <span>Serial number</span>
             <input type="text" id="field-serial" class="input" placeholder="Optional" autocomplete="off" />
           </label>
+          <label class="field">
+            <span>Color</span>
+            <input type="text" id="field-color" class="input" placeholder="e.g. stainless steel, navy blue" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Dimensions</span>
+            <input type="text" id="field-dimensions" class="input" placeholder="e.g. large wall painting, ~36 in wide" autocomplete="off" />
+          </label>
           <p id="confidence-note" class="confidence-note" hidden></p>
           <button type="submit" class="btn btn--primary btn--block">Save to HomePassportAI</button>
         </form>
@@ -528,6 +549,14 @@
               <li><strong>Cloud backup</strong> — sign in to sync across devices (optional).</li>
               <li><strong>Share an item</strong> — send details to a spouse, landlord, or technician from your phone.</li>
             </ul>
+          </section>
+          <section class="guide-section">
+            <h3 class="detail-section-title">Paintings &amp; artwork</h3>
+            <p class="guide-text">
+              Photograph the whole piece with corners visible. AI can detect dominant colors, guess
+              approximate size, read corner signatures, and build a combined signature image where the
+              label photo normally goes — artist in <strong>Brand</strong>, title in <strong>Model</strong>.
+            </p>
           </section>
           <section class="guide-section">
             <h3 class="detail-section-title">Add an appliance (quick scan)</h3>
@@ -704,7 +733,7 @@
         <div id="detail-label-capture" class="detail-label-capture">
           <h3 class="detail-section-title">Model / serial label</h3>
           <p id="detail-label-lede" class="hint">
-            Snap a close-up of the manufacturer sticker or rating plate for model and serial numbers.
+            Snap a manufacturer sticker for appliances — or for paintings, AI can crop corner signatures from your main photo during scan.
           </p>
           <div class="capture-card">
             <div id="preview-detail-label-photo" class="capture-card__preview capture-card__preview--empty">
@@ -784,6 +813,14 @@
           <label class="field">
             <span>Serial number</span>
             <input type="text" id="edit-field-serial" class="input" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Color</span>
+            <input type="text" id="edit-field-color" class="input" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Dimensions</span>
+            <input type="text" id="edit-field-dimensions" class="input" autocomplete="off" />
           </label>
           <button type="submit" class="btn btn--primary btn--block">Save changes</button>
         </form>

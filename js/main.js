@@ -26,7 +26,7 @@ import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js"
 import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
 import { mapRoomGuess, populateRoomSelect, roomDisplayName, ROOM_ORDER } from "./rooms.js";
 import { installHintMode, isStandaloneApp } from "./install-prompt.js";
-import { generateInsurancePdf } from "./insurance-report.js";
+import { buildSignatureCollageLabelPhoto } from "./signature-label.js";
 import { extractVideoFrames, ROOM_SCAN_MAX_SECONDS } from "./video-frames.js";
 import {
   addAppliance,
@@ -67,6 +67,8 @@ const els = {
   searchNoResults: document.getElementById("search-no-results"),
   apiSetupBanner: document.getElementById("api-setup-banner"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
+  btnGuide: document.getElementById("btn-guide"),
+  btnSettings: document.getElementById("btn-settings"),
   btnAdd: document.getElementById("btn-add-appliance"),
   btnScanRoom: document.getElementById("btn-scan-room"),
   inputRoomVideo: document.getElementById("input-room-video"),
@@ -109,6 +111,8 @@ const els = {
   fieldBrand: document.getElementById("field-brand"),
   fieldModel: document.getElementById("field-model"),
   fieldSerial: document.getElementById("field-serial"),
+  fieldColor: document.getElementById("field-color"),
+  fieldDimensions: document.getElementById("field-dimensions"),
   confidenceNote: document.getElementById("confidence-note"),
   detailTitle: document.getElementById("detail-title"),
   detailBody: document.getElementById("detail-body"),
@@ -141,6 +145,8 @@ const els = {
   editFieldBrand: document.getElementById("edit-field-brand"),
   editFieldModel: document.getElementById("edit-field-model"),
   editFieldSerial: document.getElementById("edit-field-serial"),
+  editFieldColor: document.getElementById("edit-field-color"),
+  editFieldDimensions: document.getElementById("edit-field-dimensions"),
   settingsForm: document.getElementById("settings-form"),
   fieldApiKey: document.getElementById("field-api-key"),
   fieldTheme: document.getElementById("field-theme"),
@@ -363,6 +369,7 @@ function setupSessionRefresh() {
 }
 
 function init() {
+  updateHeaderTooltips();
   populateRoomSelect(els.fieldRoomScan);
   populateRoomSelect(els.fieldRoom);
   populateRoomSelect(els.editFieldRoom);
@@ -652,6 +659,24 @@ async function handleSignOut() {
   toast("Signed out");
 }
 
+function setTopbarTip(el, text) {
+  if (!el) return;
+  el.setAttribute("data-tip", text);
+  el.setAttribute("aria-label", text);
+  el.title = text;
+}
+
+function updateHeaderTooltips() {
+  setTopbarTip(
+    els.btnGuide,
+    "How to use HomePassportAI — scanning tips, API key setup, and benefits",
+  );
+  setTopbarTip(
+    els.btnSettings,
+    "Settings — OpenAI API key, account sign-in, backup, and insurance PDF",
+  );
+}
+
 function updateSyncBanner() {
   if (!els.btnSyncStatus) return;
   if (!isSupabaseConfigured()) {
@@ -663,13 +688,17 @@ function updateSyncBanner() {
   if (isSignedIn()) {
     els.btnSyncStatus.classList.add("is-online");
     const email = getUserEmail();
-    els.btnSyncStatus.setAttribute("aria-label", `Synced as ${email}`);
-    els.btnSyncStatus.title = `Synced as ${email}`;
+    setTopbarTip(
+      els.btnSyncStatus,
+      `Cloud sync on — signed in as ${email}. Your inventory is backing up online.`,
+    );
     return;
   }
   els.btnSyncStatus.classList.add("is-offline");
-  els.btnSyncStatus.setAttribute("aria-label", "Offline on this device. Tap to sign in.");
-  els.btnSyncStatus.title = "Offline on this device. Tap to sign in.";
+  setTopbarTip(
+    els.btnSyncStatus,
+    "Cloud sync off — sign in to back up your inventory and use it on other devices",
+  );
 }
 
 function installInstructionsHtml() {
@@ -1242,9 +1271,25 @@ async function runAnalysis() {
     els.fieldBrand.value = result.brand || "";
     els.fieldModel.value = result.modelNumber || "";
     els.fieldSerial.value = result.serialNumber || "";
+    els.fieldColor.value = result.colorDescription || "";
+    els.fieldDimensions.value = result.dimensionsDescription || "";
     els.fieldNickname.value =
       result.nickname ||
       [result.brand, result.applianceType].filter(Boolean).join(" ").trim();
+
+    if (!scan.labelPhotoDataUrl && result.signatureRegions?.length) {
+      try {
+        const collage = await buildSignatureCollageLabelPhoto(
+          scan.appliancePhotoDataUrl,
+          result.signatureRegions,
+        );
+        if (collage) {
+          scan.labelPhotoDataUrl = await compressDataUrl(collage, { maxEdge: 960, quality: 0.82 });
+        }
+      } catch {
+        // Signature crop is best-effort.
+      }
+    }
 
     if (els.confidenceNote) {
       const c = result.confidence || "low";
@@ -1252,6 +1297,9 @@ async function runAnalysis() {
       if (result.demoMode) {
         els.confidenceNote.textContent =
           "Demo mode — add your OpenAI key in Settings (⚙) to enable photo analysis.";
+      } else if (scan.labelPhotoDataUrl && result.signatureRegions?.length) {
+        els.confidenceNote.textContent =
+          "Signature corners cropped from your photo and saved as the label image. Verify artist and details below.";
       } else {
         els.confidenceNote.textContent = `Extraction confidence: ${c}. Please verify before saving.`;
       }
@@ -1316,6 +1364,8 @@ async function saveRecord() {
       brand,
       modelNumber: els.fieldModel.value.trim(),
       serialNumber: els.fieldSerial.value.trim(),
+      colorDescription: els.fieldColor?.value.trim() ?? "",
+      dimensionsDescription: els.fieldDimensions?.value.trim() ?? "",
       appliancePhotoDataUrl: appliancePhoto,
       labelPhotoDataUrl: labelPhoto,
       receiptPhotoDataUrl: receiptPhoto,
@@ -1587,6 +1637,14 @@ async function renderHome() {
       meta.textContent = `${item.brand || "Unknown brand"}${type}${model}`;
       body.append(title, meta);
 
+      const extraParts = [item.colorDescription, item.dimensionsDescription].filter(Boolean);
+      if (extraParts.length) {
+        const extra = document.createElement("p");
+        extra.className = "appliance-card__extra";
+        extra.textContent = extraParts.join(" · ");
+        body.append(extra);
+      }
+
       btn.append(img, body);
       btn.addEventListener("click", () => void openDetail(item.id));
       els.applianceList.append(btn);
@@ -1603,6 +1661,8 @@ function applianceMatchesSearch(item, query) {
     item.brand,
     item.modelNumber,
     item.serialNumber,
+    item.colorDescription,
+    item.dimensionsDescription,
     item.room,
     item.applianceType,
   ]
@@ -1686,10 +1746,16 @@ async function openDetail(id) {
   if (!els.detailBody) return;
 
   const scanned = new Date(item.scannedAt).toLocaleString();
+  const labelCaption = /painting|artwork|art print/i.test(
+    `${item.applianceType} ${item.nickname}`,
+  )
+    ? "Signature / label detail"
+    : "Model / serial label";
+
   const labelImg = item.labelPhotoDataUrl
     ? `<figure class="detail-photo">
         <img src="${item.labelPhotoDataUrl}" alt="" />
-        <figcaption>Model / serial label</figcaption>
+        <figcaption>${labelCaption}</figcaption>
       </figure>`
     : "";
   const receiptImg = item.receiptPhotoDataUrl
@@ -1714,6 +1780,8 @@ async function openDetail(id) {
       <div><dt>Brand</dt><dd>${escapeHtml(item.brand || "—")}</dd></div>
       <div><dt>Model</dt><dd>${escapeHtml(item.modelNumber || "—")}</dd></div>
       <div><dt>Serial</dt><dd>${escapeHtml(item.serialNumber || "—")}</dd></div>
+      <div><dt>Color</dt><dd>${escapeHtml(item.colorDescription || "—")}</dd></div>
+      <div><dt>Dimensions</dt><dd>${escapeHtml(item.dimensionsDescription || "—")}</dd></div>
       <div><dt>Scanned</dt><dd>${escapeHtml(scanned)}</dd></div>
     </dl>
   `;
@@ -1923,6 +1991,8 @@ function formatApplianceShareText(item) {
     item.brand ? `Brand: ${item.brand}` : "",
     item.modelNumber ? `Model: ${item.modelNumber}` : "",
     item.serialNumber ? `Serial: ${item.serialNumber}` : "",
+    item.colorDescription ? `Color: ${item.colorDescription}` : "",
+    item.dimensionsDescription ? `Dimensions: ${item.dimensionsDescription}` : "",
     "— HomePassportAI",
   ].filter(Boolean);
   return lines.join("\n");
@@ -1994,6 +2064,8 @@ async function openEditAppliance() {
   if (els.editFieldBrand) els.editFieldBrand.value = item.brand || "";
   if (els.editFieldModel) els.editFieldModel.value = item.modelNumber || "";
   if (els.editFieldSerial) els.editFieldSerial.value = item.serialNumber || "";
+  if (els.editFieldColor) els.editFieldColor.value = item.colorDescription || "";
+  if (els.editFieldDimensions) els.editFieldDimensions.value = item.dimensionsDescription || "";
 
   showView("editAppliance");
 }
@@ -2007,6 +2079,8 @@ async function saveEditAppliance() {
   const brand = els.editFieldBrand?.value.trim() ?? "";
   const modelNumber = els.editFieldModel?.value.trim() ?? "";
   const serialNumber = els.editFieldSerial?.value.trim() ?? "";
+  const colorDescription = els.editFieldColor?.value.trim() ?? "";
+  const dimensionsDescription = els.editFieldDimensions?.value.trim() ?? "";
 
   const submitBtn = els.editForm?.querySelector('button[type="submit"]');
   if (submitBtn instanceof HTMLButtonElement) {
@@ -2026,6 +2100,8 @@ async function saveEditAppliance() {
       brand,
       modelNumber,
       serialNumber,
+      colorDescription,
+      dimensionsDescription,
     });
 
     await renderHome();

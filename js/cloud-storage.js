@@ -47,6 +47,8 @@ async function rowToRecord(row) {
     brand: row.brand || "",
     modelNumber: row.model_number || "",
     serialNumber: row.serial_number || "",
+    colorDescription: row.color_description || "",
+    dimensionsDescription: row.dimensions_description || "",
     appliancePhotoDataUrl: appliancePhotoDataUrl || "",
     labelPhotoDataUrl: labelPhotoDataUrl || "",
     receiptPhotoDataUrl: receiptPhotoDataUrl,
@@ -124,6 +126,8 @@ export async function addCloudAppliance(record) {
     brand: record.brand,
     model_number: record.modelNumber,
     serial_number: record.serialNumber,
+    color_description: record.colorDescription || null,
+    dimensions_description: record.dimensionsDescription || null,
     appliance_photo_path: appliancePath,
     label_photo_path: labelPath,
     receipt_photo_path: receiptPath,
@@ -154,6 +158,8 @@ export async function updateCloudAppliance(id, updates) {
   if (updates.brand != null) payload.brand = updates.brand;
   if (updates.modelNumber != null) payload.model_number = updates.modelNumber;
   if (updates.serialNumber != null) payload.serial_number = updates.serialNumber;
+  if (updates.colorDescription != null) payload.color_description = updates.colorDescription;
+  if (updates.dimensionsDescription != null) payload.dimensions_description = updates.dimensionsDescription;
   if (updates.confidence != null) payload.confidence = updates.confidence;
   if (updates.repairCompany !== undefined) payload.repair_company = updates.repairCompany;
 

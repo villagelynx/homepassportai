@@ -33,6 +33,8 @@ import {
  * @property {string} appliancePhotoDataUrl
  * @property {string | null} labelPhotoDataUrl
  * @property {string | null} [receiptPhotoDataUrl]
+ * @property {string} [colorDescription]
+ * @property {string} [dimensionsDescription]
  * @property {string} confidence
  * @property {string} scannedAt ISO timestamp
  * @property {{ name: string, phone: string, website: string, notes: string } | null} [repairCompany]

@@ -247,15 +247,92 @@ body {
   border: 1px solid var(--border);
   background: var(--surface);
   color: inherit;
-  font-size: 1.1rem;
   cursor: pointer;
   padding: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
+.topbar__settings-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  display: block;
+}
+
 .topbar__settings:active {
   transform: scale(0.94);
   background: var(--surface-2);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .topbar__tip {
+    position: relative;
+  }
+
+  .topbar__tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    right: 0;
+    z-index: 20;
+    width: max-content;
+    max-width: 14rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--toast-bg);
+    color: var(--text);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    white-space: normal;
+    box-shadow: 0 8px 20px var(--toast-shadow);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-2px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    pointer-events: none;
+  }
+
+  .topbar__tip:hover::after,
+  .topbar__tip:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 600px) {
+  .topbar__actions {
+    gap: 0.55rem;
+  }
+
+  .topbar__sync,
+  .topbar__info {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .topbar__info-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .topbar__sync-dot {
+    width: 0.78rem;
+    height: 0.78rem;
+  }
+
+  .topbar__settings {
+    width: 2.9rem;
+    height: 2.9rem;
+    border-radius: 12px;
+  }
+
+  .topbar__settings-icon {
+    width: 1.55rem;
+    height: 1.55rem;
+  }
 }
 
 .settings-note {
@@ -915,6 +992,13 @@ body {
   margin: 0.2rem 0 0;
   font-size: 0.82rem;
   color: var(--muted);
+}
+
+.appliance-card__extra {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .empty-state {

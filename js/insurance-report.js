@@ -161,21 +161,25 @@ export async function generateInsurancePdf(appliances) {
     item.brand || "—",
     item.modelNumber || "—",
     item.serialNumber || "—",
+    item.colorDescription || "—",
+    item.dimensionsDescription || "—",
     formatScanDate(item.scannedAt),
   ]);
 
   autoTable(doc, {
     startY: y,
-    head: [["Item", "Room", "Type", "Brand", "Model", "Serial", "Documented"]],
+    head: [["Item", "Room", "Type", "Brand", "Model", "Serial", "Color", "Size", "Documented"]],
     body: inventoryRows,
     margin: { left: margin, right: margin },
     styles: { fontSize: 8, cellPadding: 5, overflow: "linebreak" },
     headStyles: { fillColor: [29, 111, 216], textColor: 255, fontStyle: "bold" },
     alternateRowStyles: { fillColor: [244, 247, 252] },
     columnStyles: {
-      0: { cellWidth: 72 },
-      4: { cellWidth: 68 },
-      5: { cellWidth: 68 },
+      0: { cellWidth: 64 },
+      4: { cellWidth: 52 },
+      5: { cellWidth: 52 },
+      6: { cellWidth: 48 },
+      7: { cellWidth: 48 },
     },
   });
 

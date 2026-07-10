@@ -9,6 +9,9 @@ import { config } from "./config.js";
  * @property {string} serialNumber
  * @property {string} confidence low | medium | high
  * @property {string} [nickname]
+ * @property {string} [colorDescription]
+ * @property {string} [dimensionsDescription]
+ * @property {import("./signature-label.js").SignatureRegion[]} [signatureRegions]
  */
 
 /**
