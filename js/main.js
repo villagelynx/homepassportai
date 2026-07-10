@@ -4,9 +4,12 @@ import { detectCurrentLocation, loadLocation, locationDisplayLabel, saveLocation
 import { localRepairGoogleUrl, localRepairSearchUrl } from "./repair-links.js";
 import { APP_VERSION, config, isSupabaseConfigured } from "./config.js";
 import {
+  clearSessionExpiredFlag,
+  friendlyAuthMessage,
   getUserEmail,
   initAuth,
   isSignedIn,
+  refreshAuthIfNeeded,
   sendPasswordReset,
   setAuthListener,
   setRecoveryListener,
@@ -14,6 +17,7 @@ import {
   signOut,
   signUp,
   updateUserPassword,
+  wasSessionExpired,
 } from "./auth.js";
 import { analyzeAppliancePhotos, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
@@ -273,10 +277,12 @@ async function boot() {
         });
       } catch (err) {
         console.error(err);
-        toast(err instanceof Error ? err.message : "Could not connect to cloud");
+        toast(friendlyAuthMessage(err));
         allowOfflineUse = true;
       }
     }
+
+    setupSessionRefresh();
 
     if (arrivedViaPasswordReset && isSupabaseConfigured()) {
       showView("updatePassword");
@@ -346,6 +352,25 @@ async function onAuthChanged() {
     return;
   }
   updateSyncBanner();
+  if (wasSessionExpired()) {
+    clearSessionExpiredFlag();
+    toast("Your sign-in expired. Please sign in again.");
+    showView("auth");
+  }
+}
+
+function setupSessionRefresh() {
+  if (!isSupabaseConfigured() || typeof document === "undefined") return;
+
+  const refresh = () => {
+    if (document.visibilityState === "visible") {
+      void refreshAuthIfNeeded();
+    }
+  };
+
+  document.addEventListener("visibilitychange", refresh);
+  window.addEventListener("pageshow", () => void refreshAuthIfNeeded());
+  window.addEventListener("focus", () => void refreshAuthIfNeeded());
 }
 
 function init() {

@@ -1,5 +1,5 @@
 import { isSupabaseConfigured } from "./config.js";
-import { isSignedIn } from "./auth.js";
+import { handleAuthFailure, isSignedIn } from "./auth.js";
 import {
   addLocalAppliance,
   clearLocalAppliances,
@@ -43,16 +43,28 @@ function useCloud() {
   return isSupabaseConfigured() && isSignedIn();
 }
 
+/** @template T @param {() => Promise<T>} fn */
+async function withCloudAuth(fn) {
+  try {
+    return await fn();
+  } catch (err) {
+    if (await handleAuthFailure(err)) {
+      throw new Error("Your sign-in expired. Please sign in again.");
+    }
+    throw err;
+  }
+}
+
 /** @returns {Promise<ApplianceRecord[]>} */
 export async function loadAppliances() {
-  if (useCloud()) return loadCloudAppliances();
+  if (useCloud()) return withCloudAuth(() => loadCloudAppliances());
   return loadLocalAppliances();
 }
 
 /** @param {ApplianceRecord} record */
 export async function addAppliance(record) {
   if (useCloud()) {
-    const saved = await addCloudAppliance(record);
+    const saved = await withCloudAuth(() => addCloudAppliance(record));
     if (!saved) throw new Error("Could not save appliance.");
     return saved;
   }
@@ -62,7 +74,7 @@ export async function addAppliance(record) {
 /** @param {string} id */
 export async function deleteAppliance(id) {
   if (useCloud()) {
-    await deleteCloudAppliance(id);
+    await withCloudAuth(() => deleteCloudAppliance(id));
     return;
   }
   deleteLocalAppliance(id);
@@ -71,7 +83,7 @@ export async function deleteAppliance(id) {
 /** @param {string} id @returns {Promise<ApplianceRecord | undefined>} */
 export async function getAppliance(id) {
   if (useCloud()) {
-    const cloud = await getCloudAppliance(id);
+    const cloud = await withCloudAuth(() => getCloudAppliance(id));
     if (cloud) return cloud;
     return getLocalAppliance(id);
   }
@@ -81,7 +93,7 @@ export async function getAppliance(id) {
 /** @param {string} id @param {Partial<ApplianceRecord>} updates */
 export async function updateAppliance(id, updates) {
   if (useCloud()) {
-    const saved = await updateCloudAppliance(id, updates);
+    const saved = await withCloudAuth(() => updateCloudAppliance(id, updates));
     if (saved) return saved;
     const local = updateLocalAppliance(id, updates);
     if (!local) throw new Error("Could not update appliance.");
@@ -97,7 +109,7 @@ export async function migrateLocalInventoryIfNeeded() {
   if (!useCloud()) return 0;
   const local = loadLocalAppliances();
   if (local.length === 0) return 0;
-  await migrateLocalToCloud(local);
+  await withCloudAuth(() => migrateLocalToCloud(local));
   clearLocalAppliances();
   return local.length;
 }
@@ -116,7 +128,7 @@ export async function importApplianceBackup(jsonText) {
     let count = 0;
     for (const item of parsed) {
       if (!item?.id || !item.appliancePhotoDataUrl) continue;
-      await addCloudAppliance(item);
+      await withCloudAuth(() => addCloudAppliance(item));
       count++;
     }
     return count;
