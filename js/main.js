@@ -67,6 +67,8 @@ const els = {
   searchNoResults: document.getElementById("search-no-results"),
   apiSetupBanner: document.getElementById("api-setup-banner"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
+  btnGuide: document.getElementById("btn-guide"),
+  btnSettings: document.getElementById("btn-settings"),
   btnAdd: document.getElementById("btn-add-appliance"),
   btnScanRoom: document.getElementById("btn-scan-room"),
   inputRoomVideo: document.getElementById("input-room-video"),
@@ -367,6 +369,7 @@ function setupSessionRefresh() {
 }
 
 function init() {
+  updateHeaderTooltips();
   populateRoomSelect(els.fieldRoomScan);
   populateRoomSelect(els.fieldRoom);
   populateRoomSelect(els.editFieldRoom);
@@ -656,6 +659,24 @@ async function handleSignOut() {
   toast("Signed out");
 }
 
+function setTopbarTip(el, text) {
+  if (!el) return;
+  el.setAttribute("data-tip", text);
+  el.setAttribute("aria-label", text);
+  el.title = text;
+}
+
+function updateHeaderTooltips() {
+  setTopbarTip(
+    els.btnGuide,
+    "How to use HomePassportAI — scanning tips, API key setup, and benefits",
+  );
+  setTopbarTip(
+    els.btnSettings,
+    "Settings — OpenAI API key, account sign-in, backup, and insurance PDF",
+  );
+}
+
 function updateSyncBanner() {
   if (!els.btnSyncStatus) return;
   if (!isSupabaseConfigured()) {
@@ -667,13 +688,17 @@ function updateSyncBanner() {
   if (isSignedIn()) {
     els.btnSyncStatus.classList.add("is-online");
     const email = getUserEmail();
-    els.btnSyncStatus.setAttribute("aria-label", `Synced as ${email}`);
-    els.btnSyncStatus.title = `Synced as ${email}`;
+    setTopbarTip(
+      els.btnSyncStatus,
+      `Cloud sync on — signed in as ${email}. Your inventory is backing up online.`,
+    );
     return;
   }
   els.btnSyncStatus.classList.add("is-offline");
-  els.btnSyncStatus.setAttribute("aria-label", "Offline on this device. Tap to sign in.");
-  els.btnSyncStatus.title = "Offline on this device. Tap to sign in.";
+  setTopbarTip(
+    els.btnSyncStatus,
+    "Cloud sync off — sign in to back up your inventory and use it on other devices",
+  );
 }
 
 function installInstructionsHtml() {

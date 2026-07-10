@@ -263,6 +263,45 @@ body {
   background: var(--surface-2);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .topbar__tip {
+    position: relative;
+  }
+
+  .topbar__tip::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    right: 0;
+    z-index: 20;
+    width: max-content;
+    max-width: 14rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--toast-bg);
+    color: var(--text);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    white-space: normal;
+    box-shadow: 0 8px 20px var(--toast-shadow);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-2px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    pointer-events: none;
+  }
+
+  .topbar__tip:hover::after,
+  .topbar__tip:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+}
+
 @media (min-width: 600px) {
   .topbar__actions {
     gap: 0.55rem;

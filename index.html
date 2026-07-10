@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=42" />
+    <link rel="stylesheet" href="./css/app.css?v=43" />
   </head>
   <body>
     <div id="app" class="app">
@@ -60,21 +60,19 @@
         <div class="topbar__actions">
           <button
             type="button"
-            class="topbar__sync"
+            class="topbar__sync topbar__tip"
             id="btn-sync-status"
             aria-label="Sync status"
-            title="Sync status"
             hidden
           >
             <span class="topbar__sync-dot" id="sync-status-dot" aria-hidden="true"></span>
           </button>
           <button
             type="button"
-            class="topbar__info"
+            class="topbar__info topbar__tip"
             id="btn-guide"
             data-nav="guide"
             aria-label="How to use HomePassportAI"
-            title="How to use"
           >
             <svg class="topbar__info-icon" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
@@ -88,7 +86,7 @@
             </svg>
           </button>
         </div>
-        <button type="button" class="topbar__settings" id="btn-settings" data-nav="settings" aria-label="Settings" title="Settings">
+        <button type="button" class="topbar__settings topbar__tip" id="btn-settings" data-nav="settings" aria-label="Settings">
           <svg class="topbar__settings-icon" viewBox="0 0 24 24" aria-hidden="true">
             <path
               d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
