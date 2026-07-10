@@ -955,6 +955,13 @@ body {
   color: var(--muted);
 }
 
+.appliance-card__extra {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .empty-state {
   text-align: center;
   color: var(--muted);

@@ -1,43 +1,9 @@
-const ANALYZE_PROMPT = `You analyze photos for a home appliance inventory app.
-
-Image 1: the whole appliance.
-Image 2: close-up of the manufacturer label / rating plate.
-
-Return JSON only with these keys:
-- appliance_type: short type (e.g. Dishwasher, Refrigerator, Range)
-- brand: manufacturer brand or empty string
-- model_number: model number from the label or empty string
-- serial_number: serial number from the label or empty string
-- confidence: "high", "medium", or "low" based on label readability
-- nickname: short friendly label like "KitchenAid dishwasher" combining brand + type
-
-Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence.`;
-
-const ANALYZE_LABEL_ONLY_PROMPT = `You analyze a close-up photo of a manufacturer label or rating plate for a home appliance inventory app.
-
-Image 1: close-up of the manufacturer label / rating plate.
-
-Return JSON only with these keys:
-- appliance_type: short type if visible on the label (e.g. Dishwasher, Refrigerator), else empty string
-- brand: manufacturer brand from the label or empty string
-- model_number: model number from the label or empty string
-- serial_number: serial number from the label or empty string
-- confidence: "high", "medium", or "low" based on label readability
-- nickname: empty string
-
-Read the label image carefully for brand, model, and serial. If unreadable, use empty strings and low confidence.`;
-
-const ANALYZE_APPLIANCE_ONLY_PROMPT = `You analyze a photo for a home appliance inventory app.
-
-Image 1: the whole appliance.
-
-Return JSON only with these keys:
-- appliance_type: short type (e.g. Dishwasher, Refrigerator, Range)
-- brand: manufacturer brand if visible on the appliance, else empty string
-- model_number: empty string (no label photo provided)
-- serial_number: empty string (no label photo provided)
-- confidence: "high", "medium", or "low" based on how clearly you can identify type and brand
-- nickname: short friendly label like "KitchenAid dishwasher" combining brand + type`;
+import {
+  ANALYZE_APPLIANCE_ONLY_PROMPT,
+  ANALYZE_LABEL_ONLY_PROMPT,
+  ANALYZE_PROMPT,
+  mapAnalyzeResponse,
+} from "../../js/analyze-fields.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -108,6 +74,9 @@ export async function handler(event) {
         serialNumber: "",
         confidence: "low",
         nickname: "",
+        colorDescription: "",
+        dimensionsDescription: "",
+        signatureRegions: [],
         demoMode: true,
       });
     }
@@ -138,7 +107,7 @@ export async function handler(event) {
           },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 500,
+        max_tokens: 750,
       }),
     });
 
@@ -151,14 +120,7 @@ export async function handler(event) {
     const raw = data.choices?.[0]?.message?.content || "{}";
     const parsed = JSON.parse(raw);
 
-    return respond(200, {
-      applianceType: String(parsed.appliance_type || parsed.applianceType || "").trim(),
-      brand: String(parsed.brand || "").trim(),
-      modelNumber: String(parsed.model_number || parsed.modelNumber || "").trim(),
-      serialNumber: String(parsed.serial_number || parsed.serialNumber || "").trim(),
-      confidence: String(parsed.confidence || "medium").trim().toLowerCase(),
-      nickname: String(parsed.nickname || "").trim(),
-    });
+    return respond(200, mapAnalyzeResponse(parsed));
   } catch (err) {
     console.error("analyze error:", err);
     return respond(500, {

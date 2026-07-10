@@ -27,46 +27,50 @@ MIME_TYPES = {
     ".svg": "image/svg+xml",
 }
 
-ANALYZE_PROMPT = """You analyze photos for a home appliance inventory app.
+ANALYZE_PROMPT = """You analyze photos for a home inventory app (appliances, furniture, electronics, artwork, etc.).
 
-Image 1: the whole appliance.
-Image 2: close-up of the manufacturer label / rating plate.
-
-Return JSON only with these keys:
-- appliance_type: short type (e.g. Dishwasher, Refrigerator, Range)
-- brand: manufacturer brand or empty string
-- model_number: model number from the label or empty string
-- serial_number: serial number from the label or empty string
-- confidence: "high", "medium", or "low" based on label readability
-- nickname: short friendly label like "KitchenAid dishwasher" combining brand + type
-
-Read the label image carefully for model and serial. If unreadable, use empty strings and low confidence."""
-
-ANALYZE_LABEL_ONLY_PROMPT = """You analyze a close-up photo of a manufacturer label or rating plate for a home appliance inventory app.
-
-Image 1: close-up of the manufacturer label / rating plate.
+Image 1: the whole item.
+Image 2: close-up of the manufacturer label / rating plate (or signature detail).
 
 Return JSON only with these keys:
-- appliance_type: short type if visible on the label (e.g. Dishwasher, Refrigerator), else empty string
-- brand: manufacturer brand from the label or empty string
-- model_number: model number from the label or empty string
-- serial_number: serial number from the label or empty string
-- confidence: "high", "medium", or "low" based on label readability
-- nickname: empty string
+- appliance_type: short type (e.g. Dishwasher, Painting, Sofa, TV)
+- brand: manufacturer brand, or artist name for artwork, or empty string
+- model_number: model number from the label, or title/medium for artwork, or empty string
+- serial_number: serial from the label, or inscription text for artwork, or empty string
+- confidence: "high", "medium", or "low"
+- nickname: short friendly label combining brand/artist + type
+- color_description: visible colors, finish, or material or empty string
+- dimensions_description: approximate size only if reasonably inferable else empty string
+- signature_regions: for paintings/artwork with visible signatures near corners only. Up to 2 boxes as percent 0-100: [{"corner":"top_left"|"top_right"|"bottom_left"|"bottom_right","x_percent","y_percent","width_percent","height_percent"}]. Empty array otherwise.
 
-Read the label image carefully for brand, model, and serial. If unreadable, use empty strings and low confidence."""
+Read the label image carefully when provided. If unreadable, use empty strings and lower confidence."""
 
-ANALYZE_APPLIANCE_ONLY_PROMPT = """You analyze a photo for a home appliance inventory app.
+ANALYZE_LABEL_ONLY_PROMPT = """You analyze a close-up photo of a manufacturer label, rating plate, or artwork signature for a home inventory app.
 
-Image 1: the whole appliance.
+Image 1: close-up label or signature area.
 
 Return JSON only with these keys:
-- appliance_type: short type (e.g. Dishwasher, Refrigerator, Range)
-- brand: manufacturer brand if visible on the appliance, else empty string
-- model_number: empty string (no label photo provided)
-- serial_number: empty string (no label photo provided)
-- confidence: "high", "medium", or "low" based on how clearly you can identify type and brand
-- nickname: short friendly label like "KitchenAid dishwasher" combining brand + type"""
+- appliance_type, brand, model_number, serial_number, confidence, nickname (empty string)
+- color_description, dimensions_description (from label if visible, else empty)
+
+Read carefully. If unreadable, use empty strings and low confidence."""
+
+ANALYZE_APPLIANCE_ONLY_PROMPT = """You analyze a photo for a home inventory app (appliances, furniture, electronics, artwork, etc.).
+
+Image 1: the whole item.
+
+Return JSON only with these keys:
+- appliance_type: short type (e.g. Dishwasher, Painting, Sofa, TV)
+- brand: manufacturer or artist if visible, else empty string
+- model_number: empty unless visible on the item
+- serial_number: empty unless visible on the item
+- confidence: "high", "medium", or "low"
+- nickname: short friendly label
+- color_description: visible colors/finish/material or empty string
+- dimensions_description: approximate size only if inferable else empty string
+- signature_regions: for paintings with visible corner signatures — up to 2 percent bounding boxes as above; else []
+
+For artwork put artist in brand, title/medium in model_number, inscription in serial_number when readable."""
 
 ROOM_PROMPT = """You analyze still frames from a ~60 second smartphone video of a home room for an inventory app.
 
@@ -196,11 +200,13 @@ def analyze_with_openai(
         model=model,
         messages=[{"role": "user", "content": content}],
         response_format={"type": "json_object"},
-        max_tokens=500,
+        max_tokens=750,
     )
 
     raw = response.choices[0].message.content or "{}"
     data = json.loads(raw)
+
+    signature_regions = data.get("signature_regions") or data.get("signatureRegions") or []
 
     return {
         "applianceType": str(data.get("appliance_type") or data.get("applianceType") or "").strip(),
@@ -209,6 +215,13 @@ def analyze_with_openai(
         "serialNumber": str(data.get("serial_number") or data.get("serialNumber") or "").strip(),
         "confidence": str(data.get("confidence") or "medium").strip().lower(),
         "nickname": str(data.get("nickname") or "").strip(),
+        "colorDescription": str(
+            data.get("color_description") or data.get("colorDescription") or ""
+        ).strip(),
+        "dimensionsDescription": str(
+            data.get("dimensions_description") or data.get("dimensionsDescription") or ""
+        ).strip(),
+        "signatureRegions": signature_regions if isinstance(signature_regions, list) else [],
     }
 
 
