@@ -51,6 +51,7 @@ const views = {
   scan3: document.getElementById("view-scan-3"),
   review: document.getElementById("view-review"),
   settings: document.getElementById("view-settings"),
+  guide: document.getElementById("view-guide"),
   detail: document.getElementById("view-detail"),
   editAppliance: document.getElementById("view-edit-appliance"),
 };
@@ -64,6 +65,7 @@ const els = {
   roomFilterChips: document.getElementById("room-filter-chips"),
   emptyState: document.getElementById("empty-state"),
   searchNoResults: document.getElementById("search-no-results"),
+  apiSetupBanner: document.getElementById("api-setup-banner"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
   btnAdd: document.getElementById("btn-add-appliance"),
   btnScanRoom: document.getElementById("btn-scan-room"),
@@ -325,6 +327,8 @@ async function enterApp(options = {}) {
   const aiStatus = await refreshApiKeyStatus();
   if (notifyAiReady) {
     notifyApiKeyStatus(aiStatus);
+  } else {
+    await updateApiSetupBanner();
   }
 }
 
@@ -524,6 +528,8 @@ function init() {
       } else if (target === "settings") {
         renderSettings();
         showView("settings");
+      } else if (target === "guide") {
+        showView("guide");
       }
     });
   }
@@ -707,6 +713,37 @@ function renderInstallSettings() {
   }
 }
 
+function openSettingsForApiKey() {
+  renderSettings();
+  showView("settings");
+  requestAnimationFrame(() => {
+    els.fieldApiKey?.focus();
+    els.fieldApiKey?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+async function requireUserApiKeyForAi() {
+  if (!hasUserApiKey()) {
+    toast("Add your OpenAI API key in Settings to use AI analysis");
+    openSettingsForApiKey();
+    return false;
+  }
+  const status = await checkApiKeyStatus();
+  if (!status.ready || status.source !== "user") {
+    toast(status.error ? `API key issue — ${status.error}` : "Set up your OpenAI API key in Settings first");
+    openSettingsForApiKey();
+    return false;
+  }
+  return true;
+}
+
+async function updateApiSetupBanner() {
+  if (!els.apiSetupBanner) return;
+  const status = await checkApiKeyStatus();
+  const hide = status.ready && status.source === "user";
+  els.apiSetupBanner.hidden = hide;
+}
+
 function requireCloudSave() {
   if (isSupabaseConfigured() && !isSignedIn() && !allowOfflineUse) {
     toast("Sign in to save to the cloud");
@@ -822,6 +859,7 @@ async function runRoomAnalysis() {
     toast("Record a short room video first");
     return;
   }
+  if (!(await requireUserApiKeyForAi())) return;
 
   const btn = els.btnAnalyzeRoom;
   if (btn instanceof HTMLButtonElement) {
@@ -1175,6 +1213,7 @@ async function onReceiptPhoto() {
 
 async function runAnalysis() {
   if (!scan.appliancePhotoDataUrl) return;
+  if (!(await requireUserApiKeyForAi())) return;
 
   if (els.btnAnalyze) {
     els.btnAnalyze.disabled = true;
@@ -1328,18 +1367,14 @@ function applyApiKeyStatus(status) {
     els.apiKeyStatus.textContent = `AI analysis ready — key ${status.masked} verified`;
     return;
   }
-  if (status.ready && status.source === "server") {
-    els.apiKeyStatus.classList.add("is-ready");
-    els.apiKeyStatus.textContent = "AI analysis ready — site key active on server";
-    return;
-  }
   if (status.source === "user" && status.masked) {
     els.apiKeyStatus.classList.add("is-warning");
     els.apiKeyStatus.textContent = `Key saved (${status.masked}) but not working — ${status.error || "check OpenAI dashboard"}`;
     return;
   }
   els.apiKeyStatus.classList.add("is-missing");
-  els.apiKeyStatus.textContent = "No API key — add one below for photo analysis";
+  els.apiKeyStatus.textContent =
+    "No API key yet — add yours below to enable label reading and room video scans";
 }
 
 /** @param {import("./analyze.js").ApiKeyStatus} status */
@@ -1348,22 +1383,17 @@ function notifyApiKeyStatus(status) {
     toast(`AI analysis ready — ${status.masked}`);
     return;
   }
-  if (status.ready && status.source === "server") {
-    toast("AI analysis ready");
-    return;
-  }
   if (status.source === "user" && status.masked) {
     toast(status.error ? `API key issue — ${status.error}` : "API key saved but not verified — check Settings");
     return;
   }
-  if (!hasUserApiKey()) {
-    toast("Add an OpenAI API key in Settings for photo analysis");
-  }
+  toast("Add your OpenAI API key in Settings to use AI label and room video analysis");
 }
 
 async function refreshApiKeyStatus() {
   const status = await checkApiKeyStatus();
   applyApiKeyStatus(status);
+  await updateApiSetupBanner();
   return status;
 }
 
@@ -1562,6 +1592,8 @@ async function renderHome() {
       els.applianceList.append(btn);
     }
   }
+
+  void updateApiSetupBanner();
 }
 
 /** @param {import("./storage.js").ApplianceRecord} item @param {string} query */
@@ -1796,6 +1828,8 @@ async function onDetailLabelPhotoSelected() {
     detailLabelPending.dataUrl = dataUrl;
     setPreview(els.previewDetailLabelPhoto, dataUrl);
     if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = false;
+
+    if (!(await requireUserApiKeyForAi())) return;
 
     if (els.detailLabelReview) els.detailLabelReview.hidden = false;
     if (els.detailLabelAnalyzeStatus) {

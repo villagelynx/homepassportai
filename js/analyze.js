@@ -206,7 +206,6 @@ export async function checkApiKeyStatus() {
     }
 
     const data = await res.json();
-    const serverReady = Boolean(data.openaiServer ?? data.openai);
     const userStatus = data.userKey;
 
     if (userKey && userStatus?.valid === true) {
@@ -219,9 +218,6 @@ export async function checkApiKeyStatus() {
         masked: maskApiKey(userKey),
         error: userStatus.error || "Invalid API key",
       };
-    }
-    if (serverReady) {
-      return { ready: true, source: "server" };
     }
     if (userKey) {
       return { ready: false, source: "user", masked: maskApiKey(userKey), error: "Key not verified" };
