@@ -24,7 +24,13 @@ import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
 import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
-import { mapRoomGuess, populateRoomSelect, roomDisplayName, ROOM_ORDER } from "./rooms.js";
+import {
+  mapRoomGuess,
+  populateRoomSelect,
+  roomDisplayName,
+  ROOM_ORDER,
+  setRoomTitleElement,
+} from "./rooms.js";
 import { installHintMode, isStandaloneApp } from "./install-prompt.js";
 import { buildSignatureCollageLabelPhoto } from "./signature-label.js";
 import { extractVideoFrames, ROOM_SCAN_MAX_SECONDS } from "./video-frames.js";
@@ -1612,7 +1618,7 @@ async function renderHome() {
     if (showHeadings) {
       const heading = document.createElement("h3");
       heading.className = "category-heading";
-      heading.textContent = roomDisplayName(room);
+      setRoomTitleElement(heading, room, roomDisplayName(room));
       els.applianceList.append(heading);
     }
 
@@ -1702,7 +1708,7 @@ function makeRoomFilterChip(roomId, label, selected) {
   btn.className = `room-filter-chip${selected ? " room-filter-chip--selected" : ""}`;
   btn.setAttribute("role", "tab");
   btn.setAttribute("aria-selected", String(selected));
-  btn.textContent = label;
+  setRoomTitleElement(btn, roomId, label);
   btn.addEventListener("click", () => {
     if (homeRoomFilter === roomId) return;
     homeRoomFilter = roomId;

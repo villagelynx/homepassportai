@@ -868,6 +868,8 @@ body {
 
 .room-filter-chip {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
   padding: 0.42rem 0.9rem;
   border-radius: 999px;
   border: 1px solid var(--border);
@@ -889,6 +891,10 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+}
+
+.room-filter-chip--selected .room-icon {
+  opacity: 1;
 }
 
 .room-filter-chip--selected:hover {
@@ -947,6 +953,29 @@ body {
   gap: 0.65rem;
 }
 
+.room-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.room-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  opacity: 0.88;
+}
+
+.room-filter-chip .room-icon {
+  width: 0.88rem;
+  height: 0.88rem;
+}
+
+.category-heading .room-icon {
+  width: 0.82rem;
+  height: 0.82rem;
+}
+
 .category-heading {
   margin: 1.1rem 0 0.15rem;
   padding: 0 0.1rem;
@@ -955,6 +984,10 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--muted);
+}
+
+.category-heading.room-title {
+  display: flex;
 }
 
 .category-heading:first-child {
