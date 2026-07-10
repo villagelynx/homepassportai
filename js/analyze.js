@@ -1,4 +1,4 @@
-import { loadApiKey } from "./api-key.js";
+import { loadApiKey, maskApiKey } from "./api-key.js";
 import { config } from "./config.js";
 
 /**
@@ -175,6 +175,60 @@ export async function analyzeRoomFrames(frames) {
       frameIndex: Number(item.frameIndex ?? item.frame_index ?? 0) || 0,
     })),
   };
+}
+
+/**
+ * @typedef {{ ready: boolean, source: "user" | "server" | "none", masked?: string, error?: string }} ApiKeyStatus
+ */
+
+/**
+ * @returns {Promise<ApiKeyStatus>}
+ */
+export async function checkApiKeyStatus() {
+  const userKey = loadApiKey();
+  /** @type {Record<string, string>} */
+  const headers = {};
+  if (userKey) {
+    headers["X-OpenAI-Api-Key"] = userKey;
+  }
+
+  try {
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => ctrl.abort(), 10000);
+    const res = await fetch("/api/health", {
+      cache: "no-store",
+      signal: ctrl.signal,
+      headers,
+    });
+    window.clearTimeout(timer);
+    if (!res.ok) {
+      return { ready: false, source: userKey ? "user" : "none", masked: userKey ? maskApiKey(userKey) : "", error: "Could not check API status" };
+    }
+
+    const data = await res.json();
+    const userStatus = data.userKey;
+
+    if (userKey && userStatus?.valid === true) {
+      return { ready: true, source: "user", masked: maskApiKey(userKey) };
+    }
+    if (userKey && userStatus?.valid === false) {
+      return {
+        ready: false,
+        source: "user",
+        masked: maskApiKey(userKey),
+        error: userStatus.error || "Invalid API key",
+      };
+    }
+    if (userKey) {
+      return { ready: false, source: "user", masked: maskApiKey(userKey), error: "Key not verified" };
+    }
+    return { ready: false, source: "none" };
+  } catch {
+    if (userKey) {
+      return { ready: false, source: "user", masked: maskApiKey(userKey), error: "Could not verify key" };
+    }
+    return { ready: false, source: "none", error: "Could not check API status" };
+  }
 }
 
 /**

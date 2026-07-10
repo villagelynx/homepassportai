@@ -1,12 +1,15 @@
 import { manualSearchUrl, manualsLibSearchUrl } from "./manual-links.js";
-import { clearApiKey, hasUserApiKey, loadApiKey, maskApiKey, saveApiKey } from "./api-key.js";
+import { clearApiKey, hasUserApiKey, saveApiKey } from "./api-key.js";
 import { detectCurrentLocation, loadLocation, locationDisplayLabel, saveLocation } from "./location.js";
 import { localRepairGoogleUrl, localRepairSearchUrl } from "./repair-links.js";
 import { APP_VERSION, config, isSupabaseConfigured } from "./config.js";
 import {
+  clearSessionExpiredFlag,
+  friendlyAuthMessage,
   getUserEmail,
   initAuth,
   isSignedIn,
+  refreshAuthIfNeeded,
   sendPasswordReset,
   setAuthListener,
   setRecoveryListener,
@@ -14,21 +17,15 @@ import {
   signOut,
   signUp,
   updateUserPassword,
+  wasSessionExpired,
 } from "./auth.js";
-import { analyzeAppliancePhotos, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, readFileAsDataUrl } from "./analyze.js";
+import { analyzeAppliancePhotos, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
 import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
 import { mapRoomGuess, populateRoomSelect, roomDisplayName, ROOM_ORDER } from "./rooms.js";
-import {
-  dismissInstallPrompt,
-  installHintMode,
-  isInstallDismissed,
-  isStandaloneApp,
-  resetInstallPrompt,
-  shouldShowInstallPrompt,
-} from "./install-prompt.js";
+import { installHintMode, isStandaloneApp } from "./install-prompt.js";
 import { generateInsurancePdf } from "./insurance-report.js";
 import { extractVideoFrames, ROOM_SCAN_MAX_SECONDS } from "./video-frames.js";
 import {
@@ -54,6 +51,7 @@ const views = {
   scan3: document.getElementById("view-scan-3"),
   review: document.getElementById("view-review"),
   settings: document.getElementById("view-settings"),
+  guide: document.getElementById("view-guide"),
   detail: document.getElementById("view-detail"),
   editAppliance: document.getElementById("view-edit-appliance"),
 };
@@ -67,12 +65,8 @@ const els = {
   roomFilterChips: document.getElementById("room-filter-chips"),
   emptyState: document.getElementById("empty-state"),
   searchNoResults: document.getElementById("search-no-results"),
+  apiSetupBanner: document.getElementById("api-setup-banner"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
-  installBanner: document.getElementById("install-banner"),
-  installBannerTitle: document.getElementById("install-banner-title"),
-  installBannerLede: document.getElementById("install-banner-lede"),
-  installBannerSteps: document.getElementById("install-banner-steps"),
-  btnDismissInstall: document.getElementById("btn-dismiss-install"),
   btnAdd: document.getElementById("btn-add-appliance"),
   btnScanRoom: document.getElementById("btn-scan-room"),
   inputRoomVideo: document.getElementById("input-room-video"),
@@ -162,7 +156,6 @@ const els = {
   settingsInstallNote: document.getElementById("settings-install-note"),
   settingsInstallSteps: document.getElementById("settings-install-steps"),
   settingsInstallStandalone: document.getElementById("settings-install-standalone"),
-  btnShowInstallCard: document.getElementById("btn-show-install-card"),
   authForm: document.getElementById("auth-form"),
   authEmail: document.getElementById("auth-email"),
   authPassword: document.getElementById("auth-password"),
@@ -251,12 +244,6 @@ function isLocalNetworkDev() {
 async function boot() {
   try {
     initTheme();
-    try {
-      const params = new URLSearchParams(location.search);
-      if (params.get("install") === "1") resetInstallPrompt();
-    } catch {
-      // ignore
-    }
     init();
     clearBootError();
     document.documentElement.dataset.hpReady = "1";
@@ -273,10 +260,12 @@ async function boot() {
         });
       } catch (err) {
         console.error(err);
-        toast(err instanceof Error ? err.message : "Could not connect to cloud");
+        toast(friendlyAuthMessage(err));
         allowOfflineUse = true;
       }
     }
+
+    setupSessionRefresh();
 
     if (arrivedViaPasswordReset && isSupabaseConfigured()) {
       showView("updatePassword");
@@ -317,7 +306,8 @@ function clearBootError() {
   }
 }
 
-async function enterApp() {
+async function enterApp(options = {}) {
+  const { notifyAiReady = false } = options;
   if (isSupabaseConfigured() && !isSignedIn() && !allowOfflineUse) {
     if (els.btnAuthOffline) els.btnAuthOffline.hidden = false;
     updateSyncBanner();
@@ -332,8 +322,14 @@ async function enterApp() {
 
   await renderHome();
   updateSyncBanner();
-  updateInstallBanner();
   showView("home");
+
+  const aiStatus = await refreshApiKeyStatus();
+  if (notifyAiReady) {
+    notifyApiKeyStatus(aiStatus);
+  } else {
+    await updateApiSetupBanner();
+  }
 }
 
 async function onAuthChanged() {
@@ -342,10 +338,28 @@ async function onAuthChanged() {
     if (migrated > 0) toast(`Synced ${migrated} appliance(s) to the cloud`);
     await renderHome();
     updateSyncBanner();
-    updateInstallBanner();
     return;
   }
   updateSyncBanner();
+  if (wasSessionExpired()) {
+    clearSessionExpiredFlag();
+    toast("Your sign-in expired. Please sign in again.");
+    showView("auth");
+  }
+}
+
+function setupSessionRefresh() {
+  if (!isSupabaseConfigured() || typeof document === "undefined") return;
+
+  const refresh = () => {
+    if (document.visibilityState === "visible") {
+      void refreshAuthIfNeeded();
+    }
+  };
+
+  document.addEventListener("visibilitychange", refresh);
+  window.addEventListener("pageshow", () => void refreshAuthIfNeeded());
+  window.addEventListener("focus", () => void refreshAuthIfNeeded());
 }
 
 function init() {
@@ -492,18 +506,6 @@ function init() {
   els.btnRestoreBackup?.addEventListener("click", () => void restoreInventory());
   els.btnRestoreInventory?.addEventListener("click", () => void restoreInventory());
   els.inputImportBackup?.addEventListener("change", () => void importBackupFile());
-  els.btnDismissInstall?.addEventListener("click", () => {
-    dismissInstallPrompt();
-    updateInstallBanner();
-    renderInstallSettings();
-  });
-  els.btnShowInstallCard?.addEventListener("click", () => {
-    resetInstallPrompt();
-    updateInstallBanner();
-    renderInstallSettings();
-    toast("Tip will show on home");
-    void renderHome().then(() => showView("home"));
-  });
 
   for (const btn of document.querySelectorAll("[data-nav]")) {
     btn.addEventListener("click", () => {
@@ -526,6 +528,8 @@ function init() {
       } else if (target === "settings") {
         renderSettings();
         showView("settings");
+      } else if (target === "guide") {
+        showView("guide");
       }
     });
   }
@@ -567,7 +571,7 @@ async function handleAuthSubmit() {
       toast("Account created — you are signed in");
     }
     allowOfflineUse = false;
-    await enterApp();
+    await enterApp({ notifyAiReady: true });
   } catch (err) {
     toast(err instanceof Error ? err.message : "Authentication failed");
   } finally {
@@ -627,7 +631,7 @@ async function handleUpdatePassword() {
     }
     toast("Password updated — you're signed in");
     allowOfflineUse = false;
-    await enterApp();
+    await enterApp({ notifyAiReady: true });
   } catch (err) {
     toast(err instanceof Error ? err.message : "Could not update password");
   } finally {
@@ -688,24 +692,6 @@ function fillInstallSteps(listEl, steps) {
   listEl.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
 }
 
-function updateInstallBanner() {
-  if (!els.installBanner) return;
-  const show = shouldShowInstallPrompt();
-  els.installBanner.hidden = !show;
-  if (!show) return;
-
-  const ios = installHintMode() === "ios";
-  if (els.installBannerTitle) {
-    els.installBannerTitle.textContent = ios
-      ? "Add HomePassportAI to your iPhone"
-      : "Add HomePassportAI on iPhone";
-  }
-  if (els.installBannerLede) {
-    els.installBannerLede.textContent = "Photos and serials, ready when you need them.";
-  }
-  fillInstallSteps(els.installBannerSteps, installInstructionsHtml());
-}
-
 function renderInstallSettings() {
   const standalone = isStandaloneApp();
   const ios = installHintMode() === "ios";
@@ -725,9 +711,37 @@ function renderInstallSettings() {
     els.settingsInstallSteps.hidden = standalone;
     if (!standalone) fillInstallSteps(els.settingsInstallSteps, installInstructionsHtml());
   }
-  if (els.btnShowInstallCard) {
-    els.btnShowInstallCard.hidden = standalone || !ios || !isInstallDismissed();
+}
+
+function openSettingsForApiKey() {
+  renderSettings();
+  showView("settings");
+  requestAnimationFrame(() => {
+    els.fieldApiKey?.focus();
+    els.fieldApiKey?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+
+async function requireUserApiKeyForAi() {
+  if (!hasUserApiKey()) {
+    toast("Add your OpenAI API key in Settings to use AI analysis");
+    openSettingsForApiKey();
+    return false;
   }
+  const status = await checkApiKeyStatus();
+  if (!status.ready || status.source !== "user") {
+    toast(status.error ? `API key issue — ${status.error}` : "Set up your OpenAI API key in Settings first");
+    openSettingsForApiKey();
+    return false;
+  }
+  return true;
+}
+
+async function updateApiSetupBanner() {
+  if (!els.apiSetupBanner) return;
+  const status = await checkApiKeyStatus();
+  const hide = status.ready && status.source === "user";
+  els.apiSetupBanner.hidden = hide;
 }
 
 function requireCloudSave() {
@@ -845,6 +859,7 @@ async function runRoomAnalysis() {
     toast("Record a short room video first");
     return;
   }
+  if (!(await requireUserApiKeyForAi())) return;
 
   const btn = els.btnAnalyzeRoom;
   if (btn instanceof HTMLButtonElement) {
@@ -1198,6 +1213,7 @@ async function onReceiptPhoto() {
 
 async function runAnalysis() {
   if (!scan.appliancePhotoDataUrl) return;
+  if (!(await requireUserApiKeyForAi())) return;
 
   if (els.btnAnalyze) {
     els.btnAnalyze.disabled = true;
@@ -1325,20 +1341,11 @@ async function saveRecord() {
 }
 
 function renderSettings() {
-  const key = loadApiKey();
   if (els.fieldTheme) els.fieldTheme.value = loadThemePreference();
   if (els.fieldRoomChips) els.fieldRoomChips.checked = loadRoomChipsEnabled();
-  if (els.apiKeyStatus) {
-    if (key) {
-      els.apiKeyStatus.hidden = false;
-      els.apiKeyStatus.textContent = `Key saved on this device: ${maskApiKey(key)}`;
-    } else {
-      els.apiKeyStatus.hidden = true;
-      els.apiKeyStatus.textContent = "";
-    }
-  }
+  void refreshApiKeyStatus();
   if (els.fieldApiKey) els.fieldApiKey.value = "";
-  if (els.btnClearApiKey) els.btnClearApiKey.hidden = !key;
+  if (els.btnClearApiKey) els.btnClearApiKey.hidden = !hasUserApiKey();
 
   const cloud = isSupabaseConfigured();
   const signedIn = isSignedIn();
@@ -1349,7 +1356,48 @@ function renderSettings() {
   renderInstallSettings();
 }
 
-function saveSettingsApiKey() {
+/** @param {import("./analyze.js").ApiKeyStatus} status */
+function applyApiKeyStatus(status) {
+  if (!els.apiKeyStatus) return;
+  els.apiKeyStatus.hidden = false;
+  els.apiKeyStatus.classList.remove("is-ready", "is-warning", "is-missing");
+
+  if (status.ready && status.source === "user") {
+    els.apiKeyStatus.classList.add("is-ready");
+    els.apiKeyStatus.textContent = `AI analysis ready — key ${status.masked} verified`;
+    return;
+  }
+  if (status.source === "user" && status.masked) {
+    els.apiKeyStatus.classList.add("is-warning");
+    els.apiKeyStatus.textContent = `Key saved (${status.masked}) but not working — ${status.error || "check OpenAI dashboard"}`;
+    return;
+  }
+  els.apiKeyStatus.classList.add("is-missing");
+  els.apiKeyStatus.textContent =
+    "No API key yet — add yours below to enable label reading and room video scans";
+}
+
+/** @param {import("./analyze.js").ApiKeyStatus} status */
+function notifyApiKeyStatus(status) {
+  if (status.ready && status.source === "user") {
+    toast(`AI analysis ready — ${status.masked}`);
+    return;
+  }
+  if (status.source === "user" && status.masked) {
+    toast(status.error ? `API key issue — ${status.error}` : "API key saved but not verified — check Settings");
+    return;
+  }
+  toast("Add your OpenAI API key in Settings to use AI label and room video analysis");
+}
+
+async function refreshApiKeyStatus() {
+  const status = await checkApiKeyStatus();
+  applyApiKeyStatus(status);
+  await updateApiSetupBanner();
+  return status;
+}
+
+async function saveSettingsApiKey() {
   const key = els.fieldApiKey?.value.trim() ?? "";
   if (!key) {
     toast("Paste your OpenAI API key");
@@ -1360,8 +1408,8 @@ function saveSettingsApiKey() {
     return;
   }
   saveApiKey(key);
-  renderSettings();
-  toast("API key saved on this device");
+  const status = await refreshApiKeyStatus();
+  notifyApiKeyStatus(status);
 }
 
 function refreshToLatestVersion() {
@@ -1544,6 +1592,8 @@ async function renderHome() {
       els.applianceList.append(btn);
     }
   }
+
+  void updateApiSetupBanner();
 }
 
 /** @param {import("./storage.js").ApplianceRecord} item @param {string} query */
@@ -1778,6 +1828,8 @@ async function onDetailLabelPhotoSelected() {
     detailLabelPending.dataUrl = dataUrl;
     setPreview(els.previewDetailLabelPhoto, dataUrl);
     if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = false;
+
+    if (!(await requireUserApiKeyForAi())) return;
 
     if (els.detailLabelReview) els.detailLabelReview.hidden = false;
     if (els.detailLabelAnalyzeStatus) {
@@ -2239,7 +2291,6 @@ async function removeDetail() {
   detailId = null;
   await renderHome();
   updateSyncBanner();
-  updateInstallBanner();
   showView("home");
   toast("Appliance removed");
 }

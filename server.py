@@ -11,6 +11,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parent
 
@@ -126,6 +128,26 @@ def resolve_port() -> int:
 
 def server_openai_configured() -> bool:
     return bool(os.environ.get("OPENAI_API_KEY", "").strip())
+
+
+def verify_openai_key(api_key: str) -> dict[str, Any]:
+    if not api_key:
+        return {"provided": False, "valid": None}
+    try:
+        req = Request(
+            "https://api.openai.com/v1/models",
+            headers={"Authorization": f"Bearer {api_key}"},
+            method="GET",
+        )
+        with urlopen(req, timeout=8) as resp:
+            valid = 200 <= resp.status < 300
+        return {"provided": True, "valid": valid}
+    except HTTPError as exc:
+        if exc.code == 401:
+            return {"provided": True, "valid": False, "error": "Invalid API key"}
+        return {"provided": True, "valid": False, "error": f"OpenAI returned HTTP {exc.code}"}
+    except Exception:
+        return {"provided": True, "valid": False, "error": "Could not reach OpenAI"}
 
 
 def resolve_api_key(handler: BaseHTTPRequestHandler) -> str:
@@ -326,11 +348,14 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/health":
+            user_key = (self.headers.get("X-OpenAI-Api-Key") or "").strip()
             self._json(
                 200,
                 {
                     "ok": True,
                     "openai": server_openai_configured(),
+                    "openaiServer": server_openai_configured(),
+                    "userKey": verify_openai_key(user_key),
                     "userKeySupported": True,
                     "analyzePath": "/api/analyze",
                     "analyzeRoomPath": "/api/analyze-room",

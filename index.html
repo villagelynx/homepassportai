@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=36" />
+    <link rel="stylesheet" href="./css/app.css?v=40" />
   </head>
   <body>
     <div id="app" class="app">
@@ -57,16 +57,37 @@
             <p class="topbar__tag" id="build-tag">Phase A · build …</p>
           </div>
         </div>
-        <button
-          type="button"
-          class="topbar__sync"
-          id="btn-sync-status"
-          aria-label="Sync status"
-          title="Sync status"
-          hidden
-        >
-          <span class="topbar__sync-dot" id="sync-status-dot" aria-hidden="true"></span>
-        </button>
+        <div class="topbar__actions">
+          <button
+            type="button"
+            class="topbar__sync"
+            id="btn-sync-status"
+            aria-label="Sync status"
+            title="Sync status"
+            hidden
+          >
+            <span class="topbar__sync-dot" id="sync-status-dot" aria-hidden="true"></span>
+          </button>
+          <button
+            type="button"
+            class="topbar__info"
+            id="btn-guide"
+            data-nav="guide"
+            aria-label="How to use HomePassportAI"
+            title="How to use"
+          >
+            <svg class="topbar__info-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" />
+              <path
+                d="M12 11v5M12 8h.01"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+        </div>
         <button type="button" class="topbar__settings" id="btn-settings" data-nav="settings" aria-label="Settings">
           ⚙
         </button>
@@ -94,25 +115,19 @@
         <div id="room-filter-chips" class="room-filter-chips" role="tablist" aria-label="Filter by room" hidden></div>
         <section class="hero">
           <h2>Your home inventory</h2>
-          <p>Scan appliances with a quick photo — add the model/serial label later with a short video.</p>
-          <div id="install-banner" class="install-banner" hidden>
-            <div class="install-banner__icon" aria-hidden="true">
-              <img src="./icons/apple-touch-icon.png" alt="" width="56" height="56" />
-            </div>
-            <div class="install-banner__body">
-              <strong id="install-banner-title">Add HomePassportAI to your iPhone</strong>
-              <p id="install-banner-lede">Photos and serials, ready when you need them.</p>
-              <ol class="install-banner__steps" id="install-banner-steps">
-                <li>Tap <strong>Share</strong> <span class="install-banner__share" aria-hidden="true">□↑</span> in Safari</li>
-                <li>Tap <strong>Add to Home Screen</strong></li>
-                <li>Tap <strong>Add</strong></li>
-              </ol>
-            </div>
-            <button type="button" class="install-banner__close" id="btn-dismiss-install" aria-label="Dismiss">
-              ×
-            </button>
-          </div>
+          <p>Scan appliances with a quick photo — add an optional model/serial label photo anytime.</p>
         </section>
+        <div id="api-setup-banner" class="api-setup-banner" hidden>
+          <p class="api-setup-banner__title">Set up AI on this device</p>
+          <p class="api-setup-banner__text">
+            Add your own <strong>OpenAI API key</strong> in Settings to read product labels, scan room
+            videos, and auto-fill model and serial numbers. Share, manuals, and insurance PDFs use your
+            saved inventory once items are added.
+          </p>
+          <button type="button" class="btn btn--secondary btn--block" data-nav="settings">
+            Set up API key
+          </button>
+        </div>
         <div id="appliance-list" class="appliance-list" role="list"></div>
         <div id="empty-state" class="empty-state" hidden>
           <p class="empty-state__tagline">Know what you own.</p>
@@ -315,8 +330,8 @@
           <p class="step-header__label">Room scan</p>
           <h2>Walk the room on video</h2>
           <p class="step-header__lede">
-            Record up to 60 seconds while slowly panning each wall and large item. We’ll pull still
-            frames and list everything AI can see so you can keep or discard each one.
+            Record up to 60 seconds while slowly panning each wall and large item. Requires your OpenAI
+            API key in Settings.
           </p>
         </div>
         <div class="capture-card">
@@ -367,7 +382,10 @@
           <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
           <p class="step-header__label">Step 1 of 3</p>
           <h2>Appliance photo</h2>
-          <p class="step-header__lede">Capture the whole appliance so we can identify type and brand.</p>
+          <p class="step-header__lede">
+            Capture the whole appliance. AI identification uses your OpenAI API key from Settings (or
+            enter details manually on the last step).
+          </p>
         </div>
         <div class="capture-card">
           <div id="preview-appliance" class="capture-card__preview capture-card__preview--empty">
@@ -479,34 +497,98 @@
         </form>
       </main>
 
+      <!-- Guide: how to use & benefits -->
+      <main id="view-guide" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
+          <h2>How HomePassportAI helps</h2>
+          <p class="step-header__lede">Photos and serials, ready when you need them.</p>
+        </div>
+        <div class="guide">
+          <section class="guide-section guide-section--highlight">
+            <h3 class="detail-section-title">OpenAI API key (required for AI)</h3>
+            <p class="guide-text">
+              HomePassportAI uses <strong>your</strong> OpenAI key on this device. You pay OpenAI
+              directly for photo and video analysis — the site does not include shared AI credits.
+            </p>
+            <ul class="guide-list">
+              <li><strong>Needed for AI:</strong> label/model/serial extraction, appliance photos, room video scans.</li>
+              <li><strong>Works without AI:</strong> saving photos, editing details, search, share, manual lookup links, insurance PDF (from saved items).</li>
+            </ul>
+            <button type="button" class="btn btn--primary btn--block guide-settings-btn" data-nav="settings">
+              Set up API key in Settings
+            </button>
+          </section>
+          <section class="guide-section">
+            <h3 class="detail-section-title">Why use it</h3>
+            <ul class="guide-list">
+              <li><strong>Know what you own</strong> — brands, models, and serial numbers in one place.</li>
+              <li><strong>Insurance ready</strong> — download a PDF inventory for claims or renewals.</li>
+              <li><strong>Repairs faster</strong> — look up manuals and save your go-to repair companies per item.</li>
+              <li><strong>Cloud backup</strong> — sign in to sync across devices (optional).</li>
+              <li><strong>Share an item</strong> — send details to a spouse, landlord, or technician from your phone.</li>
+            </ul>
+          </section>
+          <section class="guide-section">
+            <h3 class="detail-section-title">Add an appliance (quick scan)</h3>
+            <ol class="guide-list guide-list--ordered">
+              <li>Tap the <strong>camera button</strong> on the home screen.</li>
+              <li>Take a photo of the appliance.</li>
+              <li>Optionally add a <strong>label photo</strong> for model and serial (or skip it).</li>
+              <li>Optionally add a <strong>receipt photo</strong>.</li>
+              <li>Review the details, pick a <strong>room</strong>, and save.</li>
+            </ol>
+          </section>
+          <section class="guide-section">
+            <h3 class="detail-section-title">Scan a whole room</h3>
+            <p class="guide-text">
+              Record a short room video — the app finds multiple items and lets you choose which ones to keep.
+            </p>
+          </section>
+          <section class="guide-section">
+            <h3 class="detail-section-title">Find items later</h3>
+            <ul class="guide-list">
+              <li>Use <strong>search</strong> on the home list (nickname, brand, model, serial).</li>
+              <li>Tap a <strong>room chip</strong> to filter by room (toggle in Settings).</li>
+              <li>Open any item for photos, edit details, manuals, and repair notes.</li>
+            </ul>
+          </section>
+          <section class="guide-section">
+            <h3 class="detail-section-title">Settings worth knowing</h3>
+            <ul class="guide-list">
+              <li><strong>OpenAI API key</strong> — required on your device for AI label and room video analysis.</li>
+              <li><strong>Sign in</strong> — sync inventory to the cloud.</li>
+              <li><strong>Add to iPhone home screen</strong> — open like an app.</li>
+              <li><strong>Insurance PDF</strong> and <strong>backup</strong> — export or restore your inventory.</li>
+            </ul>
+            <button type="button" class="btn btn--secondary btn--block guide-settings-btn" data-nav="settings">
+              Open Settings
+            </button>
+          </section>
+        </div>
+      </main>
+
       <!-- Settings -->
       <main id="view-settings" class="view" hidden>
         <div class="step-header">
           <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
           <h2>Settings</h2>
-          <p class="step-header__lede">Add your own OpenAI key for photo analysis (BYOK).</p>
+          <p class="step-header__lede">
+            Your OpenAI API key is required on this device for AI label reading and room video scans.
+          </p>
         </div>
         <form id="settings-form" class="form settings-form">
-          <label class="field">
-            <span>Appearance</span>
-            <select id="field-theme" class="input">
-              <option value="system">Match system (day / night)</option>
-              <option value="light">Daylight</option>
-              <option value="dark">Dark</option>
-            </select>
-          </label>
-          <label class="field field--switch">
-            <span>Room filter chips</span>
-            <input type="checkbox" id="field-room-chips" class="switch-input" checked />
-          </label>
-          <p class="settings-note">Show room filter pills on the home inventory list.</p>
-          <p class="settings-note">
-            Your key is stored only on this device and sent to the HomePassportAI server when you analyze
-            photos. You pay OpenAI directly for usage.
-            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
-              >Get an API key</a
-            >
-          </p>
+          <div class="settings-api-callout">
+            <h3 class="detail-section-title">OpenAI API key (required for AI)</h3>
+            <p class="settings-note">
+              Paste a key from
+              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
+                >platform.openai.com</a
+              >. It stays on this device and is sent only when you analyze photos or room videos. You pay OpenAI
+              directly. Without a key you can still save items manually, share them, look up manuals, and build
+              insurance PDFs from saved data.
+            </p>
+          </div>
           <p id="api-key-status" class="api-key-status" hidden></p>
           <label class="field">
             <span>OpenAI API key</span>
@@ -553,6 +635,19 @@
           </label>
           <button type="submit" class="btn btn--primary btn--block">Save API key</button>
           <button type="button" class="btn btn--ghost btn--block" id="btn-clear-api-key">Remove saved key</button>
+          <label class="field">
+            <span>Appearance</span>
+            <select id="field-theme" class="input">
+              <option value="system">Match system (day / night)</option>
+              <option value="light">Daylight</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
+          <label class="field field--switch">
+            <span>Room filter chips</span>
+            <input type="checkbox" id="field-room-chips" class="switch-input" checked />
+          </label>
+          <p class="settings-note">Show room filter pills on the home inventory list.</p>
           <div id="settings-account" class="settings-account" hidden>
             <h3 class="detail-section-title">Account</h3>
             <p id="settings-email" class="settings-email"></p>
@@ -572,9 +667,6 @@
             <p id="settings-install-standalone" class="settings-note" hidden>
               You opened HomePassportAI from your home screen — you are all set.
             </p>
-            <button type="button" class="btn btn--secondary btn--block" id="btn-show-install-card" hidden>
-              Show tip on home again
-            </button>
           </div>
           <div class="settings-account settings-backup">
             <h3 class="detail-section-title">Insurance report</h3>
