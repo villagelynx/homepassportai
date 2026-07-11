@@ -1523,10 +1523,12 @@ body {
 }
 
 .landing {
-  --landing-navy: #1e3a5f;
+  --landing-navy: #1a2332;
   --landing-green: #22c55e;
+  --landing-blue: #2563eb;
   --landing-bg: #f8fafc;
   --landing-surface: #ffffff;
+  font-family: "Inter", "DM Sans", system-ui, sans-serif;
   background: var(--landing-bg);
   color: var(--landing-navy);
   min-height: 100dvh;
@@ -1565,16 +1567,19 @@ body {
 }
 
 .landing__logo {
-  width: 3rem;
-  height: 3rem;
+  width: 3.5rem;
+  height: 3.5rem;
   flex-shrink: 0;
+  overflow: visible;
 }
 
 .landing__wordmark {
   margin: 0;
-  font-size: 1.35rem;
+  font-family: "Inter", "DM Sans", system-ui, sans-serif;
+  font-size: clamp(1.35rem, 4.5vw, 1.65rem);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
 }
 
 .landing__wordmark-home {
@@ -1586,10 +1591,11 @@ body {
 }
 
 .landing__tagline {
-  margin: 0.2rem 0 0;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--muted);
+  margin: 0.25rem 0 0;
+  font-family: "Inter", "DM Sans", system-ui, sans-serif;
+  font-size: 0.84rem;
+  font-weight: 400;
+  color: var(--landing-navy);
 }
 
 .landing__hero {

@@ -1,18 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="HomePassportAI">
   <rect width="512" height="512" rx="112" fill="#ffffff" />
-  <g transform="translate(96 88)">
+  <defs>
+    <linearGradient id="hp-brand-gradient" x1="12%" y1="88%" x2="88%" y2="12%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#22c55e" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(64 64) scale(6)">
     <path
-      d="M64 96 160 24l96 72v128a16 16 0 0 1-16 16h-48V144h-64v96H80a16 16 0 0 1-16-16V96Z"
+      d="M13 52V34L32 14L46 28V20H54V32H50V52H13Z"
       fill="none"
-      stroke="#1d6fd8"
-      stroke-width="20"
+      stroke="url(#hp-brand-gradient)"
+      stroke-width="3.25"
+      stroke-linecap="round"
       stroke-linejoin="round"
     />
     <path
-      d="M96 128l48 48 96-112"
+      d="M21 40l6 6 16-16"
       fill="none"
-      stroke="#22c55e"
-      stroke-width="24"
+      stroke="url(#hp-brand-gradient)"
+      stroke-width="3.25"
       stroke-linecap="round"
       stroke-linejoin="round"
     />
