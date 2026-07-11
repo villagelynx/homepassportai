@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=55" />
+    <link rel="stylesheet" href="./css/app.css?v=59" />
   </head>
   <body>
     <div id="app" class="app">
@@ -98,161 +98,105 @@
 
       <!-- Landing (unauthenticated visitors) -->
       <main id="view-landing" class="view landing" hidden>
-        <div class="landing__phone-shell">
-          <header class="landing__topnav">
-            <div class="landing__brand">
-              <svg class="landing__brand-icon" viewBox="0 0 64 64" aria-hidden="true">
-                <defs>
-                  <linearGradient id="landing-logo-grad" gradientUnits="userSpaceOnUse" x1="8" y1="56" x2="56" y2="8">
-                    <stop offset="0%" stop-color="#1d6fd8" />
-                    <stop offset="100%" stop-color="#22c55e" />
-                  </linearGradient>
-                </defs>
-                <path
-                  d="M12 52V34L32 13L47 28V19H55V31H51V52H12Z"
-                  fill="none"
-                  stroke="url(#landing-logo-grad)"
-                  stroke-width="3.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-                <path
-                  d="M20 41l6 6 17-17"
-                  fill="none"
-                  stroke="url(#landing-logo-grad)"
-                  stroke-width="3.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-              <p class="landing__brand-text">
-                <span class="landing__brand-home">HomePassport</span><span class="landing__brand-ai">AI</span>
-              </p>
-            </div>
-            <button
-              type="button"
-              class="landing__menu-btn"
-              id="btn-landing-menu"
-              aria-label="Open menu"
-              aria-expanded="false"
-              aria-controls="landing-menu"
-            >
-              <span class="landing__menu-line"></span>
-              <span class="landing__menu-line"></span>
-              <span class="landing__menu-line"></span>
-            </button>
-            <div class="landing__menu" id="landing-menu" hidden>
-              <button type="button" class="landing__menu-item" id="btn-landing-menu-sign-in">Sign In</button>
-              <button type="button" class="landing__menu-item landing__menu-item--primary" id="btn-landing-menu-register">
-                Register
-              </button>
-            </div>
+        <div class="landing__page">
+          <header class="landing__top-actions">
+            <button type="button" class="btn btn--ghost landing__top-btn" id="btn-landing-header-sign-in">Sign In</button>
+            <button type="button" class="btn btn--primary landing__top-btn" id="btn-landing-header-register">Register</button>
           </header>
 
-          <section class="landing__my-home" aria-label="My Home preview">
-            <div class="landing__my-home-card">
-              <div class="landing__my-home-copy">
-                <h2 class="landing__my-home-title">My Home</h2>
-                <p class="landing__my-home-meta">125 Items · All Up to Date</p>
+          <div class="landing__split">
+            <div class="landing__copy">
+              <div class="landing__brand-lockup">
+                <svg class="landing__brand-lockup-icon" viewBox="0 0 64 64" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="landing-brand-grad" gradientUnits="userSpaceOnUse" x1="8" y1="56" x2="56" y2="8">
+                      <stop offset="0%" stop-color="#1d6fd8" />
+                      <stop offset="100%" stop-color="#22c55e" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M12 52V34L32 13L47 28V19H55V31H51V52H12Z" fill="none" stroke="url(#landing-brand-grad)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M20 41l6 6 17-17" fill="none" stroke="url(#landing-brand-grad)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div>
+                  <p class="landing__brand-lockup-title">
+                    <span class="landing__brand-home">HomePassport</span><span class="landing__brand-ai">AI.com</span>
+                  </p>
+                  <p class="landing__brand-lockup-tagline">Scan. Organize. Protect. Peace of Mind.</p>
+                </div>
               </div>
-              <svg class="landing__my-home-art" viewBox="0 0 200 120" aria-hidden="true">
-                <ellipse cx="100" cy="108" rx="92" ry="18" fill="#4ade80" opacity="0.95" />
-                <rect x="78" y="52" width="44" height="48" fill="#ffffff" rx="2" />
-                <path d="M70 54 L100 28 L130 54 Z" fill="#ffffff" />
-                <path d="M72 54 L100 30 L128 54 Z" fill="#0f4c9e" opacity="0.35" />
-                <rect x="86" y="62" width="10" height="12" fill="#bfdbfe" rx="1" />
-                <rect x="104" y="62" width="10" height="12" fill="#bfdbfe" rx="1" />
-                <rect x="86" y="80" width="10" height="12" fill="#bfdbfe" rx="1" />
-                <rect x="104" y="80" width="10" height="12" fill="#bfdbfe" rx="1" />
-                <rect x="96" y="86" width="8" height="14" fill="#1d6fd8" rx="1" />
-                <circle cx="52" cy="78" r="14" fill="#22c55e" />
-                <rect x="48" y="78" width="8" height="18" fill="#15803d" rx="2" />
-                <circle cx="148" cy="74" r="16" fill="#22c55e" />
-                <rect x="144" y="74" width="8" height="20" fill="#15803d" rx="2" />
-              </svg>
+
+              <section class="landing__hero">
+                <h2 class="landing__headline">
+                  Your Home.
+                  <span class="landing__headline-accent">All in One Place.</span>
+                </h2>
+                <p class="landing__lede">
+                  The AI-powered home inventory app that keeps track of your belongings, appliances, important
+                  documents and more.
+                </p>
+                <div class="landing__hero-actions">
+                  <button type="button" class="btn btn--primary" id="btn-landing-register">Register</button>
+                  <button type="button" class="btn btn--secondary" id="btn-landing-sign-in">Sign In</button>
+                </div>
+              </section>
+
+              <ul class="landing__features">
+                <li class="landing__feature">
+                  <span class="landing__feature-icon landing__feature-icon--scan" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 7.5h3l1.1-1.7c.2-.3.5-.5.9-.5h5.9c.4 0 .7.2.9.5L17 7.5h3a1.5 1.5 0 0 1 1.5 1.5V18A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                  </span>
+                  <div>
+                    <strong>AI Item Scanning</strong>
+                    <p>Snap a photo and AI extracts the model, serial number, brand and more.</p>
+                  </div>
+                </li>
+                <li class="landing__feature">
+                  <span class="landing__feature-icon landing__feature-icon--inventory" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </span>
+                  <div>
+                    <strong>Organized Inventory</strong>
+                    <p>Everything in your home, neatly organized by category and location.</p>
+                  </div>
+                </li>
+                <li class="landing__feature">
+                  <span class="landing__feature-icon landing__feature-icon--insurance" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <div>
+                    <strong>Insurance Ready</strong>
+                    <p>Generate detailed reports in seconds for insurance or peace of mind.</p>
+                  </div>
+                </li>
+                <li class="landing__feature">
+                  <span class="landing__feature-icon landing__feature-icon--secure" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                  </span>
+                  <div>
+                    <strong>Secure &amp; Private</strong>
+                    <p>Your data is encrypted and stored securely in the cloud.</p>
+                  </div>
+                </li>
+                <li class="landing__feature">
+                  <span class="landing__feature-icon landing__feature-icon--access" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 11h4m-2-2v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </span>
+                  <div>
+                    <strong>Access Anywhere</strong>
+                    <p>Available on all your devices. Share with family members.</p>
+                  </div>
+                </li>
+              </ul>
             </div>
-          </section>
 
-          <div class="landing__search-row">
-            <label class="landing__search">
-              <svg class="landing__search-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-                <path d="M16 16l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-              </svg>
-              <span class="landing__search-placeholder">Search items…</span>
-            </label>
-            <button type="button" class="landing__filter-btn" aria-label="Filter" disabled>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 7h16M7 12h10M10 17h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="landing__inner">
-          <div class="landing__layout">
-            <section class="landing__hero">
-              <h2 class="landing__headline">
-                Your Home.
-                <span class="landing__headline-accent">All in One Place.</span>
-              </h2>
-              <p class="landing__lede">
-                The AI-powered home inventory app that keeps track of your belongings, appliances, important
-                documents and more.
-              </p>
-              <div class="landing__hero-actions">
-                <button type="button" class="btn btn--primary" id="btn-landing-register">Register</button>
-                <button type="button" class="btn btn--secondary" id="btn-landing-sign-in">Sign In</button>
-              </div>
-            </section>
-
-            <ul class="landing__features">
-              <li class="landing__feature">
-                <span class="landing__feature-icon landing__feature-icon--scan" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M4 7.5h3l1.1-1.7c.2-.3.5-.5.9-.5h5.9c.4 0 .7.2.9.5L17 7.5h3a1.5 1.5 0 0 1 1.5 1.5V18A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-                </span>
-                <div>
-                  <strong>AI Item Scanning</strong>
-                  <p>Snap a photo and AI extracts the model, serial number, brand and more.</p>
-                </div>
-              </li>
-              <li class="landing__feature">
-                <span class="landing__feature-icon landing__feature-icon--inventory" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </span>
-                <div>
-                  <strong>Organized Inventory</strong>
-                  <p>Everything in your home, neatly organized by category and location.</p>
-                </div>
-              </li>
-              <li class="landing__feature">
-                <span class="landing__feature-icon landing__feature-icon--insurance" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </span>
-                <div>
-                  <strong>Insurance Ready</strong>
-                  <p>Generate detailed reports in seconds for insurance or peace of mind.</p>
-                </div>
-              </li>
-              <li class="landing__feature">
-                <span class="landing__feature-icon landing__feature-icon--secure" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-                </span>
-                <div>
-                  <strong>Secure &amp; Private</strong>
-                  <p>Your data is encrypted and stored securely in the cloud.</p>
-                </div>
-              </li>
-              <li class="landing__feature">
-                <span class="landing__feature-icon landing__feature-icon--access" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 11h4m-2-2v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </span>
-                <div>
-                  <strong>Access Anywhere</strong>
-                  <p>Available on all your devices. Share with family members.</p>
-                </div>
-              </li>
-            </ul>
+            <div class="landing__phone-col">
+              <img
+                class="landing__phone-straight"
+                src="./images/landing-phone-straight.png"
+                alt="HomePassportAI app on iPhone — My Home screen with house illustration, categories, and recently added items"
+                decoding="async"
+              />
+            </div>
           </div>
 
           <section class="landing__perfect-for" aria-label="Perfect for">
