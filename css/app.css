@@ -1571,12 +1571,58 @@ body {
   padding: calc(0.85rem + var(--safe-top)) 1.25rem 2.5rem;
 }
 
-.landing__top-actions {
+.landing__banner {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e8edf2;
+}
+
+.landing__banner-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.45rem;
+}
+
+.landing__banner-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.landing__banner-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
+}
+
+.landing__banner-title {
+  margin: 0;
+  font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
+  font-size: clamp(1.15rem, 4vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.landing__brand-home {
+  color: #1a2b41;
+}
+
+.landing__brand-ai {
+  color: #22c55e;
+}
+
+.landing__banner-tagline {
+  margin: 0 0 0.55rem;
+  padding-left: calc(2.35rem + 0.65rem);
+  font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
+  font-size: clamp(0.78rem, 2.5vw, 0.92rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: #1a2b41;
 }
 
 .landing__build-tag {
@@ -1584,7 +1630,6 @@ body {
   font-size: 0.72rem;
   font-weight: 500;
   color: #5b6472;
-  white-space: nowrap;
 }
 
 .landing__top-buttons {
@@ -1604,19 +1649,6 @@ body {
   gap: 2rem;
   align-items: center;
   margin-bottom: 2rem;
-}
-
-.landing__brand-lockup {
-  margin-bottom: 1.35rem;
-}
-
-.landing__brand-lockup-img {
-  display: block;
-  width: min(100%, 494px);
-  height: auto;
-  max-height: 5.5rem;
-  object-fit: contain;
-  object-position: left center;
 }
 
 .landing__phone-col {
@@ -1802,6 +1834,22 @@ body {
   text-align: left;
 }
 
+@media (max-width: 520px) {
+  .landing__banner-top {
+    flex-wrap: wrap;
+  }
+
+  .landing__banner-tagline {
+    padding-left: 0;
+    width: 100%;
+  }
+
+  .landing__top-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 @media (min-width: 900px) {
   .landing__page {
     padding-left: 2rem;
@@ -1809,15 +1857,20 @@ body {
     padding-top: calc(1.1rem + var(--safe-top));
   }
 
+  .landing__banner-icon {
+    width: 2.65rem;
+    height: 2.65rem;
+  }
+
+  .landing__banner-tagline {
+    padding-left: calc(2.65rem + 0.65rem);
+    font-size: 0.95rem;
+  }
+
   .landing__split {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
     gap: 2.5rem 3rem;
     align-items: start;
-  }
-
-  .landing__brand-lockup-img {
-    max-height: 6.25rem;
-    width: min(100%, 540px);
   }
 
   .landing__phone-straight {
