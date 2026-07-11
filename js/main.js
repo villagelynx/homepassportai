@@ -65,6 +65,7 @@ const views = {
 
 const els = {
   buildTag: document.getElementById("build-tag"),
+  landingBuildTag: document.getElementById("landing-build-tag"),
   applianceList: document.getElementById("appliance-list"),
   homeSearch: document.getElementById("home-search"),
   inputHomeSearch: document.getElementById("input-home-search"),
@@ -246,7 +247,13 @@ function newRecordId() {
   return `hp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
-if (els.buildTag) els.buildTag.textContent = `Phase A · build ${APP_VERSION}`;
+function setBuildTagText(suffix = "") {
+  const text = `Phase A · build ${APP_VERSION}${suffix}`;
+  if (els.buildTag) els.buildTag.textContent = text;
+  if (els.landingBuildTag) els.landingBuildTag.textContent = text;
+}
+
+setBuildTagText();
 
 const arrivedViaPasswordReset =
   typeof location !== "undefined" && /(?:[#&?])type=recovery(?:&|$)/.test(location.hash + location.search);
@@ -267,7 +274,7 @@ async function boot() {
     init();
     clearBootError();
     document.documentElement.dataset.hpReady = "1";
-    if (els.buildTag) els.buildTag.textContent = `Phase A · build ${APP_VERSION} · ready`;
+    setBuildTagText(" · ready");
 
     void probeAnalyzeServer();
 
