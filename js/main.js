@@ -179,6 +179,10 @@ const els = {
   btnAuthBack: document.getElementById("btn-auth-back"),
   btnLandingSignIn: document.getElementById("btn-landing-sign-in"),
   btnLandingRegister: document.getElementById("btn-landing-register"),
+  btnLandingMenu: document.getElementById("btn-landing-menu"),
+  landingMenu: document.getElementById("landing-menu"),
+  btnLandingMenuSignIn: document.getElementById("btn-landing-menu-sign-in"),
+  btnLandingMenuRegister: document.getElementById("btn-landing-menu-register"),
   btnLandingStart: document.getElementById("btn-landing-start"),
   btnLandingOffline: document.getElementById("btn-landing-offline"),
   updatePasswordForm: document.getElementById("update-password-form"),
@@ -493,6 +497,22 @@ function init() {
   els.btnRefreshVersion?.addEventListener("click", () => refreshToLatestVersion());
   els.btnLandingSignIn?.addEventListener("click", () => showAuth("signin"));
   els.btnLandingRegister?.addEventListener("click", () => showAuth("signup"));
+  els.btnLandingMenuSignIn?.addEventListener("click", () => {
+    closeLandingMenu();
+    showAuth("signin");
+  });
+  els.btnLandingMenuRegister?.addEventListener("click", () => {
+    closeLandingMenu();
+    showAuth("signup");
+  });
+  els.btnLandingMenu?.addEventListener("click", () => toggleLandingMenu());
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Node)) return;
+    if (els.landingMenu?.hidden) return;
+    if (els.btnLandingMenu?.contains(event.target)) return;
+    if (els.landingMenu?.contains(event.target)) return;
+    closeLandingMenu();
+  });
   els.btnLandingStart?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingOffline?.addEventListener("click", () => {
     allowOfflineUse = true;
@@ -578,8 +598,22 @@ function setAuthMode(mode) {
 
 /** @param {"signin" | "signup"} [mode] */
 function showAuth(mode = "signin") {
+  closeLandingMenu();
   setAuthMode(mode);
   showView("auth");
+}
+
+function closeLandingMenu() {
+  if (!els.landingMenu || !els.btnLandingMenu) return;
+  els.landingMenu.hidden = true;
+  els.btnLandingMenu.setAttribute("aria-expanded", "false");
+}
+
+function toggleLandingMenu() {
+  if (!els.landingMenu || !els.btnLandingMenu) return;
+  const open = els.landingMenu.hidden;
+  els.landingMenu.hidden = !open;
+  els.btnLandingMenu.setAttribute("aria-expanded", String(open));
 }
 
 function toggleAuthMode() {
@@ -1144,6 +1178,7 @@ function showView(name) {
   }
   const app = document.getElementById("app");
   app?.classList.toggle("app--landing", name === "landing");
+  if (name !== "landing") closeLandingMenu();
 }
 
 function resetScan() {
