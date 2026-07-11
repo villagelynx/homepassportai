@@ -23,7 +23,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="HomePassportAI" />
     <title>HomePassportAI</title>
-    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./icons/icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="canonical" href="https://homepassportai.com/" />
@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=62" />
+    <link rel="stylesheet" href="./css/app.css?v=63" />
   </head>
   <body>
     <div id="app" class="app">
@@ -102,19 +102,22 @@
           <header class="landing__banner">
             <div class="landing__banner-top">
               <div class="landing__banner-brand">
-                <svg class="landing__banner-icon" viewBox="0 0 64 64" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="landing-banner-grad" gradientUnits="userSpaceOnUse" x1="8" y1="56" x2="56" y2="8">
-                      <stop offset="0%" stop-color="#1d6fd8" />
-                      <stop offset="100%" stop-color="#22c55e" />
-                    </linearGradient>
-                  </defs>
-                  <path d="M12 52V34L32 13L47 28V19H55V31H51V52H12Z" fill="none" stroke="url(#landing-banner-grad)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" />
-                  <path d="M20 41l6 6 17-17" fill="none" stroke="url(#landing-banner-grad)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <p class="landing__banner-title">
-                  <span class="landing__brand-home">HomePassport</span><span class="landing__brand-ai">AI</span>
-                </p>
+                <img
+                  class="landing__banner-icon-img"
+                  src="./icons/brand-icon.png?v=1"
+                  alt=""
+                  width="56"
+                  height="56"
+                  decoding="async"
+                />
+                <img
+                  class="landing__banner-wordmark-img"
+                  src="./icons/brand-wordmark.png?v=1"
+                  alt="HomePassportAI"
+                  width="424"
+                  height="52"
+                  decoding="async"
+                />
               </div>
               <div class="landing__top-buttons">
                 <button type="button" class="btn btn--ghost landing__top-btn" id="btn-landing-header-sign-in">Sign In</button>
