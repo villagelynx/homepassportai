@@ -80,7 +80,7 @@ const ROOM_ICON_STROKE = {
 /** @type {Record<string, string[]>} */
 const ROOM_ICON_PATHS = {
   all: ["M4 4h7v7H4z", "M13 4h7v7h-7z", "M4 13h7v7H4z", "M13 13h7v7h-7z"],
-  kitchen: ["M5 12h14v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5Z", "M3 12h18", "M8 8V6a4 4 0 0 1 8 0v2"],
+  kitchen: ["M7 3v11", "M5 6h4", "M5 9h4", "M17 3v18", "M14 7h6"],
   pantry: ["M4 7h16", "M4 12h16", "M4 17h16", "M6 7v10", "M18 7v10"],
   dining: ["M4 10h16v2H4z", "M6 12v6", "M18 12v6"],
   living: ["M4 12h16a2 2 0 0 1 2 2v3H2v-3a2 2 0 0 1 2-2z", "M5 12V9a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"],
@@ -127,8 +127,31 @@ function roomIconKind(room) {
   return ROOM_ICON_KIND[room] ?? "other";
 }
 
+/** @param {string[]} paths @param {string} color */
+function createSvgRoomIcon(paths, color) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("class", "room-icon room-icon--svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  for (const d of paths) {
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", color);
+    path.setAttribute("stroke-width", "1.8");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.append(path);
+  }
+  return svg;
+}
+
 /** @param {string} room */
 export function createRoomIcon(room) {
+  if (room === "Kitchen") {
+    return createSvgRoomIcon(ROOM_ICON_PATHS.kitchen, "#d97706");
+  }
+
   const icon = document.createElement("span");
   icon.className = "room-icon";
   icon.setAttribute("aria-hidden", "true");

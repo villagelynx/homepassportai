@@ -47,6 +47,7 @@ import {
 } from "./storage.js";
 
 const views = {
+  landing: document.getElementById("view-landing"),
   home: document.getElementById("view-home"),
   auth: document.getElementById("view-auth"),
   updatePassword: document.getElementById("view-update-password"),
@@ -175,6 +176,11 @@ const els = {
   btnAuthToggle: document.getElementById("btn-auth-toggle"),
   btnAuthForgot: document.getElementById("btn-auth-forgot"),
   btnAuthOffline: document.getElementById("btn-auth-offline"),
+  btnAuthBack: document.getElementById("btn-auth-back"),
+  btnLandingSignIn: document.getElementById("btn-landing-sign-in"),
+  btnLandingRegister: document.getElementById("btn-landing-register"),
+  btnLandingStart: document.getElementById("btn-landing-start"),
+  btnLandingOffline: document.getElementById("btn-landing-offline"),
   updatePasswordForm: document.getElementById("update-password-form"),
   newPassword: document.getElementById("new-password"),
   confirmPassword: document.getElementById("confirm-password"),
@@ -323,7 +329,7 @@ async function enterApp(options = {}) {
   if (isSupabaseConfigured() && !isSignedIn() && !allowOfflineUse) {
     if (els.btnAuthOffline) els.btnAuthOffline.hidden = false;
     updateSyncBanner();
-    showView("auth");
+    showView("landing");
     return;
   }
 
@@ -356,7 +362,7 @@ async function onAuthChanged() {
   if (wasSessionExpired()) {
     clearSessionExpiredFlag();
     toast("Your sign-in expired. Please sign in again.");
-    showView("auth");
+    showAuth("signin");
   }
 }
 
@@ -481,10 +487,18 @@ function init() {
       showView("settings");
       return;
     }
-    showView("auth");
+    showAuth("signin");
   });
-  els.btnGoSignIn?.addEventListener("click", () => showView("auth"));
+  els.btnGoSignIn?.addEventListener("click", () => showAuth("signin"));
   els.btnRefreshVersion?.addEventListener("click", () => refreshToLatestVersion());
+  els.btnLandingSignIn?.addEventListener("click", () => showAuth("signin"));
+  els.btnLandingRegister?.addEventListener("click", () => showAuth("signup"));
+  els.btnLandingStart?.addEventListener("click", () => showAuth("signup"));
+  els.btnLandingOffline?.addEventListener("click", () => {
+    allowOfflineUse = true;
+    void enterApp();
+  });
+  els.btnAuthBack?.addEventListener("click", () => showView("landing"));
   els.authForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     void handleAuthSubmit();
@@ -548,14 +562,28 @@ function init() {
   }
 }
 
-function toggleAuthMode() {
-  authMode = authMode === "signin" ? "signup" : "signin";
+function setAuthMode(mode) {
+  authMode = mode;
   if (els.btnAuthSubmit) {
     els.btnAuthSubmit.textContent = authMode === "signin" ? "Sign in" : "Create account";
   }
   if (els.btnAuthToggle) {
-    els.btnAuthToggle.textContent = authMode === "signin" ? "Create an account" : "Already have an account? Sign in";
+    els.btnAuthToggle.textContent =
+      authMode === "signin" ? "Create an account" : "Already have an account? Sign in";
   }
+  if (els.authPassword instanceof HTMLInputElement) {
+    els.authPassword.autocomplete = authMode === "signin" ? "current-password" : "new-password";
+  }
+}
+
+/** @param {"signin" | "signup"} [mode] */
+function showAuth(mode = "signin") {
+  setAuthMode(mode);
+  showView("auth");
+}
+
+function toggleAuthMode() {
+  setAuthMode(authMode === "signin" ? "signup" : "signin");
 }
 
 async function handleAuthSubmit() {
@@ -661,7 +689,7 @@ async function handleSignOut() {
   allowOfflineUse = false;
   await renderHome();
   updateSyncBanner();
-  showView("auth");
+  showView("landing");
   toast("Signed out");
 }
 
@@ -782,7 +810,7 @@ async function updateApiSetupBanner() {
 function requireCloudSave() {
   if (isSupabaseConfigured() && !isSignedIn() && !allowOfflineUse) {
     toast("Sign in to save to the cloud");
-    showView("auth");
+    showAuth("signin");
     return false;
   }
   return true;
@@ -1114,6 +1142,8 @@ function showView(name) {
     el.hidden = !active;
     el.classList.toggle("view--active", active);
   }
+  const app = document.getElementById("app");
+  app?.classList.toggle("app--landing", name === "landing");
 }
 
 function resetScan() {
