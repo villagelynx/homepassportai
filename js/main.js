@@ -179,6 +179,8 @@ const els = {
   btnAuthBack: document.getElementById("btn-auth-back"),
   btnLandingSignIn: document.getElementById("btn-landing-sign-in"),
   btnLandingRegister: document.getElementById("btn-landing-register"),
+  btnLandingHeaderSignIn: document.getElementById("btn-landing-header-sign-in"),
+  btnLandingHeaderRegister: document.getElementById("btn-landing-header-register"),
   btnLandingStart: document.getElementById("btn-landing-start"),
   btnLandingOffline: document.getElementById("btn-landing-offline"),
   updatePasswordForm: document.getElementById("update-password-form"),
@@ -493,6 +495,8 @@ function init() {
   els.btnRefreshVersion?.addEventListener("click", () => refreshToLatestVersion());
   els.btnLandingSignIn?.addEventListener("click", () => showAuth("signin"));
   els.btnLandingRegister?.addEventListener("click", () => showAuth("signup"));
+  els.btnLandingHeaderSignIn?.addEventListener("click", () => showAuth("signin"));
+  els.btnLandingHeaderRegister?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingStart?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingOffline?.addEventListener("click", () => {
     allowOfflineUse = true;
