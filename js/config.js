@@ -1,7 +1,7 @@
 /** @readonly */
 import { runtimeConfig } from "./runtime-config.js";
 
-export const APP_VERSION = "0.9.15";
+export const APP_VERSION = "0.9.16";
 
 function resolveAnalyzeApiUrl() {
   if (typeof location === "undefined") return "/api/analyze";
