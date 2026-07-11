@@ -1588,41 +1588,35 @@ body {
 .landing__banner-brand {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.55rem;
   min-width: 0;
 }
 
-.landing__banner-icon {
-  width: 2.35rem;
-  height: 2.35rem;
+.landing__banner-icon-img {
+  display: block;
+  width: auto;
+  height: 2.75rem;
   flex-shrink: 0;
 }
 
-.landing__banner-title {
-  margin: 0;
-  font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
-  font-size: clamp(1.15rem, 4vw, 1.45rem);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.landing__brand-home {
-  color: #1a2b41;
-}
-
-.landing__brand-ai {
-  color: #22c55e;
+.landing__banner-wordmark-img {
+  display: block;
+  width: auto;
+  height: 2.1rem;
+  max-width: min(100%, 18rem);
+  object-fit: contain;
+  object-position: left center;
 }
 
 .landing__banner-tagline {
-  margin: 0 0 0.55rem;
-  padding-left: calc(2.35rem + 0.65rem);
+  display: block;
+  margin: 0.5rem 0 0.65rem;
   font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
-  font-size: clamp(0.78rem, 2.5vw, 0.92rem);
-  font-weight: 500;
-  line-height: 1.35;
+  font-size: clamp(0.9rem, 2.8vw, 1.05rem);
+  font-weight: 600;
+  line-height: 1.4;
   color: #1a2b41;
+  letter-spacing: 0.01em;
 }
 
 .landing__build-tag {
@@ -1839,9 +1833,16 @@ body {
     flex-wrap: wrap;
   }
 
-  .landing__banner-tagline {
-    padding-left: 0;
-    width: 100%;
+  .landing__banner-brand {
+    flex: 1 1 100%;
+  }
+
+  .landing__banner-icon-img {
+    height: 2.35rem;
+  }
+
+  .landing__banner-wordmark-img {
+    height: 1.75rem;
   }
 
   .landing__top-buttons {
@@ -1857,14 +1858,18 @@ body {
     padding-top: calc(1.1rem + var(--safe-top));
   }
 
-  .landing__banner-icon {
-    width: 2.65rem;
-    height: 2.65rem;
+  .landing__banner-icon-img {
+    height: 3.1rem;
+  }
+
+  .landing__banner-wordmark-img {
+    height: 2.35rem;
+    max-width: 20rem;
   }
 
   .landing__banner-tagline {
-    padding-left: calc(2.65rem + 0.65rem);
-    font-size: 0.95rem;
+    font-size: 1.05rem;
+    margin-top: 0.6rem;
   }
 
   .landing__split {
