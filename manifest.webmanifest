@@ -4,7 +4,7 @@
   "description": "Scan appliances — smart inventory for your home.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1d6fd8",
+  "background_color": "#ffffff",
   "theme_color": "#1d6fd8",
   "icons": [
     {

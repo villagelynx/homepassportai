@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=47" />
+    <link rel="stylesheet" href="./css/app.css?v=49" />
   </head>
   <body>
     <div id="app" class="app">
@@ -96,8 +96,112 @@
         </button>
       </header>
 
+      <!-- Landing (unauthenticated visitors) -->
+      <main id="view-landing" class="view landing" hidden>
+        <div class="landing__inner">
+          <header class="landing__header">
+            <div class="landing__brand">
+              <svg class="landing__logo" viewBox="0 0 48 48" aria-hidden="true">
+                <path
+                  d="M8 22 24 10l16 12v16a2 2 0 0 1-2 2H30V28H18v12H10a2 2 0 0 1-2-2V22Z"
+                  fill="none"
+                  stroke="#1d6fd8"
+                  stroke-width="2.5"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M16 26l6 6 12-14"
+                  fill="none"
+                  stroke="#22c55e"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <div>
+                <p class="landing__wordmark">
+                  <span class="landing__wordmark-home">HomePassport</span><span class="landing__wordmark-ai">AI.com</span>
+                </p>
+                <p class="landing__tagline">Scan. Organize. Protect. Peace of Mind.</p>
+              </div>
+            </div>
+          </header>
+
+          <section class="landing__hero">
+            <h2 class="landing__headline">
+              Your Home.
+              <span class="landing__headline-accent">All in One Place.</span>
+            </h2>
+            <p class="landing__lede">
+              The AI-powered home inventory app that keeps track of your belongings, appliances, important
+              documents and more.
+            </p>
+            <div class="landing__hero-actions">
+              <button type="button" class="btn btn--primary" id="btn-landing-register">Register</button>
+              <button type="button" class="btn btn--secondary" id="btn-landing-sign-in">Sign In</button>
+            </div>
+          </section>
+
+          <ul class="landing__features">
+            <li class="landing__feature">
+              <span class="landing__feature-icon landing__feature-icon--scan" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 7.5h3l1.1-1.7c.2-.3.5-.5.9-.5h5.9c.4 0 .7.2.9.5L17 7.5h3a1.5 1.5 0 0 1 1.5 1.5V18A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              </span>
+              <div>
+                <strong>AI Item Scanning</strong>
+                <p>Snap a photo and AI extracts the model, serial number, brand and more.</p>
+              </div>
+            </li>
+            <li class="landing__feature">
+              <span class="landing__feature-icon landing__feature-icon--inventory" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <div>
+                <strong>Organized Inventory</strong>
+                <p>Everything in your home, neatly organized by category and location.</p>
+              </div>
+            </li>
+            <li class="landing__feature">
+              <span class="landing__feature-icon landing__feature-icon--insurance" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </span>
+              <div>
+                <strong>Insurance Ready</strong>
+                <p>Generate detailed reports in seconds for insurance or peace of mind.</p>
+              </div>
+            </li>
+            <li class="landing__feature">
+              <span class="landing__feature-icon landing__feature-icon--secure" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              </span>
+              <div>
+                <strong>Secure &amp; Private</strong>
+                <p>Your data is encrypted and stored securely in the cloud.</p>
+              </div>
+            </li>
+            <li class="landing__feature">
+              <span class="landing__feature-icon landing__feature-icon--access" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 11h4m-2-2v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <div>
+                <strong>Access Anywhere</strong>
+                <p>Available on all your devices. Share with family members.</p>
+              </div>
+            </li>
+          </ul>
+
+          <section class="landing__cta">
+            <button type="button" class="btn btn--primary btn--block landing__cta-btn" id="btn-landing-start">
+              Start for Free
+            </button>
+            <p class="landing__cta-note">No credit card required</p>
+            <button type="button" class="linkish" id="btn-landing-offline">Continue offline (this device only)</button>
+          </section>
+        </div>
+      </main>
+
       <!-- Home: appliance list -->
-      <main id="view-home" class="view view--active">
+      <main id="view-home" class="view" hidden>
         <div id="home-search" class="home-search" hidden>
           <div class="home-search__field">
             <input
@@ -171,6 +275,7 @@
 
       <!-- Auth -->
       <main id="view-auth" class="view" hidden>
+        <button type="button" class="linkish auth-back" id="btn-auth-back">← Back</button>
         <section class="hero">
           <h2>Sign in to sync</h2>
           <p>Save your inventory in the cloud and open it on any phone or computer.</p>
