@@ -1568,7 +1568,7 @@ body {
 .landing__header-bar {
   background: #ffffff;
   border-bottom: 1px solid #e8edf2;
-  padding: calc(1.1rem + var(--safe-top)) 1.25rem 1.35rem;
+  padding: calc(1.35rem + var(--safe-top)) 1.25rem 1.5rem;
 }
 
 .landing__inner {
@@ -1580,7 +1580,7 @@ body {
 .landing__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: 1.25rem;
   max-width: 1080px;
   margin: 0 auto;
@@ -1589,32 +1589,19 @@ body {
 .landing__brand {
   display: flex;
   align-items: center;
+  justify-content: center;
   min-width: 0;
-  padding: 0.15rem 0;
+  padding: 0.25rem 0;
   background: #ffffff;
 }
 
 .landing__brand-lockup {
   display: block;
-  width: min(100%, 560px);
+  width: min(100%, 720px);
   height: auto;
-  max-height: 5.75rem;
+  max-height: 7.5rem;
   object-fit: contain;
-  object-position: left center;
-}
-
-.landing__header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  flex-shrink: 0;
-}
-
-.landing__header-btn {
-  min-width: 6.25rem;
-  padding: 0.7rem 1.2rem;
-  font-size: 0.95rem;
-  font-weight: 600;
+  object-position: center;
 }
 
 .landing__layout {
@@ -1797,8 +1784,8 @@ body {
   .landing__header-bar {
     padding-left: 2rem;
     padding-right: 2rem;
-    padding-top: calc(1.35rem + var(--safe-top));
-    padding-bottom: 1.5rem;
+    padding-top: calc(1.75rem + var(--safe-top));
+    padding-bottom: 1.75rem;
   }
 
   .landing__inner {
@@ -1807,14 +1794,8 @@ body {
   }
 
   .landing__brand-lockup {
-    max-height: 6.5rem;
-    width: min(100%, 620px);
-  }
-
-  .landing__header-btn {
-    min-width: 7rem;
-    padding: 0.8rem 1.35rem;
-    font-size: 1rem;
+    max-height: 9rem;
+    width: min(100%, 820px);
   }
 
   .landing__layout {
@@ -1834,21 +1815,8 @@ body {
     padding-right: 1rem;
   }
 
-  .landing__header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .landing__brand-lockup {
-    max-height: 4.75rem;
-    width: min(100%, 100%);
-  }
-
-  .landing__header-actions {
-    justify-content: stretch;
-  }
-
-  .landing__header-actions .btn {
-    flex: 1 1 0;
+    max-height: 5.5rem;
+    width: 100%;
   }
 }
