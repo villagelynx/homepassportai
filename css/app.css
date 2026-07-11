@@ -1588,22 +1588,15 @@ body {
 .landing__banner-brand {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
-.landing__banner-icon-img {
+.landing__banner-header-img {
   display: block;
   width: auto;
   height: 2.75rem;
-  flex-shrink: 0;
-}
-
-.landing__banner-wordmark-img {
-  display: block;
-  width: auto;
-  height: 2.1rem;
-  max-width: min(100%, 18rem);
+  max-width: min(100%, 22rem);
   object-fit: contain;
   object-position: left center;
 }
@@ -1837,12 +1830,9 @@ body {
     flex: 1 1 100%;
   }
 
-  .landing__banner-icon-img {
+  .landing__banner-header-img {
     height: 2.35rem;
-  }
-
-  .landing__banner-wordmark-img {
-    height: 1.75rem;
+    max-width: 100%;
   }
 
   .landing__top-buttons {
@@ -1858,13 +1848,9 @@ body {
     padding-top: calc(1.1rem + var(--safe-top));
   }
 
-  .landing__banner-icon-img {
-    height: 3.1rem;
-  }
-
-  .landing__banner-wordmark-img {
-    height: 2.35rem;
-    max-width: 20rem;
+  .landing__banner-header-img {
+    height: 3.25rem;
+    max-width: 26rem;
   }
 
   .landing__banner-tagline {
