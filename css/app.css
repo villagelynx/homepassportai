@@ -1607,38 +1607,16 @@ body {
 }
 
 .landing__brand-lockup {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
   margin-bottom: 1.35rem;
 }
 
-.landing__brand-lockup-icon {
-  width: 3rem;
-  height: 3rem;
-  flex-shrink: 0;
-}
-
-.landing__brand-lockup-title {
-  margin: 0;
-  font-size: clamp(1.2rem, 3.5vw, 1.55rem);
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.landing__brand-lockup-tagline {
-  margin: 0.25rem 0 0;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: #4b5563;
-}
-
-.landing__brand-home {
-  color: #1a2b41;
-}
-
-.landing__brand-ai {
-  color: #22c55e;
+.landing__brand-lockup-img {
+  display: block;
+  width: min(100%, 494px);
+  height: auto;
+  max-height: 5.5rem;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .landing__phone-col {
@@ -1835,6 +1813,11 @@ body {
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
     gap: 2.5rem 3rem;
     align-items: start;
+  }
+
+  .landing__brand-lockup-img {
+    max-height: 6.25rem;
+    width: min(100%, 540px);
   }
 
   .landing__phone-straight {
