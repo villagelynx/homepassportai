@@ -5,9 +5,6 @@ import {
   ANALYZE_LABEL_ONLY_PROMPT,
   ANALYZE_PROPERTY_TAX_PROMPT,
   ANALYZE_PROMPT,
-  emptyFacebookMarketplaceResponse,
-  emptyInsurancePolicyResponse,
-  emptyPropertyTaxResponse,
   mapAnalyzeResponse,
   mapFacebookMarketplaceResponse,
   mapInsurancePolicyResponse,
@@ -22,6 +19,12 @@ const CORS = {
 
 const MAX_BODY_BYTES = 5_500_000;
 const DOCUMENT_MODES = new Set(["insurancePolicy", "propertyTax"]);
+const USER_API_KEY_REQUIRED = "OpenAI API key required. Add your own key in Settings.";
+
+/** @param {import("@netlify/functions").HandlerEvent} event */
+function resolveUserApiKey(event) {
+  return (event.headers["x-openai-api-key"] || event.headers["X-OpenAI-Api-Key"] || "").trim();
+}
 
 /** @param {number} code @param {object} payload */
 function respond(code, payload) {
@@ -69,15 +72,10 @@ export async function handler(event) {
         return respond(400, { error: "At least one item photo is required" });
       }
 
-      const apiKey = (
-        event.headers["x-openai-api-key"] ||
-        event.headers["X-OpenAI-Api-Key"] ||
-        process.env.OPENAI_API_KEY ||
-        ""
-      ).trim();
+      const apiKey = resolveUserApiKey(event);
 
       if (!apiKey) {
-        return respond(200, emptyFacebookMarketplaceResponse(true));
+        return respond(401, { error: USER_API_KEY_REQUIRED });
       }
 
       const item = body.item && typeof body.item === "object" ? body.item : {};
@@ -129,20 +127,10 @@ export async function handler(event) {
         return respond(400, { error: "documentPhotoDataUrl is required" });
       }
 
-      const apiKey = (
-        event.headers["x-openai-api-key"] ||
-        event.headers["X-OpenAI-Api-Key"] ||
-        process.env.OPENAI_API_KEY ||
-        ""
-      ).trim();
+      const apiKey = resolveUserApiKey(event);
 
       if (!apiKey) {
-        return respond(
-          200,
-          mode === "insurancePolicy"
-            ? emptyInsurancePolicyResponse(true)
-            : emptyPropertyTaxResponse(true),
-        );
+        return respond(401, { error: USER_API_KEY_REQUIRED });
       }
 
       const prompt =
@@ -191,26 +179,10 @@ export async function handler(event) {
       return respond(400, { error: "appliancePhotoDataUrl is required" });
     }
 
-    const apiKey = (
-      event.headers["x-openai-api-key"] ||
-      event.headers["X-OpenAI-Api-Key"] ||
-      process.env.OPENAI_API_KEY ||
-      ""
-    ).trim();
+    const apiKey = resolveUserApiKey(event);
 
     if (!apiKey) {
-      return respond(200, {
-        applianceType: "",
-        brand: "",
-        modelNumber: "",
-        serialNumber: "",
-        confidence: "low",
-        nickname: "",
-        colorDescription: "",
-        dimensionsDescription: "",
-        signatureRegions: [],
-        demoMode: true,
-      });
+      return respond(401, { error: USER_API_KEY_REQUIRED });
     }
 
     const content = labelOnly

@@ -35,6 +35,9 @@ import { config } from "./config.js";
 /** @param {string} text @param {Response} res */
 function formatAnalyzeError(text, res) {
   const trimmed = text.trim();
+  if (res.status === 401) {
+    return "Add your OpenAI API key in Settings to use AI analysis.";
+  }
   if (
     trimmed.includes("lambda") ||
     trimmed.includes("decoding") ||
@@ -59,17 +62,30 @@ function formatAnalyzeError(text, res) {
   return trimmed.slice(0, 200) || `Analysis failed (HTTP ${res.status})`;
 }
 
+/** @returns {string} */
+function getUserApiKeyOrThrow() {
+  const apiKey = loadApiKey();
+  if (!apiKey) {
+    throw new Error("Add your OpenAI API key in Settings to use AI analysis.");
+  }
+  return apiKey;
+}
+
+/** @returns {Record<string, string>} */
+function userApiKeyHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "X-OpenAI-Api-Key": getUserApiKeyOrThrow(),
+  };
+}
+
 /**
  * @param {{ appliancePhotoDataUrl?: string, labelPhotoDataUrl?: string | null, mode?: "labelOnly" }} photos
  * @returns {Promise<AnalysisResult>}
  */
 export async function analyzeAppliancePhotos(photos) {
   /** @type {Record<string, string>} */
-  const headers = { "Content-Type": "application/json" };
-  const apiKey = loadApiKey();
-  if (apiKey) {
-    headers["X-OpenAI-Api-Key"] = apiKey;
-  }
+  const headers = userApiKeyHeaders();
 
   /** @type {Record<string, string>} */
   const body = {};
@@ -133,11 +149,7 @@ export async function analyzeLabelPhoto(labelPhotoDataUrl) {
  */
 export async function analyzeRoomFrames(frames) {
   /** @type {Record<string, string>} */
-  const headers = { "Content-Type": "application/json" };
-  const apiKey = loadApiKey();
-  if (apiKey) {
-    headers["X-OpenAI-Api-Key"] = apiKey;
-  }
+  const headers = userApiKeyHeaders();
 
   let res;
   try {
@@ -187,7 +199,7 @@ export async function analyzeRoomFrames(frames) {
 }
 
 /**
- * @typedef {{ ready: boolean, source: "user" | "server" | "none", masked?: string, error?: string }} ApiKeyStatus
+ * @typedef {{ ready: boolean, source: "user" | "none", masked?: string, error?: string }} ApiKeyStatus
  */
 
 /**
@@ -284,11 +296,7 @@ export async function checkAnalyzeServer() {
  */
 export async function generateFacebookMarketplaceListing(item, photos) {
   /** @type {Record<string, string>} */
-  const headers = { "Content-Type": "application/json" };
-  const apiKey = loadApiKey();
-  if (apiKey) {
-    headers["X-OpenAI-Api-Key"] = apiKey;
-  }
+  const headers = userApiKeyHeaders();
 
   const body = {
     mode: "facebookMarketplace",
@@ -340,11 +348,7 @@ export async function generateFacebookMarketplaceListing(item, photos) {
 /** @param {"insurancePolicy" | "propertyTax"} type @param {string} documentPhotoDataUrl */
 export async function analyzeDocumentPhoto(type, documentPhotoDataUrl) {
   /** @type {Record<string, string>} */
-  const headers = { "Content-Type": "application/json" };
-  const apiKey = loadApiKey();
-  if (apiKey) {
-    headers["X-OpenAI-Api-Key"] = apiKey;
-  }
+  const headers = userApiKeyHeaders();
 
   const body = {
     mode: type,

@@ -229,6 +229,7 @@ const els = {
   settingsInstallStandalone: document.getElementById("settings-install-standalone"),
   authForm: document.getElementById("auth-form"),
   authEmail: document.getElementById("auth-email"),
+  authRememberEmail: document.getElementById("auth-remember-email"),
   authPassword: document.getElementById("auth-password"),
   btnAuthSubmit: document.getElementById("btn-auth-submit"),
   btnAuthToggle: document.getElementById("btn-auth-toggle"),
@@ -344,6 +345,8 @@ let homeRoomFilter = "recent";
 let homeSearchQuery = "";
 /** @type {"dashboard" | "inventory"} */
 let homePanel = "dashboard";
+
+const REMEMBERED_EMAIL_KEY = "homepassport-ai:remembered-email";
 
 /** @type {{ dataUrl: string | null, suggestions: { brand: string, modelNumber: string, serialNumber: string } | null }} */
 const detailLabelPending = {
@@ -666,6 +669,14 @@ function init() {
     e.preventDefault();
     void handleAuthSubmit();
   });
+  els.authEmail?.addEventListener("input", () => {
+    const email = els.authEmail?.value.trim() ?? "";
+    if (email) syncRememberedEmail(email);
+  });
+  els.authRememberEmail?.addEventListener("change", () => {
+    const email = els.authEmail?.value.trim() ?? "";
+    if (email) syncRememberedEmail(email);
+  });
   els.btnAuthToggle?.addEventListener("click", () => toggleAuthMode());
   els.btnAuthForgot?.addEventListener("click", () => void handleForgotPassword());
   els.updatePasswordForm?.addEventListener("submit", (e) => {
@@ -754,9 +765,54 @@ function setAuthMode(mode) {
   }
 }
 
+function loadRememberedEmail() {
+  try {
+    return localStorage.getItem(REMEMBERED_EMAIL_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+/** @param {string} email */
+function saveRememberedEmail(email) {
+  try {
+    localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+  } catch {
+    // Ignore storage failures in private mode.
+  }
+}
+
+function clearRememberedEmail() {
+  try {
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+  } catch {
+    // Ignore storage failures in private mode.
+  }
+}
+
+function applyRememberedEmail() {
+  const remembered = loadRememberedEmail();
+  if (els.authRememberEmail instanceof HTMLInputElement) {
+    els.authRememberEmail.checked = Boolean(remembered);
+  }
+  if (els.authEmail instanceof HTMLInputElement && !els.authEmail.value.trim()) {
+    els.authEmail.value = remembered;
+  }
+}
+
+/** @param {string} email */
+function syncRememberedEmail(email) {
+  if (els.authRememberEmail instanceof HTMLInputElement && els.authRememberEmail.checked) {
+    saveRememberedEmail(email);
+  } else {
+    clearRememberedEmail();
+  }
+}
+
 /** @param {"signin" | "signup"} [mode] */
 function showAuth(mode = "signin") {
   setAuthMode(mode);
+  applyRememberedEmail();
   showView("auth");
 }
 
@@ -776,6 +832,7 @@ async function handleAuthSubmit() {
   }
 
   try {
+    syncRememberedEmail(email);
     if (authMode === "signin") {
       await signIn(email, password);
       toast("Signed in");
@@ -813,6 +870,7 @@ async function handleForgotPassword() {
   if (btn instanceof HTMLButtonElement) btn.disabled = true;
 
   try {
+    syncRememberedEmail(email);
     await sendPasswordReset(email);
     toast("Password reset email sent — check your inbox");
   } catch (err) {
@@ -1736,7 +1794,7 @@ function applyApiKeyStatus(status) {
   }
   els.apiKeyStatus.classList.add("is-missing");
   els.apiKeyStatus.textContent =
-    "No API key yet — add yours below to enable label reading and room video scans";
+    "No API key yet — add your own OpenAI key below (never a shared developer key)";
 }
 
 /** @param {import("./analyze.js").ApiKeyStatus} status */

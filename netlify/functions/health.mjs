@@ -39,15 +39,13 @@ export async function handler(event) {
     ""
   ).trim();
   const userKeyStatus = await verifyOpenAiKey(userKey);
-  const serverKey = Boolean((process.env.OPENAI_API_KEY || "").trim());
 
   return {
     statusCode: 200,
     headers: { "Content-Type": "application/json", ...CORS },
     body: JSON.stringify({
       ok: true,
-      openai: serverKey,
-      openaiServer: serverKey,
+      requiresUserKey: true,
       userKey: userKeyStatus,
       userKeySupported: true,
       analyzePath: "/api/analyze",

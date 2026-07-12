@@ -37,6 +37,12 @@ const CORS = {
 
 const MAX_BODY_BYTES = 5_500_000;
 const MAX_FRAMES = 10;
+const USER_API_KEY_REQUIRED = "OpenAI API key required. Add your own key in Settings.";
+
+/** @param {import("@netlify/functions").HandlerEvent} event */
+function resolveUserApiKey(event) {
+  return (event.headers["x-openai-api-key"] || event.headers["X-OpenAI-Api-Key"] || "").trim();
+}
 
 /** @param {number} code @param {object} payload */
 function respond(code, payload) {
@@ -79,19 +85,10 @@ export async function handler(event) {
       return respond(400, { error: `Too many frames (max ${MAX_FRAMES})` });
     }
 
-    const apiKey = (
-      event.headers["x-openai-api-key"] ||
-      event.headers["X-OpenAI-Api-Key"] ||
-      process.env.OPENAI_API_KEY ||
-      ""
-    ).trim();
+    const apiKey = resolveUserApiKey(event);
 
     if (!apiKey) {
-      return respond(200, {
-        roomGuess: "Other",
-        demoMode: true,
-        items: demoItems(frames.length),
-      });
+      return respond(401, { error: USER_API_KEY_REQUIRED });
     }
 
     const content = [

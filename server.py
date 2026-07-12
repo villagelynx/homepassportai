@@ -180,9 +180,6 @@ def resolve_port() -> int:
     return 8080
 
 
-def server_openai_configured() -> bool:
-    return bool(os.environ.get("OPENAI_API_KEY", "").strip())
-
 
 def verify_openai_key(api_key: str) -> dict[str, Any]:
     if not api_key:
@@ -204,11 +201,12 @@ def verify_openai_key(api_key: str) -> dict[str, Any]:
         return {"provided": True, "valid": False, "error": "Could not reach OpenAI"}
 
 
-def resolve_api_key(handler: BaseHTTPRequestHandler) -> str:
-    user_key = (handler.headers.get("X-OpenAI-Api-Key") or "").strip()
-    if user_key:
-        return user_key
-    return os.environ.get("OPENAI_API_KEY", "").strip()
+USER_API_KEY_REQUIRED = "OpenAI API key required. Add your own key in Settings."
+
+
+def resolve_user_api_key(handler: BaseHTTPRequestHandler) -> str:
+    """Only the caller's key from Settings — never the server's OPENAI_API_KEY."""
+    return (handler.headers.get("X-OpenAI-Api-Key") or "").strip()
 
 
 def analyze_with_openai(
@@ -581,8 +579,7 @@ class Handler(BaseHTTPRequestHandler):
                 200,
                 {
                     "ok": True,
-                    "openai": server_openai_configured(),
-                    "openaiServer": server_openai_configured(),
+                    "requiresUserKey": True,
                     "userKey": verify_openai_key(user_key),
                     "userKeySupported": True,
                     "analyzePath": "/api/analyze",
@@ -641,11 +638,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "At least one item photo is required"})
                 return
 
-            api_key = resolve_api_key(self)
+            api_key = resolve_user_api_key(self)
             if not api_key:
-                empty = map_facebook_marketplace_response({})
-                empty["demoMode"] = True
-                self._json(200, empty)
+                self._json(401, {"error": USER_API_KEY_REQUIRED})
                 return
 
             item = body.get("item") if isinstance(body.get("item"), dict) else {}
@@ -668,15 +663,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "documentPhotoDataUrl is required"})
                 return
 
-            api_key = resolve_api_key(self)
+            api_key = resolve_user_api_key(self)
             if not api_key:
-                empty = (
-                    map_insurance_policy_response({})
-                    if mode == "insurancePolicy"
-                    else map_property_tax_response({})
-                )
-                empty["demoMode"] = True
-                self._json(200, empty)
+                self._json(401, {"error": USER_API_KEY_REQUIRED})
                 return
 
             try:
@@ -695,20 +684,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": "appliancePhotoDataUrl is required"})
             return
 
-        api_key = resolve_api_key(self)
+        api_key = resolve_user_api_key(self)
         if not api_key:
-            self._json(
-                200,
-                {
-                    "applianceType": "",
-                    "brand": "",
-                    "modelNumber": "",
-                    "serialNumber": "",
-                    "confidence": "low",
-                    "nickname": "",
-                    "demoMode": True,
-                },
-            )
+            self._json(401, {"error": USER_API_KEY_REQUIRED})
             return
 
         try:
@@ -747,16 +725,9 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": "Too many frames (max 10)"})
             return
 
-        api_key = resolve_api_key(self)
+        api_key = resolve_user_api_key(self)
         if not api_key:
-            self._json(
-                200,
-                {
-                    "roomGuess": "Other",
-                    "demoMode": True,
-                    "items": demo_room_items(len(frames)),
-                },
-            )
+            self._json(401, {"error": USER_API_KEY_REQUIRED})
             return
 
         try:
@@ -822,10 +793,7 @@ def main() -> None:
     print(f"Serving from: {ROOT}")
     print(f"HomePassportAI → http://127.0.0.1:{port}  (or http://localhost:{port})")
     print(f"On your phone: http://{local_ip()}:{port}")
-    if server_openai_configured():
-        print("AI analysis: server key ready (OPENAI_API_KEY in .env)")
-    else:
-        print("AI analysis: add a key in app Settings (BYOK) or OPENAI_API_KEY in .env")
+    print("AI analysis: BYOK only — each user adds their own OpenAI key in Settings")
     print("Press Ctrl+C to stop.")
 
     try:
