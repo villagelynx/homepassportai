@@ -566,6 +566,39 @@ body {
     padding-top: calc(1.1rem + var(--safe-top));
   }
 
+  .view.landing {
+    padding: 0;
+  }
+
+  .app.app--landing {
+    background: #ffffff;
+  }
+
+  .landing__hero-actions {
+    display: none;
+  }
+
+  .landing__build-tag,
+  #build-tag {
+    display: none;
+  }
+
+  .home-auth-cta {
+    display: none;
+  }
+
+  .topbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e8edf2;
+    backdrop-filter: none;
+  }
+
+  .topbar__info,
+  .topbar__settings,
+  .topbar__sync {
+    color: #1a2b41;
+  }
+
   .landing__banner-brand,
   .topbar__brand.landing__banner-brand {
     --banner-header-h: 4.1rem;
@@ -588,10 +621,6 @@ body {
 
   .landing__phone-straight {
     width: min(100%, 380px);
-  }
-
-  .landing__hero-actions .btn {
-    min-width: 9rem;
   }
 }
 
