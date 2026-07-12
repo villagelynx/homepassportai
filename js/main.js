@@ -2244,108 +2244,124 @@ async function renderHome() {
 
   const chipsEnabled = loadRoomChipsEnabled();
   const hasInventory = list.length > 0;
+  const onDashboard = homePanel === "dashboard";
+  const onInventory = homePanel === "inventory";
 
-  updateHomeDashboardStats(list.length);
-  renderRecentlyAdded(list, chipsEnabled);
+  if (onDashboard) {
+    updateHomeDashboardStats(list.length);
+    renderRecentlyAdded(list, chipsEnabled);
 
-  if (els.homeSearch) {
-    els.homeSearch.hidden = !hasInventory;
+    if (els.roomFilterChips) {
+      els.roomFilterChips.hidden = !chipsEnabled || !hasInventory;
+    }
+
+    if (chipsEnabled && hasInventory) {
+      const allGrouped = groupByRoom(list);
+      if (
+        homeRoomFilter !== "all" &&
+        homeRoomFilter !== "recent" &&
+        homeRoomFilter !== BUILDING_FILTER_ID &&
+        homeRoomFilter !== OUTDOOR_FILTER_ID &&
+        !allGrouped.some(([room]) => room === homeRoomFilter)
+      ) {
+        homeRoomFilter = "recent";
+      }
+      renderRoomFilterChips(allGrouped, list.length);
+    } else {
+      homeRoomFilter = "recent";
+    }
+  } else {
+    if (els.roomFilterChips) els.roomFilterChips.hidden = true;
+    if (els.homeRecentGrid) els.homeRecentGrid.innerHTML = "";
+    if (els.homeRecentEmpty) els.homeRecentEmpty.hidden = true;
   }
-  if (els.inputHomeSearch && els.inputHomeSearch.value !== homeSearchQuery) {
-    els.inputHomeSearch.value = homeSearchQuery;
-  }
-  updateHomeSearchClearButton();
 
-  const filtered = homeSearchQuery ? list.filter((item) => applianceMatchesSearch(item, homeSearchQuery)) : list;
-  const grouped = groupByRoom(filtered);
+  if (onInventory) {
+    if (els.homeSearch) {
+      els.homeSearch.hidden = !hasInventory;
+    }
+    if (els.inputHomeSearch && els.inputHomeSearch.value !== homeSearchQuery) {
+      els.inputHomeSearch.value = homeSearchQuery;
+    }
+    updateHomeSearchClearButton();
 
-  if (els.roomFilterChips) {
-    els.roomFilterChips.hidden = !chipsEnabled || !hasInventory;
-  }
+    const filtered = homeSearchQuery ? list.filter((item) => applianceMatchesSearch(item, homeSearchQuery)) : list;
+    const grouped = groupByRoom(filtered);
 
-  if (chipsEnabled && hasInventory) {
-    const allGrouped = groupByRoom(list);
-    if (
+    els.applianceList.innerHTML = "";
+    els.emptyState.hidden = hasInventory;
+    if (els.searchNoResults) {
+      els.searchNoResults.hidden = !hasInventory || filtered.length > 0 || !homeSearchQuery;
+    }
+
+    const showHeadings =
+      !chipsEnabled ||
+      homeRoomFilter === "all" ||
+      homeRoomFilter === BUILDING_FILTER_ID ||
+      homeRoomFilter === OUTDOOR_FILTER_ID;
+    const roomFiltered =
+      chipsEnabled &&
       homeRoomFilter !== "all" &&
       homeRoomFilter !== "recent" &&
       homeRoomFilter !== BUILDING_FILTER_ID &&
-      homeRoomFilter !== OUTDOOR_FILTER_ID &&
-      !allGrouped.some(([room]) => room === homeRoomFilter)
-    ) {
-      homeRoomFilter = "recent";
-    }
-    renderRoomFilterChips(allGrouped, list.length);
-  } else {
-    homeRoomFilter = "recent";
-  }
+      homeRoomFilter !== OUTDOOR_FILTER_ID;
 
-  els.applianceList.innerHTML = "";
-  els.emptyState.hidden = hasInventory;
-  if (els.searchNoResults) {
-    els.searchNoResults.hidden = !hasInventory || filtered.length > 0 || !homeSearchQuery;
-  }
-
-  const showHeadings =
-    !chipsEnabled ||
-    homeRoomFilter === "all" ||
-    homeRoomFilter === BUILDING_FILTER_ID ||
-    homeRoomFilter === OUTDOOR_FILTER_ID;
-  const roomFiltered =
-    chipsEnabled &&
-    homeRoomFilter !== "all" &&
-    homeRoomFilter !== "recent" &&
-    homeRoomFilter !== BUILDING_FILTER_ID &&
-    homeRoomFilter !== OUTDOOR_FILTER_ID;
-
-  if (chipsEnabled && homeRoomFilter === "recent") {
-    const sorted = [...filtered].sort(
-      (a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime(),
-    );
-    for (const item of sorted) {
-      els.applianceList.append(makeApplianceCardButton(item));
-    }
-  } else {
-    const entries =
-      chipsEnabled && homeRoomFilter === BUILDING_FILTER_ID
-        ? grouped.filter(([room]) => isBuildingRoom(room))
-        : chipsEnabled && homeRoomFilter === OUTDOOR_FILTER_ID
-          ? grouped.filter(([room]) => isOutdoorGroupRoom(room))
-          : roomFiltered
-            ? grouped.filter(([room]) => room === homeRoomFilter)
-            : grouped;
-
-    let buildingGroupHeadingShown = false;
-    let outdoorGroupHeadingShown = false;
-    for (const [room, items] of entries) {
-      if (showHeadings && isBuildingRoom(room) && !buildingGroupHeadingShown) {
-        const groupHeading = document.createElement("h2");
-        groupHeading.className = "category-group-heading";
-        groupHeading.textContent = BUILDING_GROUP_LABEL;
-        els.applianceList.append(groupHeading);
-        buildingGroupHeadingShown = true;
-      }
-
-      if (showHeadings && isOutdoorGroupRoom(room) && !outdoorGroupHeadingShown) {
-        const groupHeading = document.createElement("h2");
-        groupHeading.className = "category-group-heading";
-        groupHeading.textContent = OUTDOOR_GROUP_LABEL;
-        els.applianceList.append(groupHeading);
-        outdoorGroupHeadingShown = true;
-      }
-
-      if (showHeadings) {
-        const heading = document.createElement("h3");
-        heading.className = "category-heading";
-        setRoomTitleElement(heading, room, roomDisplayName(room));
-        els.applianceList.append(heading);
-      }
-
-      for (const item of items) {
+    if (chipsEnabled && homeRoomFilter === "recent") {
+      const sorted = [...filtered].sort(
+        (a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime(),
+      );
+      for (const item of sorted) {
         els.applianceList.append(makeApplianceCardButton(item));
       }
+    } else {
+      const entries =
+        chipsEnabled && homeRoomFilter === BUILDING_FILTER_ID
+          ? grouped.filter(([room]) => isBuildingRoom(room))
+          : chipsEnabled && homeRoomFilter === OUTDOOR_FILTER_ID
+            ? grouped.filter(([room]) => isOutdoorGroupRoom(room))
+            : roomFiltered
+              ? grouped.filter(([room]) => room === homeRoomFilter)
+              : grouped;
+
+      let buildingGroupHeadingShown = false;
+      let outdoorGroupHeadingShown = false;
+      for (const [room, items] of entries) {
+        if (showHeadings && isBuildingRoom(room) && !buildingGroupHeadingShown) {
+          const groupHeading = document.createElement("h2");
+          groupHeading.className = "category-group-heading";
+          groupHeading.textContent = BUILDING_GROUP_LABEL;
+          els.applianceList.append(groupHeading);
+          buildingGroupHeadingShown = true;
+        }
+
+        if (showHeadings && isOutdoorGroupRoom(room) && !outdoorGroupHeadingShown) {
+          const groupHeading = document.createElement("h2");
+          groupHeading.className = "category-group-heading";
+          groupHeading.textContent = OUTDOOR_GROUP_LABEL;
+          els.applianceList.append(groupHeading);
+          outdoorGroupHeadingShown = true;
+        }
+
+        if (showHeadings) {
+          const heading = document.createElement("h3");
+          heading.className = "category-heading";
+          setRoomTitleElement(heading, room, roomDisplayName(room));
+          els.applianceList.append(heading);
+        }
+
+        for (const item of items) {
+          els.applianceList.append(makeApplianceCardButton(item));
+        }
+      }
     }
+  } else {
+    els.applianceList.innerHTML = "";
+    if (els.homeSearch) els.homeSearch.hidden = true;
+    if (els.searchNoResults) els.searchNoResults.hidden = true;
+    els.emptyState.hidden = true;
   }
 
+  applyHomePanelVisibility();
   void updateApiSetupBanner();
   syncHomeTabButtons();
 }
@@ -2356,11 +2372,15 @@ function openInventoryPanel() {
   void renderHome();
 }
 
+function applyHomePanelVisibility() {
+  els.homeDashboard?.toggleAttribute("hidden", homePanel !== "dashboard");
+  els.homeInventoryPanel?.toggleAttribute("hidden", homePanel !== "inventory");
+  els.homeReportsPanel?.toggleAttribute("hidden", homePanel !== "reports");
+}
+
 function setHomePanel(panel) {
   homePanel = panel;
-  els.homeDashboard?.toggleAttribute("hidden", panel !== "dashboard");
-  els.homeInventoryPanel?.toggleAttribute("hidden", panel !== "inventory");
-  els.homeReportsPanel?.toggleAttribute("hidden", panel !== "reports");
+  applyHomePanelVisibility();
   syncHomeTabButtons();
   if (panel === "inventory") {
     els.homeInventoryPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
