@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=68" />
+    <link rel="stylesheet" href="./css/app.css?v=69" />
   </head>
   <body>
     <div id="app" class="app">
@@ -220,87 +220,168 @@
         </div>
       </main>
 
-      <!-- Home: appliance list -->
-      <main id="view-home" class="view" hidden>
-        <div id="home-search" class="home-search" hidden>
-          <div class="home-search__field">
-            <input
-              type="search"
-              id="input-home-search"
-              class="input home-search__input"
-              placeholder="Search nickname, brand, model, serial…"
-              autocomplete="off"
-              autocorrect="off"
-              spellcheck="false"
-              enterkeyhint="search"
-            />
-            <button type="button" class="home-search__clear" id="btn-clear-home-search" aria-label="Clear search" hidden>
-              ×
+      <!-- Home: dashboard + inventory -->
+      <main id="view-home" class="view home-view" hidden>
+        <div id="home-dashboard" class="home-dashboard">
+          <section class="home-promo-card" aria-label="Home overview">
+            <div class="home-promo-card__copy">
+              <h2 class="home-promo-card__title">
+                Your Home. Your Inventory. Your <span class="home-promo-card__accent">Peace of Mind.</span>
+              </h2>
+              <p class="home-promo-card__lede">
+                The smart way to document, organize and protect everything in your home.
+              </p>
+            </div>
+            <div class="home-promo-card__visual">
+              <img
+                class="home-promo-card__house"
+                src="./images/home-dashboard-house.png"
+                alt=""
+                width="348"
+                height="274"
+                decoding="async"
+              />
+              <div class="home-promo-chips" aria-label="Home highlights">
+                <button type="button" class="home-promo-chip home-promo-chip--rooms" id="btn-chip-rooms">Rooms</button>
+                <button type="button" class="home-promo-chip home-promo-chip--inventory" id="btn-chip-inventory">Inventory</button>
+                <button type="button" class="home-promo-chip home-promo-chip--value" id="btn-chip-value">Value</button>
+              </div>
+            </div>
+            <div class="home-promo-stats">
+              <div class="home-promo-stat">
+                <span class="home-promo-stat__icon home-promo-stat__icon--items" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M4 8h16v12H4zM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                </span>
+                <div>
+                  <p class="home-promo-stat__label">Items Tracked</p>
+                  <p class="home-promo-stat__value home-promo-stat__value--green" id="home-stat-items">0</p>
+                </div>
+              </div>
+              <div class="home-promo-stat">
+                <span class="home-promo-stat__icon home-promo-stat__icon--value" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <div>
+                  <p class="home-promo-stat__label">Total Value</p>
+                  <p class="home-promo-stat__value home-promo-stat__value--blue" id="home-stat-value">—</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <nav class="home-action-grid" aria-label="Quick actions">
+            <button type="button" class="home-action-card" id="btn-home-scan-room">
+              <span class="home-action-card__icon home-action-card__icon--scan" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4M9 12h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <span class="home-action-card__title">Scan Room</span>
+              <span class="home-action-card__sub">AI Room Scan</span>
+            </button>
+            <button type="button" class="home-action-card" id="btn-home-add-item">
+              <span class="home-action-card__icon home-action-card__icon--add" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M6 8h12v12H6z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+              </span>
+              <span class="home-action-card__title">Add Item</span>
+              <span class="home-action-card__sub">Manual Entry</span>
+            </button>
+            <button type="button" class="home-action-card" id="btn-home-inventory">
+              <span class="home-action-card__icon home-action-card__icon--inventory" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M7 4h10v16H7zM9 8h6M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <span class="home-action-card__title">My Inventory</span>
+              <span class="home-action-card__sub">View &amp; Manage</span>
+            </button>
+            <button type="button" class="home-action-card" id="btn-home-reports">
+              <span class="home-action-card__icon home-action-card__icon--reports" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 18V8M10 18V5M15 18v-7M20 18v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              </span>
+              <span class="home-action-card__title">Reports</span>
+              <span class="home-action-card__sub">Export &amp; Share</span>
+            </button>
+          </nav>
+
+          <section class="home-recent" aria-labelledby="home-recent-title">
+            <div class="home-recent__head">
+              <h3 class="home-recent__title" id="home-recent-title">Recently Added</h3>
+              <button type="button" class="home-recent__view-all" id="btn-home-view-all">View All</button>
+            </div>
+            <div id="home-recent-grid" class="home-recent-grid" role="list"></div>
+            <p id="home-recent-empty" class="home-recent-empty" hidden>No items yet — scan or add your first item.</p>
+          </section>
+
+          <button type="button" class="home-protected-banner" id="btn-home-protected">
+            <span class="home-protected-banner__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </span>
+            <span class="home-protected-banner__copy">
+              <strong>You're Protected</strong>
+              <span>Keep your home inventory up to date and be prepared for the unexpected.</span>
+            </span>
+            <span class="home-protected-banner__chev" aria-hidden="true">›</span>
+          </button>
+        </div>
+
+        <div id="home-inventory-panel" class="home-inventory-panel" hidden>
+          <div id="home-search" class="home-search" hidden>
+            <div class="home-search__field">
+              <input
+                type="search"
+                id="input-home-search"
+                class="input home-search__input"
+                placeholder="Search nickname, brand, model, serial…"
+                autocomplete="off"
+                autocorrect="off"
+                spellcheck="false"
+                enterkeyhint="search"
+              />
+              <button type="button" class="home-search__clear" id="btn-clear-home-search" aria-label="Clear search" hidden>
+                ×
+              </button>
+            </div>
+          </div>
+          <div id="room-filter-chips" class="room-filter-chips" role="tablist" aria-label="Filter by room" hidden></div>
+          <div id="api-setup-banner" class="api-setup-banner" hidden>
+            <p class="api-setup-banner__title">Set up AI on this device</p>
+            <p class="api-setup-banner__text">
+              Add your own <strong>OpenAI API key</strong> in Settings to read product labels, scan room
+              videos, and auto-fill model and serial numbers.
+            </p>
+            <button type="button" class="btn btn--secondary btn--block" data-nav="settings">
+              Set up API key
             </button>
           </div>
-        </div>
-        <div id="room-filter-chips" class="room-filter-chips" role="tablist" aria-label="Filter by room" hidden></div>
-        <section class="home-hero-card" aria-label="My Home">
-          <div class="home-hero-card__copy">
-            <h2 class="home-hero-card__title">My Home</h2>
-            <p class="home-hero-card__meta" id="home-item-meta">0 Items</p>
+          <div id="appliance-list" class="appliance-list" role="list"></div>
+          <div id="empty-state" class="empty-state" hidden>
+            <p class="empty-state__tagline">Know what you own.</p>
+            <p class="empty-state__subline">Photos and serials, ready when you need them.</p>
+            <button type="button" class="linkish" id="btn-restore-inventory">Restore saved data</button>
           </div>
-          <img
-            class="home-hero-card__house"
-            src="./images/my-home-house.png"
-            alt=""
-            width="202"
-            height="307"
-            decoding="async"
-          />
-        </section>
-        <div id="api-setup-banner" class="api-setup-banner" hidden>
-          <p class="api-setup-banner__title">Set up AI on this device</p>
-          <p class="api-setup-banner__text">
-            Add your own <strong>OpenAI API key</strong> in Settings to read product labels, scan room
-            videos, and auto-fill model and serial numbers. Share, manuals, and insurance PDFs use your
-            saved inventory once items are added.
-          </p>
-          <button type="button" class="btn btn--secondary btn--block" data-nav="settings">
-            Set up API key
+          <p id="search-no-results" class="empty-state" hidden>No matches for your search.</p>
+        </div>
+
+        <nav class="home-tabbar" aria-label="Main navigation">
+          <button type="button" class="home-tabbar__btn is-active" id="btn-tab-home" data-home-tab="dashboard">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1.5 1.5 0 0 1-1.5 1.5H15v-6.5H9V21.5H5.5A1.5 1.5 0 0 1 4 20v-9.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <span>Home</span>
           </button>
-        </div>
-        <div id="appliance-list" class="appliance-list" role="list"></div>
-        <div id="empty-state" class="empty-state" hidden>
-          <p class="empty-state__tagline">Know what you own.</p>
-          <p class="empty-state__subline">Photos and serials, ready when you need them.</p>
-          <button type="button" class="linkish" id="btn-restore-inventory">Restore saved data</button>
-        </div>
-        <p id="search-no-results" class="empty-state" hidden>No matches for your search.</p>
-        <button type="button" class="fab" id="btn-add-appliance" aria-label="Add appliance or item">
-          <svg class="fab__icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M4 7.5h3l1.1-1.7c.2-.3.5-.5.9-.5h5.9c.4 0 .7.2.9.5L17 7.5h3a1.5 1.5 0 0 1 1.5 1.5V18A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8" />
-          </svg>
-          Add appliance or item
-        </button>
-        <div class="home-actions">
-          <button type="button" class="fab fab--room" id="btn-scan-room">
-            <svg class="fab__icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M3.5 7.5A1.5 1.5 0 0 1 5 6h10a1.5 1.5 0 0 1 1.5 1.5v1.7l3.3-2.1a1 1 0 0 1 1.5.9v8a1 1 0 0 1-1.5.9l-3.3-2.1v1.7A1.5 1.5 0 0 1 15 18H5A1.5 1.5 0 0 1 3.5 16.5v-9Z"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
-            Scan room (0-60s video)
+          <button type="button" class="home-tabbar__btn" id="btn-tab-inventory" data-home-tab="inventory">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v12H4zM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <span>Inventory</span>
           </button>
-        </div>
+          <button type="button" class="home-tabbar__btn home-tabbar__btn--add" id="btn-add-appliance" aria-label="Add item">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <span>Add Item</span>
+          </button>
+          <button type="button" class="home-tabbar__btn" id="btn-tab-reports">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16H7zM9 8h6M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <span>Reports</span>
+          </button>
+          <button type="button" class="home-tabbar__btn" id="btn-tab-settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a7.9 7.9 0 0 0 0-6l2-1.5a.75.75 0 0 0 .18-.96l-2-3.46a.75.75 0 0 0-.9-.33l-2.5 1a8.1 8.1 0 0 0-1.6-1l-.4-2.65A.75.75 0 0 0 14 2h-4a.75.75 0 0 0-.74.63l-.4 2.65a8.1 8.1 0 0 0-1.6 1l-2.5-1a.75.75 0 0 0-.9.33l-2 3.46a.75.75 0 0 0 .18.96L4.6 9a7.9 7.9 0 0 0 0 6l-2 1.5a.75.75 0 0 0-.18.96l2 3.46c.18.31.53.42.85.33l2.5-1c.51.45 1.05.78 1.6 1l.4 2.65c.07.37.37.63.74.63h4c.37 0 .67-.26.74-.63l.4-2.65c.58-.24 1.12-.57 1.6-1l2.5 1c.32.09.67-.02.85-.33l2-3.46a.75.75 0 0 0-.18-.96L19.4 15Z" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            <span>Settings</span>
+          </button>
+        </nav>
+        <button type="button" class="fab fab--room" id="btn-scan-room" hidden aria-hidden="true" tabindex="-1"></button>
       </main>
 
       <!-- Auth -->

@@ -73,7 +73,25 @@ const els = {
   roomFilterChips: document.getElementById("room-filter-chips"),
   emptyState: document.getElementById("empty-state"),
   searchNoResults: document.getElementById("search-no-results"),
-  homeItemMeta: document.getElementById("home-item-meta"),
+  homeDashboard: document.getElementById("home-dashboard"),
+  homeInventoryPanel: document.getElementById("home-inventory-panel"),
+  homeStatItems: document.getElementById("home-stat-items"),
+  homeStatValue: document.getElementById("home-stat-value"),
+  homeRecentGrid: document.getElementById("home-recent-grid"),
+  homeRecentEmpty: document.getElementById("home-recent-empty"),
+  btnHomeScanRoom: document.getElementById("btn-home-scan-room"),
+  btnHomeAddItem: document.getElementById("btn-home-add-item"),
+  btnHomeInventory: document.getElementById("btn-home-inventory"),
+  btnHomeReports: document.getElementById("btn-home-reports"),
+  btnHomeViewAll: document.getElementById("btn-home-view-all"),
+  btnChipRooms: document.getElementById("btn-chip-rooms"),
+  btnChipInventory: document.getElementById("btn-chip-inventory"),
+  btnChipValue: document.getElementById("btn-chip-value"),
+  btnHomeProtected: document.getElementById("btn-home-protected"),
+  btnTabHome: document.getElementById("btn-tab-home"),
+  btnTabInventory: document.getElementById("btn-tab-inventory"),
+  btnTabReports: document.getElementById("btn-tab-reports"),
+  btnTabSettings: document.getElementById("btn-tab-settings"),
   apiSetupBanner: document.getElementById("api-setup-banner"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
   btnGuide: document.getElementById("btn-guide"),
@@ -233,6 +251,8 @@ let allowOfflineUse = false;
 /** @type {"all" | string} */
 let homeRoomFilter = "all";
 let homeSearchQuery = "";
+/** @type {"dashboard" | "inventory"} */
+let homePanel = "dashboard";
 
 /** @type {{ dataUrl: string | null, suggestions: { brand: string, modelNumber: string, serialNumber: string } | null }} */
 const detailLabelPending = {
@@ -397,6 +417,26 @@ function init() {
   populateRoomSelect(els.editFieldRoom);
   els.btnAdd?.addEventListener("click", () => startScan());
   els.btnScanRoom?.addEventListener("click", () => startRoomScan());
+  els.btnHomeScanRoom?.addEventListener("click", () => startRoomScan());
+  els.btnHomeAddItem?.addEventListener("click", () => startScan());
+  els.btnHomeInventory?.addEventListener("click", () => setHomePanel("inventory"));
+  els.btnHomeReports?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnHomeViewAll?.addEventListener("click", () => setHomePanel("inventory"));
+  els.btnChipRooms?.addEventListener("click", () => {
+    setHomePanel("inventory");
+    homeRoomFilter = "all";
+    void renderHome();
+  });
+  els.btnChipInventory?.addEventListener("click", () => setHomePanel("inventory"));
+  els.btnChipValue?.addEventListener("click", () => toast("Item value tracking is coming soon"));
+  els.btnHomeProtected?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnTabHome?.addEventListener("click", () => setHomePanel("dashboard"));
+  els.btnTabInventory?.addEventListener("click", () => setHomePanel("inventory"));
+  els.btnTabReports?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnTabSettings?.addEventListener("click", () => {
+    renderSettings();
+    showView("settings");
+  });
   els.inputRoomVideo?.addEventListener("change", () => void onRoomVideoSelected());
   els.btnClearRoomVideo?.addEventListener("click", () => clearRoomVideo());
   els.btnAnalyzeRoom?.addEventListener("click", () => void runRoomAnalysis());
@@ -552,6 +592,7 @@ function init() {
       if (target === "home") {
         resetScan();
         resetRoomScan();
+        homePanel = "dashboard";
         void renderHome().then(() => {
           updateSyncBanner();
           showView("home");
@@ -1156,6 +1197,7 @@ function showView(name) {
   }
   const app = document.getElementById("app");
   app?.classList.toggle("app--landing", name === "landing");
+  app?.classList.toggle("app--home-tabbar", name === "home");
 }
 
 function resetScan() {
@@ -1619,7 +1661,8 @@ async function renderHome() {
   const chipsEnabled = loadRoomChipsEnabled();
   const hasInventory = list.length > 0;
 
-  updateHomeHeroMeta(list.length);
+  updateHomeDashboardStats(list.length);
+  renderRecentlyAdded(list);
 
   if (els.homeSearch) {
     els.homeSearch.hidden = !hasInventory;
@@ -1702,14 +1745,72 @@ async function renderHome() {
   }
 
   void updateApiSetupBanner();
+  syncHomeTabButtons();
 }
 
-function updateHomeHeroMeta(itemCount) {
-  if (!els.homeItemMeta) return;
-  const label = itemCount === 1 ? "1 Item" : `${itemCount} Items`;
-  const status =
-    itemCount === 0 ? "Start scanning to build your inventory" : "All Up to Date";
-  els.homeItemMeta.textContent = `${label} • ${status}`;
+function setHomePanel(panel) {
+  homePanel = panel;
+  els.homeDashboard?.toggleAttribute("hidden", panel !== "dashboard");
+  els.homeInventoryPanel?.toggleAttribute("hidden", panel !== "inventory");
+  syncHomeTabButtons();
+  if (panel === "inventory") {
+    els.homeInventoryPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function syncHomeTabButtons() {
+  els.btnTabHome?.classList.toggle("is-active", homePanel === "dashboard");
+  els.btnTabInventory?.classList.toggle("is-active", homePanel === "inventory");
+}
+
+function updateHomeDashboardStats(itemCount) {
+  if (els.homeStatItems) els.homeStatItems.textContent = String(itemCount);
+  if (els.homeStatValue) els.homeStatValue.textContent = "—";
+}
+
+/** @param {import("./storage.js").ApplianceRecord[]} list */
+function renderRecentlyAdded(list) {
+  if (!els.homeRecentGrid) return;
+  els.homeRecentGrid.innerHTML = "";
+  const recent = [...list]
+    .sort((a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime())
+    .slice(0, 3);
+
+  if (els.homeRecentEmpty) {
+    els.homeRecentEmpty.hidden = recent.length > 0;
+  }
+
+  for (const item of recent) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "home-recent-card";
+    btn.setAttribute("role", "listitem");
+
+    const imgWrap = document.createElement("div");
+    imgWrap.className = "home-recent-card__img-wrap";
+    const img = document.createElement("img");
+    img.className = "home-recent-card__img";
+    img.src = item.appliancePhotoDataUrl;
+    img.alt = "";
+    imgWrap.append(img);
+
+    const body = document.createElement("div");
+    body.className = "home-recent-card__body";
+    const name = document.createElement("p");
+    name.className = "home-recent-card__name";
+    name.textContent = item.nickname;
+    const room = document.createElement("p");
+    room.className = "home-recent-card__room";
+    room.textContent = roomDisplayName(item.room);
+    const price = document.createElement("p");
+    price.className = "home-recent-card__price";
+    price.textContent = "—";
+    body.append(name, room, price);
+
+    btn.append(imgWrap, body);
+    btn.addEventListener("click", () => void openDetail(item.id));
+    els.homeRecentGrid.append(btn);
+  }
 }
 
 /** @param {import("./storage.js").ApplianceRecord} item @param {string} query */
