@@ -636,17 +636,16 @@
           </p>
         </div>
         <div class="capture-card">
+          <input type="file" id="input-room-video" accept="video/*" capture="environment" hidden />
+          <div class="capture-card__toolbar" id="toolbar-room-video" hidden>
+            <label class="btn btn--secondary capture-toolbar-btn" for="input-room-video" id="label-room-video-retake">Re-record room video</label>
+            <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-clear-room-video">Clear &amp; re-record</button>
+          </div>
           <div id="preview-room-video" class="capture-card__preview capture-card__preview--empty capture-card__preview--video">
             <span>No video yet</span>
           </div>
           <p id="room-scan-status" class="room-scan-status" hidden></p>
-          <label class="btn btn--primary btn--block capture-btn" id="label-room-video">
-            <input type="file" id="input-room-video" accept="video/*" capture="environment" hidden />
-            Record room video
-          </label>
-          <button type="button" class="btn btn--secondary btn--block" id="btn-clear-room-video" hidden>
-            Clear &amp; re-record
-          </button>
+          <label class="btn btn--primary btn--block capture-btn" for="input-room-video" id="label-room-video">Record room video</label>
         </div>
         <button type="button" class="btn btn--primary btn--block" id="btn-analyze-room" disabled>
           Analyze room video
@@ -689,16 +688,15 @@
           </p>
         </div>
         <div class="capture-card">
+          <input type="file" id="input-appliance-photo" accept="image/*" capture="environment" hidden />
+          <div class="capture-card__toolbar" id="toolbar-appliance" hidden>
+            <label class="btn btn--secondary capture-toolbar-btn" for="input-appliance-photo" id="label-appliance-retake">Retake appliance photo</label>
+            <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-appliance">Clear &amp; retake</button>
+          </div>
           <div id="preview-appliance" class="capture-card__preview capture-card__preview--empty">
             <span>No photo yet</span>
           </div>
-          <label class="btn btn--primary btn--block capture-btn" id="label-appliance-photo">
-            <input type="file" id="input-appliance-photo" accept="image/*" capture="environment" hidden />
-            Take appliance photo
-          </label>
-          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-appliance" hidden>
-            Clear &amp; retake
-          </button>
+          <label class="btn btn--primary btn--block capture-btn" for="input-appliance-photo" id="label-appliance-photo">Take appliance photo</label>
         </div>
         <button type="button" class="btn btn--primary btn--block" id="btn-to-step-2" disabled>Continue</button>
       </main>
@@ -718,16 +716,15 @@
           <p id="label-hint-text">After your appliance photo, we’ll show where the label is usually located.</p>
         </aside>
         <div class="capture-card">
+          <input type="file" id="input-label-photo" accept="image/*" capture="environment" hidden />
+          <div class="capture-card__toolbar" id="toolbar-label" hidden>
+            <label class="btn btn--secondary capture-toolbar-btn" for="input-label-photo" id="label-label-retake">Retake label photo</label>
+            <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-label">Clear &amp; retake</button>
+          </div>
           <div id="preview-label" class="capture-card__preview capture-card__preview--empty">
             <span>No photo yet</span>
           </div>
-          <label class="btn btn--primary btn--block capture-btn" id="label-label-photo">
-            <input type="file" id="input-label-photo" accept="image/*" capture="environment" hidden />
-            Take label photo
-          </label>
-          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-label" hidden>
-            Clear &amp; retake
-          </button>
+          <label class="btn btn--primary btn--block capture-btn" for="input-label-photo" id="label-label-photo">Take label photo</label>
         </div>
         <button type="button" class="btn btn--primary btn--block" id="btn-to-step-3">Continue</button>
         <button type="button" class="btn btn--ghost btn--block" id="btn-skip-label">Skip label for now</button>
@@ -742,16 +739,15 @@
           <p class="step-header__lede">Snap the receipt if you have it — handy for warranty and repair. You can skip this step.</p>
         </div>
         <div class="capture-card">
+          <input type="file" id="input-receipt-photo" accept="image/*" capture="environment" hidden />
+          <div class="capture-card__toolbar" id="toolbar-receipt" hidden>
+            <label class="btn btn--secondary capture-toolbar-btn" for="input-receipt-photo" id="label-receipt-retake">Retake receipt photo</label>
+            <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-receipt">Clear &amp; retake</button>
+          </div>
           <div id="preview-receipt" class="capture-card__preview capture-card__preview--empty">
             <span>No photo yet</span>
           </div>
-          <label class="btn btn--primary btn--block capture-btn" id="label-receipt-photo">
-            <input type="file" id="input-receipt-photo" accept="image/*" capture="environment" hidden />
-            Take receipt photo
-          </label>
-          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-receipt" hidden>
-            Clear &amp; retake
-          </button>
+          <label class="btn btn--primary btn--block capture-btn" for="input-receipt-photo" id="label-receipt-photo">Take receipt photo</label>
         </div>
         <button type="button" class="btn btn--primary btn--block" id="btn-analyze">Analyze photos</button>
         <button type="button" class="btn btn--ghost btn--block" id="btn-skip-receipt">Skip receipt</button>
@@ -824,16 +820,15 @@
           <p id="scan-doc-lede" class="step-header__lede">Take a clear photo of the document.</p>
         </div>
         <div class="capture-card">
+          <input type="file" id="input-doc-photo" accept="image/*" capture="environment" hidden />
+          <div class="capture-card__toolbar" id="toolbar-doc-photo" hidden>
+            <label class="btn btn--secondary capture-toolbar-btn" for="input-doc-photo" id="label-doc-retake">Retake document photo</label>
+            <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-doc-photo">Clear &amp; retake</button>
+          </div>
           <div id="preview-doc-photo" class="capture-card__preview capture-card__preview--empty">
             <span>No photo yet</span>
           </div>
-          <label class="btn btn--primary btn--block capture-btn" id="label-doc-photo">
-            <input type="file" id="input-doc-photo" accept="image/*" capture="environment" hidden />
-            Take document photo
-          </label>
-          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-doc-photo" hidden>
-            Retake photo
-          </button>
+          <label class="btn btn--primary btn--block capture-btn" for="input-doc-photo" id="label-doc-photo">Take document photo</label>
         </div>
         <button type="button" class="btn btn--primary btn--block" id="btn-analyze-doc" disabled>Analyze document</button>
       </main>
@@ -1172,44 +1167,47 @@
           <p id="detail-label-lede" class="hint">
             Snap a manufacturer sticker for appliances — or for paintings, AI can crop corner signatures from your main photo during scan.
           </p>
-          <div class="capture-card">
-            <div id="preview-detail-label-photo" class="capture-card__preview capture-card__preview--empty">
-              <span>No photo yet</span>
-            </div>
-            <label class="btn btn--primary btn--block capture-btn" id="label-detail-label-photo">
+          <div class="capture-layout">
+            <div class="capture-layout__photo">
               <input type="file" id="input-detail-label-photo" accept="image/*" capture="environment" hidden />
-              Take label photo
-            </label>
-            <button type="button" class="btn btn--secondary btn--block" id="btn-clear-detail-label-photo" hidden>
-              Clear &amp; retake
-            </button>
-          </div>
-          <div id="detail-label-review" class="detail-label-review" hidden>
-            <p id="detail-label-analyze-status" class="hint" hidden>Analyzing label…</p>
-            <form id="detail-label-review-form" class="form">
-              <label class="field">
-                <span>Brand</span>
-                <input type="text" id="detail-label-brand" class="input" autocomplete="off" />
-                <p id="detail-label-brand-hint" class="field-hint" hidden></p>
-              </label>
-              <label class="field">
-                <span>Model number</span>
-                <input type="text" id="detail-label-model" class="input" autocomplete="off" />
-                <p id="detail-label-model-hint" class="field-hint" hidden></p>
-              </label>
-              <label class="field">
-                <span>Serial number</span>
-                <input type="text" id="detail-label-serial" class="input" autocomplete="off" />
-                <p id="detail-label-serial-hint" class="field-hint" hidden></p>
-              </label>
-              <p id="detail-label-confidence" class="confidence-note" hidden></p>
-              <button type="submit" class="btn btn--primary btn--block" id="btn-save-detail-label">
-                Save label photo &amp; details
-              </button>
-              <button type="button" class="btn btn--ghost btn--block" id="btn-cancel-detail-label-review">
-                Cancel
-              </button>
-            </form>
+              <div id="preview-detail-label-photo" class="capture-card__preview capture-card__preview--empty">
+                <span>No photo yet</span>
+              </div>
+              <label class="btn btn--primary btn--block capture-btn" for="input-detail-label-photo" id="label-detail-label-photo">Take label photo</label>
+            </div>
+            <div class="capture-layout__side">
+              <div class="capture-card__toolbar capture-card__toolbar--side" id="toolbar-detail-label" hidden>
+                <label class="btn btn--secondary capture-toolbar-btn" for="input-detail-label-photo" id="label-detail-label-retake">Retake label photo</label>
+                <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-clear-detail-label-photo">Clear &amp; retake</button>
+              </div>
+              <div id="detail-label-review" class="detail-label-review" hidden>
+                <p id="detail-label-analyze-status" class="hint" hidden>Analyzing label…</p>
+                <form id="detail-label-review-form" class="form">
+                  <label class="field">
+                    <span>Brand</span>
+                    <input type="text" id="detail-label-brand" class="input" autocomplete="off" />
+                    <p id="detail-label-brand-hint" class="field-hint" hidden></p>
+                  </label>
+                  <label class="field">
+                    <span>Model number</span>
+                    <input type="text" id="detail-label-model" class="input" autocomplete="off" />
+                    <p id="detail-label-model-hint" class="field-hint" hidden></p>
+                  </label>
+                  <label class="field">
+                    <span>Serial number</span>
+                    <input type="text" id="detail-label-serial" class="input" autocomplete="off" />
+                    <p id="detail-label-serial-hint" class="field-hint" hidden></p>
+                  </label>
+                  <p id="detail-label-confidence" class="confidence-note" hidden></p>
+                  <button type="submit" class="btn btn--primary btn--block" id="btn-save-detail-label">
+                    Save label photo &amp; details
+                  </button>
+                  <button type="button" class="btn btn--ghost btn--block" id="btn-cancel-detail-label-review">
+                    Cancel
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
         <button type="button" class="btn btn--secondary btn--block" id="btn-share-appliance">Share item</button>
