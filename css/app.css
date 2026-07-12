@@ -513,38 +513,12 @@ body {
 }
 
 .home-promo-card {
-  padding: 1rem 0.95rem 1.05rem;
+  padding: 0.95rem 0.95rem 1rem;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   overflow: hidden;
-}
-
-.home-promo-card__copy {
-  min-width: 0;
-  margin-bottom: 0.5rem;
-}
-
-.home-promo-card__headline {
-  margin: 0 0 0.35rem;
-  font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
-  font-size: clamp(1.35rem, 5.5vw, 1.75rem);
-  font-weight: 700;
-  line-height: 1.08;
-  color: #1a2b41;
-}
-
-.home-promo-card__headline-accent {
-  display: block;
-  color: #22c55e;
-}
-
-.home-promo-card__lede {
-  margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.5;
-  color: #4b5563;
 }
 
 .home-promo-card__features {
@@ -605,17 +579,12 @@ body {
   background: #6366f1;
 }
 
-.home-promo-card__feature-icon--secure {
+.home-promo-card__feature-icon--savings {
   background: #f97316;
 }
 
 .home-promo-card__feature-icon--access {
   background: #ec4899;
-}
-
-:root[data-theme="dark"] .home-promo-card__headline,
-:root:not([data-theme="light"]) .home-promo-card__headline {
-  color: var(--text);
 }
 
 :root[data-theme="dark"] .home-promo-card__feature strong,
@@ -624,35 +593,26 @@ body {
 }
 
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .home-promo-card__headline {
-    color: #1a2b41;
-  }
-
   :root:not([data-theme="dark"]) .home-promo-card__feature strong {
     color: #1a2b41;
   }
 }
 
-:root[data-theme="dark"] .home-promo-card__lede,
-:root:not([data-theme="light"]) .home-promo-card__lede,
 :root[data-theme="dark"] .home-promo-card__feature p,
 :root:not([data-theme="light"]) .home-promo-card__feature p {
   color: var(--muted);
 }
 
 @media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) .home-promo-card__lede,
   :root:not([data-theme="dark"]) .home-promo-card__feature p {
     color: #5b6472;
   }
 }
 
-:root[data-theme="light"] .home-promo-card__lede,
 :root[data-theme="light"] .home-promo-card__feature p {
   color: #5b6472;
 }
 
-:root[data-theme="light"] .home-promo-card__headline,
 :root[data-theme="light"] .home-promo-card__feature strong {
   color: #1a2b41;
 }
@@ -1051,10 +1011,6 @@ body {
   .home-view.view {
     padding-left: 1rem;
     padding-right: 1rem;
-  }
-
-  .home-promo-card__lede {
-    font-size: 0.88rem;
   }
 }
 
