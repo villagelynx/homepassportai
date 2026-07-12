@@ -78,6 +78,7 @@ const els = {
   homeItemMeta: document.getElementById("home-item-meta"),
   homeRecentGrid: document.getElementById("home-recent-grid"),
   homeRecentEmpty: document.getElementById("home-recent-empty"),
+  homeRecentTitle: document.getElementById("home-recent-title"),
   btnHomeScanRoom: document.getElementById("btn-home-scan-room"),
   btnHomeAddItem: document.getElementById("btn-home-add-item"),
   btnHomeInventory: document.getElementById("btn-home-inventory"),
@@ -249,8 +250,8 @@ let detailId = null;
 let toastTimer = 0;
 let authMode = "signin";
 let allowOfflineUse = false;
-/** @type {"all" | string} */
-let homeRoomFilter = "all";
+/** @type {"all" | "recent" | string} */
+let homeRoomFilter = "recent";
 let homeSearchQuery = "";
 /** @type {"dashboard" | "inventory"} */
 let homePanel = "dashboard";
@@ -518,7 +519,7 @@ function init() {
   els.fieldRoomChips?.addEventListener("change", () => {
     const enabled = els.fieldRoomChips?.checked ?? true;
     saveRoomChipsEnabled(enabled);
-    if (!enabled) homeRoomFilter = "all";
+    if (!enabled) homeRoomFilter = "recent";
     toast(enabled ? "Room filter chips on" : "Room filter chips off");
     void renderHome();
   });
@@ -1669,7 +1670,7 @@ async function renderHome() {
   const hasInventory = list.length > 0;
 
   updateHomeDashboardStats(list.length);
-  renderRecentlyAdded(list);
+  renderRecentlyAdded(list, chipsEnabled);
 
   if (els.homeAuthCta) {
     els.homeAuthCta.hidden = !isSupabaseConfigured() || isSignedIn();
@@ -1692,12 +1693,16 @@ async function renderHome() {
 
   if (chipsEnabled && hasInventory) {
     const allGrouped = groupByRoom(list);
-    if (homeRoomFilter !== "all" && !allGrouped.some(([room]) => room === homeRoomFilter)) {
-      homeRoomFilter = "all";
+    if (
+      homeRoomFilter !== "all" &&
+      homeRoomFilter !== "recent" &&
+      !allGrouped.some(([room]) => room === homeRoomFilter)
+    ) {
+      homeRoomFilter = "recent";
     }
     renderRoomFilterChips(allGrouped, list.length);
   } else {
-    homeRoomFilter = "all";
+    homeRoomFilter = "recent";
   }
 
   els.applianceList.innerHTML = "";
@@ -1707,51 +1712,30 @@ async function renderHome() {
   }
 
   const showHeadings = !chipsEnabled || homeRoomFilter === "all";
-  const entries =
-    chipsEnabled && homeRoomFilter !== "all"
-      ? grouped.filter(([room]) => room === homeRoomFilter)
-      : grouped;
+  const roomFiltered =
+    chipsEnabled && homeRoomFilter !== "all" && homeRoomFilter !== "recent";
 
-  for (const [room, items] of entries) {
-    if (showHeadings) {
-      const heading = document.createElement("h3");
-      heading.className = "category-heading";
-      setRoomTitleElement(heading, room, roomDisplayName(room));
-      els.applianceList.append(heading);
+  if (chipsEnabled && homeRoomFilter === "recent") {
+    const sorted = [...filtered].sort(
+      (a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime(),
+    );
+    for (const item of sorted) {
+      els.applianceList.append(makeApplianceCardButton(item));
     }
+  } else {
+    const entries = roomFiltered ? grouped.filter(([room]) => room === homeRoomFilter) : grouped;
 
-    for (const item of items) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "appliance-card";
-      btn.setAttribute("role", "listitem");
-
-      const img = document.createElement("img");
-      img.className = "appliance-card__thumb";
-      img.src = item.appliancePhotoDataUrl;
-      img.alt = "";
-
-      const body = document.createElement("div");
-      body.className = "appliance-card__body";
-      const title = document.createElement("h3");
-      title.textContent = item.nickname;
-      const meta = document.createElement("p");
-      const type = item.applianceType ? ` · ${item.applianceType}` : "";
-      const model = item.modelNumber ? ` · ${item.modelNumber}` : "";
-      meta.textContent = `${item.brand || "Unknown brand"}${type}${model}`;
-      body.append(title, meta);
-
-      const extraParts = [item.colorDescription, item.dimensionsDescription].filter(Boolean);
-      if (extraParts.length) {
-        const extra = document.createElement("p");
-        extra.className = "appliance-card__extra";
-        extra.textContent = extraParts.join(" · ");
-        body.append(extra);
+    for (const [room, items] of entries) {
+      if (showHeadings) {
+        const heading = document.createElement("h3");
+        heading.className = "category-heading";
+        setRoomTitleElement(heading, room, roomDisplayName(room));
+        els.applianceList.append(heading);
       }
 
-      btn.append(img, body);
-      btn.addEventListener("click", () => void openDetail(item.id));
-      els.applianceList.append(btn);
+      for (const item of items) {
+        els.applianceList.append(makeApplianceCardButton(item));
+      }
     }
   }
 
@@ -1781,19 +1765,93 @@ function updateHomeDashboardStats(itemCount) {
   }
 }
 
-/** @param {import("./storage.js").ApplianceRecord[]} list */
-function renderRecentlyAdded(list) {
-  if (!els.homeRecentGrid) return;
-  els.homeRecentGrid.innerHTML = "";
-  const recent = [...list]
-    .sort((a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime())
-    .slice(0, 6);
+/** @param {"all" | "recent" | string} [filter] */
+function getHomeRecentSectionTitle(filter = homeRoomFilter) {
+  if (filter === "all") return "All Items";
+  if (filter === "recent") return "Recently Added";
+  return roomDisplayName(filter);
+}
 
-  if (els.homeRecentEmpty) {
-    els.homeRecentEmpty.hidden = recent.length > 0;
+/** @param {import("./storage.js").ApplianceRecord} item */
+function makeApplianceCardButton(item) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "appliance-card";
+  btn.setAttribute("role", "listitem");
+
+  const img = document.createElement("img");
+  img.className = "appliance-card__thumb";
+  img.src = item.appliancePhotoDataUrl;
+  img.alt = "";
+
+  const body = document.createElement("div");
+  body.className = "appliance-card__body";
+  const title = document.createElement("h3");
+  title.textContent = item.nickname;
+  const meta = document.createElement("p");
+  const type = item.applianceType ? ` · ${item.applianceType}` : "";
+  const model = item.modelNumber ? ` · ${item.modelNumber}` : "";
+  meta.textContent = `${item.brand || "Unknown brand"}${type}${model}`;
+  body.append(title, meta);
+
+  const extraParts = [item.colorDescription, item.dimensionsDescription].filter(Boolean);
+  if (extraParts.length) {
+    const extra = document.createElement("p");
+    extra.className = "appliance-card__extra";
+    extra.textContent = extraParts.join(" · ");
+    body.append(extra);
   }
 
-  for (const item of recent) {
+  btn.append(img, body);
+  btn.addEventListener("click", () => void openDetail(item.id));
+  return btn;
+}
+
+/** @param {import("./storage.js").ApplianceRecord[]} list @param {"all" | "recent" | string} filter */
+function getDashboardCategoryItems(list, filter) {
+  let items = [...list];
+
+  if (filter !== "all" && filter !== "recent") {
+    items = items.filter((item) => (item.room || "Other") === filter);
+    items.sort((a, b) =>
+      (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
+    );
+    return items;
+  }
+
+  items.sort((a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime());
+  if (filter === "recent") {
+    return items.slice(0, 6);
+  }
+
+  return items;
+}
+
+/** @param {"all" | "recent" | string} filter */
+function getHomeRecentEmptyMessage(filter) {
+  if (filter === "recent") return "No items yet — scan or add your first item.";
+  if (filter === "all") return "No items yet — scan or add your first item.";
+  return `No items in ${roomDisplayName(filter)} yet.`;
+}
+
+/** @param {import("./storage.js").ApplianceRecord[]} list @param {boolean} [chipsEnabled] */
+function renderRecentlyAdded(list, chipsEnabled = loadRoomChipsEnabled()) {
+  if (!els.homeRecentGrid) return;
+  els.homeRecentGrid.innerHTML = "";
+
+  const filter = chipsEnabled ? homeRoomFilter : "recent";
+  if (els.homeRecentTitle) {
+    els.homeRecentTitle.textContent = getHomeRecentSectionTitle(filter);
+  }
+
+  const items = getDashboardCategoryItems(list, filter);
+
+  if (els.homeRecentEmpty) {
+    els.homeRecentEmpty.textContent = getHomeRecentEmptyMessage(filter);
+    els.homeRecentEmpty.hidden = items.length > 0;
+  }
+
+  for (const item of items) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "home-recent-card";
@@ -1858,6 +1916,7 @@ function renderRoomFilterChips(grouped, totalCount) {
   container.innerHTML = "";
   container.append(
     makeRoomFilterChip("all", `All · ${totalCount}`, homeRoomFilter === "all"),
+    makeRoomFilterChip("recent", "Recently Added", homeRoomFilter === "recent"),
   );
 
   for (const [room, items] of grouped) {
@@ -1867,14 +1926,18 @@ function renderRoomFilterChips(grouped, totalCount) {
   }
 }
 
-/** @param {"all" | string} roomId */
+/** @param {"all" | "recent" | string} roomId */
 function makeRoomFilterChip(roomId, label, selected) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = `room-filter-chip${selected ? " room-filter-chip--selected" : ""}`;
   btn.setAttribute("role", "tab");
   btn.setAttribute("aria-selected", String(selected));
-  setRoomTitleElement(btn, roomId, label);
+  if (roomId === "recent") {
+    btn.textContent = label;
+  } else {
+    setRoomTitleElement(btn, roomId, label);
+  }
   btn.addEventListener("click", () => {
     if (homeRoomFilter === roomId) return;
     homeRoomFilter = roomId;
