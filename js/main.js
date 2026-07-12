@@ -97,6 +97,7 @@ const els = {
   apiSetupBanner: document.getElementById("api-setup-banner"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
   btnGuide: document.getElementById("btn-guide"),
+  btnTopbarSignOut: document.getElementById("btn-topbar-sign-out"),
   btnSettings: document.getElementById("btn-settings"),
   btnAdd: document.getElementById("btn-add-appliance"),
   btnScanRoom: document.getElementById("btn-scan-room"),
@@ -579,6 +580,7 @@ function init() {
   });
   els.btnClearApiKey?.addEventListener("click", () => clearSettingsApiKey());
   els.btnSignOut?.addEventListener("click", () => void handleSignOut());
+  els.btnTopbarSignOut?.addEventListener("click", () => void handleSignOut());
   els.btnSyncStatus?.addEventListener("click", () => {
     if (!isSupabaseConfigured()) return;
     if (isSignedIn()) {
@@ -835,9 +837,17 @@ function updateHeaderTooltips() {
     els.btnSettings,
     "Settings — OpenAI API key, account sign-in, backup, and insurance PDF",
   );
+  setTopbarTip(els.btnTopbarSignOut, "Sign out of your account on this device");
+}
+
+function updateTopbarSignOut() {
+  if (!els.btnTopbarSignOut) return;
+  const show = isSupabaseConfigured() && isSignedIn();
+  els.btnTopbarSignOut.hidden = !show;
 }
 
 function updateSyncBanner() {
+  updateTopbarSignOut();
   if (!els.btnSyncStatus) return;
   if (!isSupabaseConfigured()) {
     els.btnSyncStatus.hidden = true;
