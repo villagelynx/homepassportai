@@ -574,31 +574,6 @@ body {
     background: #ffffff;
   }
 
-  .landing__hero-actions {
-    display: none;
-  }
-
-  .landing__build-tag,
-  #build-tag {
-    display: none;
-  }
-
-  .home-auth-cta {
-    display: none;
-  }
-
-  .topbar {
-    background: #ffffff;
-    border-bottom: 1px solid #e8edf2;
-    backdrop-filter: none;
-  }
-
-  .topbar__info,
-  .topbar__settings,
-  .topbar__sync {
-    color: #1a2b41;
-  }
-
   .landing__banner-brand,
   .topbar__brand.landing__banner-brand {
     --banner-header-h: 4.1rem;
@@ -2494,4 +2469,37 @@ body {
   margin: 0 0 0.5rem;
   padding: 0;
   text-align: left;
+}
+
+/* Desktop layout overrides — must come after landing/base rules */
+@media (min-width: 768px) {
+  .landing__hero-actions {
+    display: none !important;
+  }
+
+  .landing__build-tag,
+  #build-tag,
+  #landing-build-tag {
+    display: none !important;
+  }
+
+  .home-auth-cta {
+    display: none !important;
+  }
+
+  .landing__back-app {
+    display: none !important;
+  }
+
+  .topbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e8edf2;
+    backdrop-filter: none;
+  }
+
+  .topbar__info,
+  .topbar__settings,
+  .topbar__sync {
+    color: #1a2b41;
+  }
 }
