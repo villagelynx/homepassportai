@@ -147,6 +147,53 @@ body {
   padding: 0;
 }
 
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.brand-lockup__icon {
+  width: 2.65rem;
+  height: 2.65rem;
+  object-fit: contain;
+  flex-shrink: 0;
+  display: block;
+}
+
+.brand-lockup__text {
+  font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
+  font-size: clamp(1.05rem, 4.2vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.topbar .brand-lockup__homepassport {
+  color: var(--text);
+}
+
+.brand-lockup__ai,
+.landing .brand-lockup__ai {
+  color: #22c55e;
+}
+
+.landing .brand-lockup__homepassport {
+  color: #1a2b41;
+}
+
+.brand-lockup--landing .brand-lockup__icon {
+  width: 3rem;
+  height: 3rem;
+}
+
+.brand-lockup--landing .brand-lockup__text {
+  font-size: clamp(1.3rem, 5vw, 1.85rem);
+}
+
 .topbar__logo-icon {
   width: 1.85rem;
   height: 1.85rem;
@@ -566,16 +613,19 @@ body {
 
   .landing__banner-brand,
   .topbar__brand.landing__banner-brand {
-    --banner-header-h: 2.85rem;
-  }
-
-  .landing__banner-brand {
     flex: 1 1 100%;
   }
 
-  .landing__banner-header-img,
-  .topbar__brand .landing__banner-header-img {
+  .brand-lockup {
     max-width: 100%;
+  }
+
+  .brand-lockup__text {
+    font-size: clamp(0.95rem, 4vw, 1.2rem);
+  }
+
+  .brand-lockup--landing .brand-lockup__text {
+    font-size: clamp(1.1rem, 4.8vw, 1.5rem);
   }
 
   .landing__top-buttons {
@@ -599,14 +649,22 @@ body {
     background: #ffffff;
   }
 
-  .landing__banner-brand,
-  .topbar__brand.landing__banner-brand {
-    --banner-header-h: 4.1rem;
+  .brand-lockup--landing .brand-lockup__icon {
+    width: 3.35rem;
+    height: 3.35rem;
   }
 
-  .landing__banner-header-img,
-  .topbar__brand .landing__banner-header-img {
-    max-width: 32rem;
+  .brand-lockup--landing .brand-lockup__text {
+    font-size: 2rem;
+  }
+
+  .topbar .brand-lockup__icon {
+    width: 2.85rem;
+    height: 2.85rem;
+  }
+
+  .topbar .brand-lockup__text {
+    font-size: 1.5rem;
   }
 
   .landing__banner-tagline {
@@ -2253,7 +2311,6 @@ body {
 }
 
 .landing__banner-brand {
-  --banner-header-h: 3.35rem;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -2262,21 +2319,9 @@ body {
   flex: 1 1 auto;
 }
 
-.topbar__logo--brand .landing__banner-header-img {
-  display: block;
-}
-
-.landing__banner-header-img {
-  display: block;
-  width: auto;
-  height: var(--banner-header-h);
-  max-width: min(100%, 28rem);
-  object-fit: contain;
-  object-position: left center;
-}
-
 .landing__banner-meta {
-  padding-left: calc(var(--banner-header-h, 2.75rem) * 184 / 112);
+  padding-left: 0;
+  margin-top: 0.1rem;
 }
 
 .landing__banner-tagline {

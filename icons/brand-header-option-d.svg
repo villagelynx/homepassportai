@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 160" role="img" aria-label="HomePassportAI">
+  <!-- Option D: Rounded minimal home, no chimney -->
+  <g transform="translate(18 34)">
+    <path
+      d="M48 8L8 40v52h80V40L48 8Z"
+      fill="none"
+      stroke="#1d6fd8"
+      stroke-width="5"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M32 92V62c0-6 5-11 16-11s16 5 16 11v30"
+      fill="none"
+      stroke="#1d6fd8"
+      stroke-width="5"
+      stroke-linecap="round"
+    />
+    <circle cx="68" cy="52" r="6" fill="#22c55e" />
+  </g>
+  <text
+    x="148"
+    y="102"
+    font-family="Montserrat, 'DM Sans', system-ui, sans-serif"
+    font-size="68"
+    font-weight="700"
+    letter-spacing="-0.02em"
+  >
+    <tspan fill="#1a2b41">HomePassport</tspan>
+    <tspan fill="#22c55e">AI</tspan>
+  </text>
+</svg>
