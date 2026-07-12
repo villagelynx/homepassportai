@@ -99,6 +99,24 @@ Return JSON only with these keys (use empty string if not visible):
 
 Read carefully. Do not invent values. If not a property tax document, use empty strings and low confidence."""
 
+ANALYZE_FACEBOOK_MARKETPLACE_PROMPT = """You help a homeowner create a Facebook Marketplace listing to sell a household item they inventoried in a home app.
+
+You receive item details (type, brand, model, color, dimensions, estimated values) and one or more photos: main item photo, optional label/serial close-up, optional purchase receipt.
+
+Write honest, friendly Marketplace copy. Price competitively for a local used sale — typically below estimated replacement value unless the item appears nearly new. Be specific; mention brand and model when known.
+
+Return JSON only with these keys:
+- title: short Marketplace title (under 60 characters), specific not generic
+- price: suggested listing price for Facebook (e.g. "$120" or "Free") — USD only, no "obo" in this field
+- description: 2–4 short paragraphs for the listing description. Include brand, model, condition, color/dimensions if known, local pickup note, and honest wear. Plain text only — no hashtags. Ready to paste into Facebook.
+- condition: one of "New", "Used - Like new", "Used - Good", "Used - Fair", "For parts"
+- category_hint: best Facebook Marketplace category guess (e.g. "Home & Garden > Appliances")
+- photo_recommendations: for each photo type provided, an entry { "photo": "appliance"|"label"|"receipt", "include": true|false, "note": "short reason" }
+- selling_tips: array of 1–3 brief seller tips
+- confidence: "high", "medium", or "low"
+
+Do not invent model numbers or features not supported by the item data or photos. If a receipt photo is provided, you may note original purchase receipt is available."""
+
 DOCUMENT_MODES = {"insurancePolicy", "propertyTax"}
 
 ROOM_PROMPT = """You analyze still frames from a ~60 second smartphone video of a home room for an inventory app.
@@ -305,6 +323,41 @@ def map_property_tax_response(data: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def map_facebook_marketplace_response(data: dict[str, Any]) -> dict[str, Any]:
+    recs_raw = data.get("photo_recommendations") or data.get("photoRecommendations")
+    recs: list[dict[str, Any]] = []
+    if isinstance(recs_raw, list):
+        for entry in recs_raw:
+            if not isinstance(entry, dict):
+                continue
+            photo = str(entry.get("photo") or "").strip().lower()
+            if photo not in ("appliance", "label", "receipt"):
+                continue
+            recs.append(
+                {
+                    "photo": photo,
+                    "include": bool(entry.get("include")),
+                    "note": str(entry.get("note") or "").strip(),
+                }
+            )
+
+    tips_raw = data.get("selling_tips") or data.get("sellingTips")
+    tips: list[str] = []
+    if isinstance(tips_raw, list):
+        tips = [str(t or "").strip() for t in tips_raw if str(t or "").strip()]
+
+    return {
+        "title": str(data.get("title") or "").strip(),
+        "price": str(data.get("price") or "").strip(),
+        "description": str(data.get("description") or "").strip(),
+        "condition": str(data.get("condition") or "").strip(),
+        "categoryHint": str(data.get("category_hint") or data.get("categoryHint") or "").strip(),
+        "photoRecommendations": recs,
+        "sellingTips": tips,
+        "confidence": str(data.get("confidence") or "medium").strip().lower(),
+    }
+
+
 def analyze_document_with_openai(api_key: str, mode: str, document_data_url: str) -> dict[str, str]:
     if not api_key:
         raise RuntimeError("No OpenAI API key provided.")
@@ -337,6 +390,48 @@ def analyze_document_with_openai(api_key: str, mode: str, document_data_url: str
     if mode == "insurancePolicy":
         return map_insurance_policy_response(data)
     return map_property_tax_response(data)
+
+
+def analyze_marketplace_with_openai(
+    api_key: str,
+    item: dict[str, Any],
+    appliance_data_url: str | None = None,
+    label_data_url: str | None = None,
+    receipt_data_url: str | None = None,
+) -> dict[str, Any]:
+    if not api_key:
+        raise RuntimeError("No OpenAI API key provided.")
+    if not appliance_data_url and not label_data_url and not receipt_data_url:
+        raise RuntimeError("At least one item photo is required.")
+
+    from openai import OpenAI
+
+    client = OpenAI(api_key=api_key)
+    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
+    item_summary = f"Item details:\n{json.dumps(item, indent=2)}"
+    content: list[dict[str, Any]] = [
+        {"type": "text", "text": f"{ANALYZE_FACEBOOK_MARKETPLACE_PROMPT}\n\n{item_summary}"},
+    ]
+    if appliance_data_url:
+        content.append({"type": "text", "text": "Photo: main item (appliance)"})
+        content.append({"type": "image_url", "image_url": {"url": appliance_data_url}})
+    if label_data_url:
+        content.append({"type": "text", "text": "Photo: label / serial close-up"})
+        content.append({"type": "image_url", "image_url": {"url": label_data_url}})
+    if receipt_data_url:
+        content.append({"type": "text", "text": "Photo: purchase receipt"})
+        content.append({"type": "image_url", "image_url": {"url": receipt_data_url}})
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": content}],
+        response_format={"type": "json_object"},
+        max_tokens=1100,
+    )
+
+    raw = response.choices[0].message.content or "{}"
+    data = json.loads(raw)
+    return map_facebook_marketplace_response(data)
 
 
 def analyze_room_with_openai(api_key: str, frames: list[str]) -> dict[str, Any]:
@@ -536,9 +631,37 @@ class Handler(BaseHTTPRequestHandler):
 
         appliance = body.get("appliancePhotoDataUrl") or body.get("appliance_photo")
         label = body.get("labelPhotoDataUrl") or body.get("label_photo")
+        receipt = body.get("receiptPhotoDataUrl") or body.get("receipt_photo")
         document = body.get("documentPhotoDataUrl") or body.get("document_photo")
         mode = str(body.get("mode") or "").strip()
         label_only = mode == "labelOnly"
+
+        if mode == "facebookMarketplace":
+            if not appliance and not label and not receipt:
+                self._json(400, {"error": "At least one item photo is required"})
+                return
+
+            api_key = resolve_api_key(self)
+            if not api_key:
+                empty = map_facebook_marketplace_response({})
+                empty["demoMode"] = True
+                self._json(200, empty)
+                return
+
+            item = body.get("item") if isinstance(body.get("item"), dict) else {}
+            try:
+                result = analyze_marketplace_with_openai(
+                    api_key,
+                    item,
+                    str(appliance) if appliance else None,
+                    str(label) if label else None,
+                    str(receipt) if receipt else None,
+                )
+                self._json(200, result)
+            except Exception as exc:
+                print(f"Analyze marketplace error: {exc}", file=sys.stderr)
+                self._json(500, {"error": str(exc)})
+            return
 
         if mode in DOCUMENT_MODES:
             if not document:

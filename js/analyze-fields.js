@@ -97,6 +97,24 @@ Return JSON only with these keys (use empty string if not visible):
 
 Read carefully. Do not invent values. If the image is not a property tax document, use empty strings and low confidence.`;
 
+export const ANALYZE_FACEBOOK_MARKETPLACE_PROMPT = `You help a homeowner create a Facebook Marketplace listing to sell a household item they inventoried in a home app.
+
+You receive item details (type, brand, model, color, dimensions, estimated values) and one or more photos: main item photo, optional label/serial close-up, optional purchase receipt.
+
+Write honest, friendly Marketplace copy. Price competitively for a local used sale — typically below estimated replacement value unless the item appears nearly new. Be specific; mention brand and model when known.
+
+Return JSON only with these keys:
+- title: short Marketplace title (under 60 characters), specific not generic
+- price: suggested listing price for Facebook (e.g. "$120" or "Free") — USD only, no "obo" in this field
+- description: 2–4 short paragraphs for the listing description. Include brand, model, condition, color/dimensions if known, local pickup note, and honest wear. Plain text only — no hashtags. Ready to paste into Facebook.
+- condition: one of "New", "Used - Like new", "Used - Good", "Used - Fair", "For parts"
+- category_hint: best Facebook Marketplace category guess (e.g. "Home & Garden > Appliances")
+- photo_recommendations: for each photo type provided, an entry { "photo": "appliance"|"label"|"receipt", "include": true|false, "note": "short reason, e.g. Hero shot showing overall condition" }
+- selling_tips: array of 1–3 brief seller tips (e.g. "Respond quickly to messages")
+- confidence: "high", "medium", or "low"
+
+Do not invent model numbers or features not supported by the item data or photos. If a receipt photo is provided, you may note original purchase receipt is available.`;
+
 /** @param {object} parsed */
 export function mapInsurancePolicyResponse(parsed) {
   return {
@@ -172,6 +190,55 @@ export function emptyPropertyTaxResponse(demoMode = false) {
     dueDates: "",
     exemptions: "",
     nickname: "",
+    confidence: "low",
+    ...(demoMode ? { demoMode: true } : {}),
+  };
+}
+
+/** @param {unknown} raw */
+function normalizePhotoRecommendations(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const photo = String(entry.photo || "").trim().toLowerCase();
+      if (photo !== "appliance" && photo !== "label" && photo !== "receipt") return null;
+      return {
+        photo,
+        include: Boolean(entry.include),
+        note: String(entry.note || "").trim(),
+      };
+    })
+    .filter(Boolean);
+}
+
+/** @param {object} parsed */
+export function mapFacebookMarketplaceResponse(parsed) {
+  const tips = parsed.selling_tips || parsed.sellingTips;
+  return {
+    title: String(parsed.title || "").trim(),
+    price: String(parsed.price || "").trim(),
+    description: String(parsed.description || "").trim(),
+    condition: String(parsed.condition || "").trim(),
+    categoryHint: String(parsed.category_hint || parsed.categoryHint || "").trim(),
+    photoRecommendations: normalizePhotoRecommendations(
+      parsed.photo_recommendations || parsed.photoRecommendations,
+    ),
+    sellingTips: Array.isArray(tips) ? tips.map((t) => String(t || "").trim()).filter(Boolean) : [],
+    confidence: String(parsed.confidence || "medium").trim().toLowerCase(),
+  };
+}
+
+/** @param {boolean} [demoMode] */
+export function emptyFacebookMarketplaceResponse(demoMode = false) {
+  return {
+    title: "",
+    price: "",
+    description: "",
+    condition: "",
+    categoryHint: "",
+    photoRecommendations: [],
+    sellingTips: [],
     confidence: "low",
     ...(demoMode ? { demoMode: true } : {}),
   };

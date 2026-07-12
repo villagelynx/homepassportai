@@ -19,7 +19,7 @@ import {
   updateUserPassword,
   wasSessionExpired,
 } from "./auth.js";
-import { analyzeAppliancePhotos, analyzeDocumentPhoto, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, readFileAsDataUrl } from "./analyze.js";
+import { analyzeAppliancePhotos, analyzeDocumentPhoto, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, generateFacebookMarketplaceListing, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
 import { addDocument, deleteDocument, loadDocuments } from "./document-storage.js";
 import { generateInsurancePdf } from "./insurance-report.js";
@@ -62,6 +62,7 @@ const views = {
   settings: document.getElementById("view-settings"),
   guide: document.getElementById("view-guide"),
   detail: document.getElementById("view-detail"),
+  marketplace: document.getElementById("view-marketplace"),
   editAppliance: document.getElementById("view-edit-appliance"),
   scanDoc: document.getElementById("view-scan-doc"),
   reviewDoc: document.getElementById("view-review-doc"),
@@ -169,6 +170,20 @@ const els = {
   detailLabelConfidence: document.getElementById("detail-label-confidence"),
   btnCancelDetailLabelReview: document.getElementById("btn-cancel-detail-label-review"),
   btnShareAppliance: document.getElementById("btn-share-appliance"),
+  btnMarketplaceAppliance: document.getElementById("btn-marketplace-appliance"),
+  btnMarketplaceBack: document.getElementById("btn-marketplace-back"),
+  btnMarketplaceRegenerate: document.getElementById("btn-marketplace-regenerate"),
+  btnMarketplaceCopyAll: document.getElementById("btn-marketplace-copy-all"),
+  marketplaceTitle: document.getElementById("marketplace-title"),
+  marketplaceStatus: document.getElementById("marketplace-status"),
+  marketplaceResult: document.getElementById("marketplace-result"),
+  marketplaceFieldTitle: document.getElementById("marketplace-field-title"),
+  marketplaceFieldPrice: document.getElementById("marketplace-field-price"),
+  marketplaceFieldCondition: document.getElementById("marketplace-field-condition"),
+  marketplaceFieldDescription: document.getElementById("marketplace-field-description"),
+  marketplaceCategory: document.getElementById("marketplace-category"),
+  marketplacePhotos: document.getElementById("marketplace-photos"),
+  marketplaceTips: document.getElementById("marketplace-tips"),
   btnEdit: document.getElementById("btn-edit-appliance"),
   btnDelete: document.getElementById("btn-delete-appliance"),
   editForm: document.getElementById("edit-appliance-form"),
@@ -305,6 +320,10 @@ const documentScan = {
 };
 
 let detailId = null;
+/** @type {import("./analyze.js").MarketplaceListingResult | null} */
+let marketplaceListing = null;
+/** @type {import("./storage.js").ApplianceRecord | null} */
+let marketplaceItem = null;
 let toastTimer = 0;
 let authMode = "signin";
 let allowOfflineUse = false;
@@ -543,6 +562,19 @@ function init() {
   });
   els.btnCancelDetailLabelReview?.addEventListener("click", () => cancelDetailLabelReview());
   els.btnShareAppliance?.addEventListener("click", () => void shareCurrentAppliance());
+  els.btnMarketplaceAppliance?.addEventListener("click", () => void openMarketplaceAssistant());
+  els.btnMarketplaceBack?.addEventListener("click", () => {
+    if (detailId) void openDetail(detailId);
+    else showView("home");
+  });
+  els.btnMarketplaceRegenerate?.addEventListener("click", () => void generateMarketplaceListing());
+  els.btnMarketplaceCopyAll?.addEventListener("click", () => void copyAllMarketplaceText());
+  document.querySelectorAll(".marketplace-copy-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-copy-target");
+      if (targetId) void copyMarketplaceField(targetId);
+    });
+  });
   els.inputHomeSearch?.addEventListener("input", () => {
     homeSearchQuery = els.inputHomeSearch?.value.trim() ?? "";
     updateHomeSearchClearButton();
@@ -2744,6 +2776,240 @@ async function shareCurrentAppliance() {
   const subject = encodeURIComponent(item.nickname);
   const body = encodeURIComponent(text);
   location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+/** @param {string} text @param {string} [successMessage] */
+async function copyTextToClipboard(text, successMessage = "Copied") {
+  if (!text.trim()) {
+    toast("Nothing to copy");
+    return false;
+  }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      toast(successMessage);
+      return true;
+    }
+  } catch {
+    // fall through
+  }
+  toast("Could not copy — select and copy manually");
+  return false;
+}
+
+/** @param {string} fieldId */
+async function copyMarketplaceField(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
+  const label =
+    fieldId === "marketplace-field-title"
+      ? "Title"
+      : fieldId === "marketplace-field-price"
+        ? "Price"
+        : fieldId === "marketplace-field-condition"
+          ? "Condition"
+          : "Description";
+  await copyTextToClipboard(el.value, `${label} copied`);
+}
+
+async function copyAllMarketplaceText() {
+  const title = els.marketplaceFieldTitle?.value.trim() || "";
+  const price = els.marketplaceFieldPrice?.value.trim() || "";
+  const condition = els.marketplaceFieldCondition?.value.trim() || "";
+  const description = els.marketplaceFieldDescription?.value.trim() || "";
+  const lines = [
+    title ? `Title: ${title}` : "",
+    price ? `Price: ${price}` : "",
+    condition ? `Condition: ${condition}` : "",
+    description,
+  ].filter(Boolean);
+  await copyTextToClipboard(lines.join("\n\n"), "Listing text copied — paste into Facebook");
+}
+
+/** @param {import("./analyze.js").MarketplaceListingResult} result @param {import("./storage.js").ApplianceRecord} item */
+function renderMarketplaceResult(result, item) {
+  marketplaceListing = result;
+  marketplaceItem = item;
+
+  if (els.marketplaceFieldTitle) els.marketplaceFieldTitle.value = result.title || "";
+  if (els.marketplaceFieldPrice) els.marketplaceFieldPrice.value = result.price || "";
+  if (els.marketplaceFieldCondition) els.marketplaceFieldCondition.value = result.condition || "";
+  if (els.marketplaceFieldDescription) {
+    els.marketplaceFieldDescription.value = result.description || "";
+  }
+
+  if (els.marketplaceCategory) {
+    if (result.categoryHint) {
+      els.marketplaceCategory.hidden = false;
+      els.marketplaceCategory.textContent = `Suggested category: ${result.categoryHint}`;
+    } else {
+      els.marketplaceCategory.hidden = true;
+      els.marketplaceCategory.textContent = "";
+    }
+  }
+
+  if (els.marketplacePhotos) {
+    const photoMeta = {
+      appliance: { label: "Main photo", url: item.appliancePhotoDataUrl },
+      label: { label: "Label / serial", url: item.labelPhotoDataUrl },
+      receipt: { label: "Receipt", url: item.receiptPhotoDataUrl },
+    };
+    const recByPhoto = new Map(
+      (result.photoRecommendations || []).map((rec) => [rec.photo, rec]),
+    );
+    els.marketplacePhotos.replaceChildren();
+
+    for (const [key, meta] of Object.entries(photoMeta)) {
+      if (!meta.url) continue;
+      const rec = recByPhoto.get(/** @type {"appliance"|"label"|"receipt"} */ (key));
+      const include = rec ? rec.include : true;
+      const note = rec?.note || (include ? "Include in your listing" : "Optional — skip if not needed");
+
+      const card = document.createElement("article");
+      card.className = "marketplace-photo-card";
+
+      const img = document.createElement("img");
+      img.src = meta.url;
+      img.alt = meta.label;
+      card.append(img);
+
+      const labelEl = document.createElement("p");
+      labelEl.className = "marketplace-photo-card__label";
+      labelEl.textContent = meta.label;
+      card.append(labelEl);
+
+      const badge = document.createElement("span");
+      badge.className = `marketplace-photo-card__badge ${
+        include ? "marketplace-photo-card__badge--include" : "marketplace-photo-card__badge--skip"
+      }`;
+      badge.textContent = include ? "Include" : "Skip";
+      card.append(badge);
+
+      const noteEl = document.createElement("p");
+      noteEl.className = "marketplace-photo-card__note";
+      noteEl.textContent = note;
+      card.append(noteEl);
+
+      els.marketplacePhotos.append(card);
+    }
+  }
+
+  if (els.marketplaceTips) {
+    const tips = result.sellingTips || [];
+    els.marketplaceTips.replaceChildren();
+    if (tips.length) {
+      els.marketplaceTips.hidden = false;
+      for (const tip of tips) {
+        const li = document.createElement("li");
+        li.textContent = tip;
+        els.marketplaceTips.append(li);
+      }
+    } else {
+      els.marketplaceTips.hidden = true;
+    }
+  }
+
+  if (els.marketplaceResult) els.marketplaceResult.hidden = false;
+  if (els.btnMarketplaceRegenerate) els.btnMarketplaceRegenerate.hidden = false;
+}
+
+function resetMarketplaceView() {
+  marketplaceListing = null;
+  marketplaceItem = null;
+  if (els.marketplaceStatus) {
+    els.marketplaceStatus.hidden = true;
+    els.marketplaceStatus.textContent = "";
+  }
+  if (els.marketplaceResult) els.marketplaceResult.hidden = true;
+  if (els.btnMarketplaceRegenerate) els.btnMarketplaceRegenerate.hidden = true;
+  if (els.marketplaceFieldTitle) els.marketplaceFieldTitle.value = "";
+  if (els.marketplaceFieldPrice) els.marketplaceFieldPrice.value = "";
+  if (els.marketplaceFieldCondition) els.marketplaceFieldCondition.value = "";
+  if (els.marketplaceFieldDescription) els.marketplaceFieldDescription.value = "";
+  if (els.marketplaceCategory) {
+    els.marketplaceCategory.hidden = true;
+    els.marketplaceCategory.textContent = "";
+  }
+  if (els.marketplacePhotos) els.marketplacePhotos.replaceChildren();
+  if (els.marketplaceTips) {
+    els.marketplaceTips.hidden = true;
+    els.marketplaceTips.replaceChildren();
+  }
+}
+
+async function openMarketplaceAssistant() {
+  if (!detailId) return;
+  const item = await getAppliance(detailId);
+  if (!item) return;
+
+  if (els.marketplaceTitle) {
+    els.marketplaceTitle.textContent = `Sell: ${item.nickname}`;
+  }
+  resetMarketplaceView();
+  showView("marketplace");
+  await generateMarketplaceListing();
+}
+
+async function generateMarketplaceListing() {
+  if (!detailId) return;
+  const item = await getAppliance(detailId);
+  if (!item) return;
+
+  if (!(await requireUserApiKeyForAi())) return;
+
+  if (els.marketplaceStatus) {
+    els.marketplaceStatus.hidden = false;
+    els.marketplaceStatus.textContent = "Generating listing…";
+  }
+  if (els.marketplaceResult) els.marketplaceResult.hidden = true;
+  if (els.btnMarketplaceRegenerate) els.btnMarketplaceRegenerate.hidden = true;
+
+  try {
+    const photos = {};
+    if (item.appliancePhotoDataUrl) {
+      photos.appliancePhotoDataUrl = await compressDataUrl(item.appliancePhotoDataUrl, {
+        maxEdge: 1200,
+        quality: 0.78,
+      });
+    }
+    if (item.labelPhotoDataUrl) {
+      photos.labelPhotoDataUrl = await compressDataUrl(item.labelPhotoDataUrl, {
+        maxEdge: 960,
+        quality: 0.72,
+      });
+    }
+    if (item.receiptPhotoDataUrl) {
+      photos.receiptPhotoDataUrl = await compressDataUrl(item.receiptPhotoDataUrl, {
+        maxEdge: 960,
+        quality: 0.72,
+      });
+    }
+
+    if (!photos.appliancePhotoDataUrl && !photos.labelPhotoDataUrl && !photos.receiptPhotoDataUrl) {
+      toast("Add at least one photo to this item first");
+      if (detailId) void openDetail(detailId);
+      return;
+    }
+
+    const result = await generateFacebookMarketplaceListing(item, photos);
+    if (result.demoMode) {
+      toast("Add your OpenAI API key in Settings to generate listings");
+      openSettingsForApiKey();
+      if (detailId) void openDetail(detailId);
+      return;
+    }
+
+    renderMarketplaceResult(result, item);
+    if (els.marketplaceStatus) els.marketplaceStatus.hidden = true;
+    toast("Listing ready — copy and paste into Facebook");
+  } catch (err) {
+    if (els.marketplaceStatus) {
+      els.marketplaceStatus.hidden = false;
+      els.marketplaceStatus.textContent =
+        err instanceof Error ? err.message : "Could not generate listing";
+    }
+    toast(err instanceof Error ? err.message : "Could not generate listing");
+  }
 }
 
 /** @param {string} name */

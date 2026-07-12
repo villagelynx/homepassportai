@@ -1213,10 +1213,62 @@
           </div>
         </div>
         <button type="button" class="btn btn--secondary btn--block" id="btn-share-appliance">Share item</button>
+        <button type="button" class="btn btn--secondary btn--block" id="btn-marketplace-appliance">Sell on Facebook Marketplace</button>
         <div id="detail-manuals" class="detail-manuals" hidden></div>
         <div id="detail-repair" class="detail-repair"></div>
         <button type="button" class="btn btn--secondary btn--block" id="btn-edit-appliance">Edit item</button>
         <button type="button" class="btn btn--danger btn--block" id="btn-delete-appliance">Remove appliance</button>
+      </main>
+
+      <!-- Facebook Marketplace assistant -->
+      <main id="view-marketplace" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" id="btn-marketplace-back">← Back</button>
+          <h2 id="marketplace-title">Facebook Marketplace</h2>
+          <p class="step-header__lede">AI-generated listing copy you can paste into Facebook Marketplace.</p>
+        </div>
+        <p id="marketplace-status" class="hint marketplace-status" hidden>Generating listing…</p>
+        <div id="marketplace-result" class="marketplace-result" hidden>
+          <div class="marketplace-copy-block">
+            <div class="marketplace-copy-row">
+              <label class="field marketplace-field">
+                <span>Title</span>
+                <input type="text" id="marketplace-field-title" class="input" readonly />
+              </label>
+              <button type="button" class="btn btn--secondary marketplace-copy-btn" data-copy-target="marketplace-field-title">Copy</button>
+            </div>
+            <div class="marketplace-copy-row">
+              <label class="field marketplace-field">
+                <span>Price</span>
+                <input type="text" id="marketplace-field-price" class="input" readonly />
+              </label>
+              <button type="button" class="btn btn--secondary marketplace-copy-btn" data-copy-target="marketplace-field-price">Copy</button>
+            </div>
+            <div class="marketplace-copy-row">
+              <label class="field marketplace-field">
+                <span>Condition</span>
+                <input type="text" id="marketplace-field-condition" class="input" readonly />
+              </label>
+              <button type="button" class="btn btn--secondary marketplace-copy-btn" data-copy-target="marketplace-field-condition">Copy</button>
+            </div>
+            <div class="marketplace-copy-row marketplace-copy-row--stack">
+              <label class="field marketplace-field">
+                <span>Description</span>
+                <textarea id="marketplace-field-description" class="input marketplace-textarea" rows="8" readonly></textarea>
+              </label>
+              <button type="button" class="btn btn--secondary marketplace-copy-btn" data-copy-target="marketplace-field-description">Copy</button>
+            </div>
+            <p id="marketplace-category" class="hint marketplace-meta" hidden></p>
+            <button type="button" class="btn btn--primary btn--block" id="btn-marketplace-copy-all">Copy all listing text</button>
+          </div>
+          <section class="marketplace-photos-section">
+            <h3 class="detail-section-title">Photos to upload</h3>
+            <p class="hint">Add these images when creating your listing on Facebook.</p>
+            <div id="marketplace-photos" class="marketplace-photos"></div>
+          </section>
+          <ul id="marketplace-tips" class="marketplace-tips" hidden></ul>
+        </div>
+        <button type="button" class="btn btn--secondary btn--block" id="btn-marketplace-regenerate" hidden>Regenerate listing</button>
       </main>
 
       <!-- Edit saved item -->
