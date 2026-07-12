@@ -72,6 +72,29 @@ Return JSON only with these keys:
 
 For artwork put artist in brand, title/medium in model_number, inscription in serial_number when readable."""
 
+ANALYZE_INSURANCE_POLICY_PROMPT = """You analyze a photo of a homeowners or renters insurance policy document, declarations page, or insurance ID card for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- insurer_name, policy_number, policy_type, named_insureds, property_address
+- effective_date, expiration_date, dwelling_coverage, personal_property_coverage
+- liability_coverage, deductible, annual_premium, agent_name, agent_phone
+- nickname: short friendly label like "State Farm Homeowners 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If not an insurance document, use empty strings and low confidence."""
+
+ANALYZE_PROPERTY_TAX_PROMPT = """You analyze a photo of a property tax bill, tax assessment notice, or county tax statement for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority, parcel_number, property_address, tax_year, assessed_value
+- tax_amount, due_dates, exemptions
+- nickname: short friendly label like "King County Property Tax 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If not a property tax document, use empty strings and low confidence."""
+
+DOCUMENT_MODES = {"insurancePolicy", "propertyTax"}
+
 ROOM_PROMPT = """You analyze still frames from a ~60 second smartphone video of a home room for an inventory app.
 
 The images are frames sampled across the room scan, in order.
@@ -223,6 +246,82 @@ def analyze_with_openai(
         ).strip(),
         "signatureRegions": signature_regions if isinstance(signature_regions, list) else [],
     }
+
+
+def map_insurance_policy_response(data: dict[str, Any]) -> dict[str, str]:
+    return {
+        "insurerName": str(data.get("insurer_name") or data.get("insurerName") or "").strip(),
+        "policyNumber": str(data.get("policy_number") or data.get("policyNumber") or "").strip(),
+        "policyType": str(data.get("policy_type") or data.get("policyType") or "").strip(),
+        "namedInsureds": str(data.get("named_insureds") or data.get("namedInsureds") or "").strip(),
+        "propertyAddress": str(data.get("property_address") or data.get("propertyAddress") or "").strip(),
+        "effectiveDate": str(data.get("effective_date") or data.get("effectiveDate") or "").strip(),
+        "expirationDate": str(data.get("expiration_date") or data.get("expirationDate") or "").strip(),
+        "dwellingCoverage": str(
+            data.get("dwelling_coverage") or data.get("dwellingCoverage") or ""
+        ).strip(),
+        "personalPropertyCoverage": str(
+            data.get("personal_property_coverage") or data.get("personalPropertyCoverage") or ""
+        ).strip(),
+        "liabilityCoverage": str(
+            data.get("liability_coverage") or data.get("liabilityCoverage") or ""
+        ).strip(),
+        "deductible": str(data.get("deductible") or "").strip(),
+        "annualPremium": str(data.get("annual_premium") or data.get("annualPremium") or "").strip(),
+        "agentName": str(data.get("agent_name") or data.get("agentName") or "").strip(),
+        "agentPhone": str(data.get("agent_phone") or data.get("agentPhone") or "").strip(),
+        "nickname": str(data.get("nickname") or "").strip(),
+        "confidence": str(data.get("confidence") or "medium").strip().lower(),
+    }
+
+
+def map_property_tax_response(data: dict[str, Any]) -> dict[str, str]:
+    return {
+        "taxingAuthority": str(data.get("taxing_authority") or data.get("taxingAuthority") or "").strip(),
+        "parcelNumber": str(data.get("parcel_number") or data.get("parcelNumber") or "").strip(),
+        "propertyAddress": str(data.get("property_address") or data.get("propertyAddress") or "").strip(),
+        "taxYear": str(data.get("tax_year") or data.get("taxYear") or "").strip(),
+        "assessedValue": str(data.get("assessed_value") or data.get("assessedValue") or "").strip(),
+        "taxAmount": str(data.get("tax_amount") or data.get("taxAmount") or "").strip(),
+        "dueDates": str(data.get("due_dates") or data.get("dueDates") or "").strip(),
+        "exemptions": str(data.get("exemptions") or "").strip(),
+        "nickname": str(data.get("nickname") or "").strip(),
+        "confidence": str(data.get("confidence") or "medium").strip().lower(),
+    }
+
+
+def analyze_document_with_openai(api_key: str, mode: str, document_data_url: str) -> dict[str, str]:
+    if not api_key:
+        raise RuntimeError("No OpenAI API key provided.")
+    if mode not in DOCUMENT_MODES:
+        raise RuntimeError(f"Unsupported document mode: {mode}")
+
+    from openai import OpenAI
+
+    client = OpenAI(api_key=api_key)
+    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
+    prompt = (
+        ANALYZE_INSURANCE_POLICY_PROMPT
+        if mode == "insurancePolicy"
+        else ANALYZE_PROPERTY_TAX_PROMPT
+    )
+    content: list[dict[str, Any]] = [
+        {"type": "text", "text": prompt},
+        {"type": "image_url", "image_url": {"url": document_data_url}},
+    ]
+
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": content}],
+        response_format={"type": "json_object"},
+        max_tokens=900,
+    )
+
+    raw = response.choices[0].message.content or "{}"
+    data = json.loads(raw)
+    if mode == "insurancePolicy":
+        return map_insurance_policy_response(data)
+    return map_property_tax_response(data)
 
 
 def analyze_room_with_openai(api_key: str, frames: list[str]) -> dict[str, Any]:
@@ -416,8 +515,33 @@ class Handler(BaseHTTPRequestHandler):
 
         appliance = body.get("appliancePhotoDataUrl") or body.get("appliance_photo")
         label = body.get("labelPhotoDataUrl") or body.get("label_photo")
+        document = body.get("documentPhotoDataUrl") or body.get("document_photo")
         mode = str(body.get("mode") or "").strip()
         label_only = mode == "labelOnly"
+
+        if mode in DOCUMENT_MODES:
+            if not document:
+                self._json(400, {"error": "documentPhotoDataUrl is required"})
+                return
+
+            api_key = resolve_api_key(self)
+            if not api_key:
+                empty = (
+                    map_insurance_policy_response({})
+                    if mode == "insurancePolicy"
+                    else map_property_tax_response({})
+                )
+                empty["demoMode"] = True
+                self._json(200, empty)
+                return
+
+            try:
+                result = analyze_document_with_openai(api_key, mode, str(document))
+                self._json(200, result)
+            except Exception as exc:
+                print(f"Analyze document error: {exc}", file=sys.stderr)
+                self._json(500, {"error": str(exc)})
+            return
 
         if label_only:
             if not label:

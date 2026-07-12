@@ -2536,3 +2536,145 @@ body {
     color: #1d6fd8;
   }
 }
+
+.reports-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 16px 24px;
+}
+
+.reports-hub__section {
+  background: var(--surface-elevated, #fff);
+  border: 1px solid var(--border-subtle, #e8edf2);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.reports-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.reports-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--border-subtle, #e8edf2);
+  border-radius: 14px;
+  background: var(--surface, #f8fafc);
+  text-align: left;
+  cursor: pointer;
+}
+
+.reports-action-card:active {
+  background: var(--surface-pressed, #eef2f7);
+}
+
+.reports-action-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: #1d6fd8;
+}
+
+.reports-action-card__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.reports-action-card__icon--insurance {
+  background: #e8f2ff;
+}
+
+.reports-action-card__icon--tax {
+  background: #eef8ef;
+  color: #2d8a45;
+}
+
+.reports-action-card__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary, #1a2b41);
+}
+
+.reports-action-card__sub {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1.35;
+}
+
+.reports-saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.reports-saved-card {
+  border: 1px solid var(--border-subtle, #e8edf2);
+  border-radius: 12px;
+  padding: 12px;
+  background: var(--surface, #f8fafc);
+}
+
+.reports-saved-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reports-saved-card__title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary, #1a2b41);
+}
+
+.reports-saved-card__type {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 2px;
+}
+
+.reports-saved-card__meta {
+  font-size: 0.78rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+.reports-saved-card__delete {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: #b42318;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.review-doc-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.home-reports-panel {
+  padding: 0 0 12px;
+}
+
+.step-header--compact {
+  padding: 8px 16px 0;
+}
+
+.step-header--compact h2 {
+  margin-bottom: 4px;
+}
