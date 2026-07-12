@@ -850,6 +850,11 @@ body {
   margin-bottom: 0.55rem;
 }
 
+.home-recent .room-filter-chips {
+  margin: 0 -0.85rem 0.6rem;
+  padding-bottom: 0;
+}
+
 .home-recent__title {
   margin: 0;
   font-size: 0.95rem;
