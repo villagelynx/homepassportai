@@ -27,7 +27,13 @@ import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
 import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
 import {
+  BUILDING_FILTER_ID,
+  BUILDING_GROUP_LABEL,
+  isBuildingRoom,
+  isOutdoorGroupRoom,
   mapRoomGuess,
+  OUTDOOR_FILTER_ID,
+  OUTDOOR_GROUP_LABEL,
   populateRoomSelect,
   roomDisplayName,
   ROOM_ORDER,
@@ -2204,6 +2210,8 @@ async function renderHome() {
     if (
       homeRoomFilter !== "all" &&
       homeRoomFilter !== "recent" &&
+      homeRoomFilter !== BUILDING_FILTER_ID &&
+      homeRoomFilter !== OUTDOOR_FILTER_ID &&
       !allGrouped.some(([room]) => room === homeRoomFilter)
     ) {
       homeRoomFilter = "recent";
@@ -2219,9 +2227,17 @@ async function renderHome() {
     els.searchNoResults.hidden = !hasInventory || filtered.length > 0 || !homeSearchQuery;
   }
 
-  const showHeadings = !chipsEnabled || homeRoomFilter === "all";
+  const showHeadings =
+    !chipsEnabled ||
+    homeRoomFilter === "all" ||
+    homeRoomFilter === BUILDING_FILTER_ID ||
+    homeRoomFilter === OUTDOOR_FILTER_ID;
   const roomFiltered =
-    chipsEnabled && homeRoomFilter !== "all" && homeRoomFilter !== "recent";
+    chipsEnabled &&
+    homeRoomFilter !== "all" &&
+    homeRoomFilter !== "recent" &&
+    homeRoomFilter !== BUILDING_FILTER_ID &&
+    homeRoomFilter !== OUTDOOR_FILTER_ID;
 
   if (chipsEnabled && homeRoomFilter === "recent") {
     const sorted = [...filtered].sort(
@@ -2231,9 +2247,34 @@ async function renderHome() {
       els.applianceList.append(makeApplianceCardButton(item));
     }
   } else {
-    const entries = roomFiltered ? grouped.filter(([room]) => room === homeRoomFilter) : grouped;
+    const entries =
+      chipsEnabled && homeRoomFilter === BUILDING_FILTER_ID
+        ? grouped.filter(([room]) => isBuildingRoom(room))
+        : chipsEnabled && homeRoomFilter === OUTDOOR_FILTER_ID
+          ? grouped.filter(([room]) => isOutdoorGroupRoom(room))
+          : roomFiltered
+            ? grouped.filter(([room]) => room === homeRoomFilter)
+            : grouped;
 
+    let buildingGroupHeadingShown = false;
+    let outdoorGroupHeadingShown = false;
     for (const [room, items] of entries) {
+      if (showHeadings && isBuildingRoom(room) && !buildingGroupHeadingShown) {
+        const groupHeading = document.createElement("h2");
+        groupHeading.className = "category-group-heading";
+        groupHeading.textContent = BUILDING_GROUP_LABEL;
+        els.applianceList.append(groupHeading);
+        buildingGroupHeadingShown = true;
+      }
+
+      if (showHeadings && isOutdoorGroupRoom(room) && !outdoorGroupHeadingShown) {
+        const groupHeading = document.createElement("h2");
+        groupHeading.className = "category-group-heading";
+        groupHeading.textContent = OUTDOOR_GROUP_LABEL;
+        els.applianceList.append(groupHeading);
+        outdoorGroupHeadingShown = true;
+      }
+
       if (showHeadings) {
         const heading = document.createElement("h3");
         heading.className = "category-heading";
@@ -2288,6 +2329,8 @@ function updateHomeDashboardStats(itemCount) {
 function getHomeRecentSectionTitle(filter = homeRoomFilter) {
   if (filter === "all") return "All Items";
   if (filter === "recent") return "Recently Added";
+  if (filter === BUILDING_FILTER_ID) return BUILDING_GROUP_LABEL;
+  if (filter === OUTDOOR_FILTER_ID) return OUTDOOR_GROUP_LABEL;
   return roomDisplayName(filter);
 }
 
@@ -2330,8 +2373,24 @@ function makeApplianceCardButton(item) {
 function getDashboardCategoryItems(list, filter) {
   let items = [...list];
 
-  if (filter !== "all" && filter !== "recent") {
+  if (filter !== "all" && filter !== "recent" && filter !== BUILDING_FILTER_ID && filter !== OUTDOOR_FILTER_ID) {
     items = items.filter((item) => (item.room || "Other") === filter);
+    items.sort((a, b) =>
+      (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
+    );
+    return items;
+  }
+
+  if (filter === BUILDING_FILTER_ID) {
+    items = items.filter((item) => isBuildingRoom(item.room || "Other"));
+    items.sort((a, b) =>
+      (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
+    );
+    return items;
+  }
+
+  if (filter === OUTDOOR_FILTER_ID) {
+    items = items.filter((item) => isOutdoorGroupRoom(item.room || "Other"));
     items.sort((a, b) =>
       (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
     );
@@ -2350,6 +2409,8 @@ function getDashboardCategoryItems(list, filter) {
 function getHomeRecentEmptyMessage(filter) {
   if (filter === "recent") return "No items yet — scan or add your first item.";
   if (filter === "all") return "No items yet — scan or add your first item.";
+  if (filter === BUILDING_FILTER_ID) return "No building items yet.";
+  if (filter === OUTDOOR_FILTER_ID) return "No outdoor items yet.";
   return `No items in ${roomDisplayName(filter)} yet.`;
 }
 
@@ -2440,7 +2501,34 @@ function renderRoomFilterChips(grouped, totalCount) {
     makeRoomFilterChip("recent", "Recently Added", homeRoomFilter === "recent"),
   );
 
+  const buildingCount = grouped
+    .filter(([room]) => isBuildingRoom(room))
+    .reduce((sum, [, items]) => sum + items.length, 0);
+  if (buildingCount > 0) {
+    container.append(
+      makeRoomFilterChip(
+        BUILDING_FILTER_ID,
+        `${BUILDING_GROUP_LABEL} · ${buildingCount}`,
+        homeRoomFilter === BUILDING_FILTER_ID,
+      ),
+    );
+  }
+
+  const outdoorCount = grouped
+    .filter(([room]) => isOutdoorGroupRoom(room))
+    .reduce((sum, [, items]) => sum + items.length, 0);
+  if (outdoorCount > 0) {
+    container.append(
+      makeRoomFilterChip(
+        OUTDOOR_FILTER_ID,
+        `${OUTDOOR_GROUP_LABEL} · ${outdoorCount}`,
+        homeRoomFilter === OUTDOOR_FILTER_ID,
+      ),
+    );
+  }
+
   for (const [room, items] of grouped) {
+    if (isBuildingRoom(room) || isOutdoorGroupRoom(room)) continue;
     container.append(
       makeRoomFilterChip(room, `${roomDisplayName(room)} · ${items.length}`, homeRoomFilter === room),
     );
@@ -2456,6 +2544,10 @@ function makeRoomFilterChip(roomId, label, selected) {
   btn.setAttribute("aria-selected", String(selected));
   if (roomId === "recent") {
     btn.textContent = label;
+  } else if (roomId === BUILDING_FILTER_ID) {
+    setRoomTitleElement(btn, "Building", label);
+  } else if (roomId === OUTDOOR_FILTER_ID) {
+    setRoomTitleElement(btn, "Outdoor", label);
   } else {
     setRoomTitleElement(btn, roomId, label);
   }

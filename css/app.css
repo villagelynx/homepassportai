@@ -1670,6 +1670,20 @@ body {
   height: 0.85rem;
 }
 
+.category-group-heading {
+  margin: 1.35rem 0 0.35rem;
+  padding: 0 0.1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.category-group-heading:first-child {
+  margin-top: 0;
+}
+
 .category-heading {
   margin: 1.1rem 0 0.15rem;
   padding: 0 0.1rem;
