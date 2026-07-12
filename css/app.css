@@ -494,14 +494,24 @@ body {
   opacity: 0.95;
 }
 
+.home-hero-card__house-wrap {
+  align-self: end;
+  width: 100%;
+  max-height: 7.25rem;
+  overflow: hidden;
+  line-height: 0;
+}
+
 .home-hero-card__house {
   display: block;
-  width: 100%;
+  width: 106%;
+  max-width: none;
   height: auto;
-  max-height: 7.25rem;
+  max-height: 7.5rem;
   object-fit: contain;
   object-position: bottom right;
-  align-self: end;
+  margin-right: -6%;
+  margin-bottom: -2px;
 }
 
 @media (min-width: 480px) {
@@ -515,8 +525,12 @@ body {
     font-size: 1.3rem;
   }
 
-  .home-hero-card__house {
+  .home-hero-card__house-wrap {
     max-height: 7.75rem;
+  }
+
+  .home-hero-card__house {
+    max-height: 8rem;
   }
 }
 
