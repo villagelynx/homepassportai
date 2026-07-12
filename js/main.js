@@ -1764,7 +1764,7 @@ function syncHomeTabButtons() {
 function updateHomeDashboardStats(itemCount) {
   if (els.homeItemMeta) {
     const label = itemCount === 1 ? "Item" : "Items";
-    els.homeItemMeta.textContent = `${itemCount} ${label} • All Up to Date`;
+    els.homeItemMeta.textContent = `${itemCount} ${label}`;
   }
 }
 
