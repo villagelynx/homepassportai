@@ -33,28 +33,25 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=72" />
+    <link rel="stylesheet" href="./css/app.css?v=74" />
   </head>
   <body>
     <div id="app" class="app">
       <header class="topbar">
-        <div class="topbar__brand">
-          <button type="button" class="topbar__logo" id="btn-home" data-nav="home" aria-label="Home">
-            <svg class="topbar__logo-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path
-                d="M4 10.5 12 4l8 6.5V20a1.5 1.5 0 0 1-1.5 1.5H15v-6.5H9V21.5H5.5A1.5 1.5 0 0 1 4 20v-9.5Z"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.25"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-            </svg>
+        <div class="topbar__brand landing__banner-brand">
+          <button type="button" class="topbar__logo topbar__logo--brand" id="btn-home" data-nav="home" aria-label="Home">
+            <img
+              class="landing__banner-header-img"
+              src="./icons/brand-header.png?v=2"
+              alt="HomePassportAI"
+              width="557"
+              height="112"
+              decoding="async"
+            />
           </button>
-          <div>
-            <h1 class="topbar__title">HomePassportAI</h1>
-            <p class="topbar__tagline">Know what you own.</p>
-            <p class="topbar__tag" id="build-tag">Phase A · build …</p>
+          <div class="landing__banner-meta">
+            <p class="landing__banner-tagline">Scan, Organize, Protect, Peace of Mind</p>
+            <p class="landing__build-tag" id="build-tag">Phase A · build …</p>
           </div>
         </div>
         <div class="topbar__actions">
@@ -232,22 +229,9 @@
           </div>
           <section class="home-hero-card" aria-label="My Home">
             <div class="home-hero-card__copy">
-              <h2 class="home-hero-card__title">
-                My Home
-                <span class="home-hero-card__chev" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </span>
-              </h2>
-              <p class="home-hero-card__meta" id="home-item-meta">0 Items • All Up to Date</p>
+              <h2 class="home-hero-card__title">My Home</h2>
+              <p class="home-hero-card__meta" id="home-item-meta">0 Items</p>
             </div>
-            <img
-              class="home-hero-card__house"
-              src="./images/home-card-house.png?v=2"
-              alt=""
-              width="398"
-              height="229"
-              decoding="async"
-            />
           </section>
 
           <nav class="home-action-grid" aria-label="Quick actions">
