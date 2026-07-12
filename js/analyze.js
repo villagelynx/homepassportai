@@ -257,6 +257,86 @@ export async function checkAnalyzeServer() {
   }
 }
 
+/**
+ * @typedef {object} MarketplacePhotoRecommendation
+ * @property {"appliance" | "label" | "receipt"} photo
+ * @property {boolean} include
+ * @property {string} note
+ */
+
+/**
+ * @typedef {object} MarketplaceListingResult
+ * @property {string} title
+ * @property {string} price
+ * @property {string} description
+ * @property {string} condition
+ * @property {string} categoryHint
+ * @property {MarketplacePhotoRecommendation[]} photoRecommendations
+ * @property {string[]} sellingTips
+ * @property {string} confidence
+ * @property {boolean} [demoMode]
+ */
+
+/**
+ * @param {import("./storage.js").ApplianceRecord} item
+ * @param {{ appliancePhotoDataUrl?: string, labelPhotoDataUrl?: string | null, receiptPhotoDataUrl?: string | null }} photos
+ * @returns {Promise<MarketplaceListingResult>}
+ */
+export async function generateFacebookMarketplaceListing(item, photos) {
+  /** @type {Record<string, string>} */
+  const headers = { "Content-Type": "application/json" };
+  const apiKey = loadApiKey();
+  if (apiKey) {
+    headers["X-OpenAI-Api-Key"] = apiKey;
+  }
+
+  const body = {
+    mode: "facebookMarketplace",
+    item: {
+      nickname: item.nickname || "",
+      applianceType: item.applianceType || "",
+      brand: item.brand || "",
+      modelNumber: item.modelNumber || "",
+      serialNumber: item.serialNumber || "",
+      room: item.room || "",
+      colorDescription: item.colorDescription || "",
+      dimensionsDescription: item.dimensionsDescription || "",
+      estimatedCurrentValue: item.estimatedCurrentValue || "",
+      suggestedRetailPrice: item.suggestedRetailPrice || "",
+    },
+    appliancePhotoDataUrl: photos.appliancePhotoDataUrl || undefined,
+    labelPhotoDataUrl: photos.labelPhotoDataUrl || undefined,
+    receiptPhotoDataUrl: photos.receiptPhotoDataUrl || undefined,
+  };
+
+  let res;
+  try {
+    res = await fetch(config.analyzeApiUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error(
+      "Cannot reach the Mac server. Same Wi-Fi? Run ./serve.sh and use the http:// address shown (port 8080)."
+    );
+  }
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(formatAnalyzeError(text, res));
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || formatAnalyzeError(text, res));
+  }
+
+  return /** @type {MarketplaceListingResult} */ (data);
+}
+
 /** @param {"insurancePolicy" | "propertyTax"} type @param {string} documentPhotoDataUrl */
 export async function analyzeDocumentPhoto(type, documentPhotoDataUrl) {
   /** @type {Record<string, string>} */

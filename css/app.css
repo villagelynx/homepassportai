@@ -1964,6 +1964,128 @@ body {
   font-weight: 600;
 }
 
+.marketplace-status {
+  margin: 0 0 1rem;
+}
+
+.marketplace-result {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.marketplace-copy-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.marketplace-copy-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.marketplace-copy-row--stack {
+  grid-template-columns: 1fr;
+}
+
+.marketplace-copy-row--stack .marketplace-copy-btn {
+  justify-self: start;
+}
+
+.marketplace-field {
+  margin: 0;
+  min-width: 0;
+}
+
+.marketplace-textarea {
+  resize: vertical;
+  min-height: 8rem;
+  line-height: 1.45;
+}
+
+.marketplace-copy-btn {
+  white-space: nowrap;
+  min-height: 2.75rem;
+}
+
+.marketplace-meta {
+  margin: 0;
+}
+
+.marketplace-photos-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem;
+}
+
+.marketplace-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: 0.65rem;
+}
+
+.marketplace-photo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.marketplace-photo-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.marketplace-photo-card__label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.marketplace-photo-card__badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.marketplace-photo-card__badge--include {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+.marketplace-photo-card__badge--skip {
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  color: var(--muted);
+}
+
+.marketplace-photo-card__note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.marketplace-tips {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.marketplace-tips li + li {
+  margin-top: 0.35rem;
+}
+
 .repair-location {
   margin-bottom: 0.75rem;
 }

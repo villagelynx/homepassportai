@@ -1,12 +1,15 @@
 import {
   ANALYZE_APPLIANCE_ONLY_PROMPT,
+  ANALYZE_FACEBOOK_MARKETPLACE_PROMPT,
   ANALYZE_INSURANCE_POLICY_PROMPT,
   ANALYZE_LABEL_ONLY_PROMPT,
   ANALYZE_PROPERTY_TAX_PROMPT,
   ANALYZE_PROMPT,
+  emptyFacebookMarketplaceResponse,
   emptyInsurancePolicyResponse,
   emptyPropertyTaxResponse,
   mapAnalyzeResponse,
+  mapFacebookMarketplaceResponse,
   mapInsurancePolicyResponse,
   mapPropertyTaxResponse,
 } from "../../js/analyze-fields.js";
@@ -58,7 +61,68 @@ export async function handler(event) {
     const documentPhoto = body.documentPhotoDataUrl || body.document_photo;
     const appliance = body.appliancePhotoDataUrl || body.appliance_photo;
     const label = body.labelPhotoDataUrl || body.label_photo;
+    const receipt = body.receiptPhotoDataUrl || body.receipt_photo;
     const labelOnly = mode === "labelOnly";
+
+    if (mode === "facebookMarketplace") {
+      if (!appliance && !label && !receipt) {
+        return respond(400, { error: "At least one item photo is required" });
+      }
+
+      const apiKey = (
+        event.headers["x-openai-api-key"] ||
+        event.headers["X-OpenAI-Api-Key"] ||
+        process.env.OPENAI_API_KEY ||
+        ""
+      ).trim();
+
+      if (!apiKey) {
+        return respond(200, emptyFacebookMarketplaceResponse(true));
+      }
+
+      const item = body.item && typeof body.item === "object" ? body.item : {};
+      const itemSummary = `Item details:\n${JSON.stringify(item, null, 2)}`;
+      /** @type {Array<Record<string, unknown>>} */
+      const content = [
+        { type: "text", text: `${ANALYZE_FACEBOOK_MARKETPLACE_PROMPT}\n\n${itemSummary}` },
+      ];
+      if (appliance) {
+        content.push({ type: "text", text: "Photo: main item (appliance)" });
+        content.push({ type: "image_url", image_url: { url: appliance } });
+      }
+      if (label) {
+        content.push({ type: "text", text: "Photo: label / serial close-up" });
+        content.push({ type: "image_url", image_url: { url: label } });
+      }
+      if (receipt) {
+        content.push({ type: "text", text: "Photo: purchase receipt" });
+        content.push({ type: "image_url", image_url: { url: receipt } });
+      }
+
+      const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
+          messages: [{ role: "user", content }],
+          response_format: { type: "json_object" },
+          max_tokens: 1100,
+        }),
+      });
+
+      const data = await openaiRes.json();
+      if (!openaiRes.ok) {
+        const msg = data?.error?.message || "OpenAI request failed";
+        return respond(500, { error: msg });
+      }
+
+      const raw = data.choices?.[0]?.message?.content || "{}";
+      const parsed = JSON.parse(raw);
+      return respond(200, mapFacebookMarketplaceResponse(parsed));
+    }
 
     if (DOCUMENT_MODES.has(mode)) {
       if (!documentPhoto) {
