@@ -75,8 +75,7 @@ const els = {
   searchNoResults: document.getElementById("search-no-results"),
   homeDashboard: document.getElementById("home-dashboard"),
   homeInventoryPanel: document.getElementById("home-inventory-panel"),
-  homeStatItems: document.getElementById("home-stat-items"),
-  homeStatValue: document.getElementById("home-stat-value"),
+  homeItemMeta: document.getElementById("home-item-meta"),
   homeRecentGrid: document.getElementById("home-recent-grid"),
   homeRecentEmpty: document.getElementById("home-recent-empty"),
   btnHomeScanRoom: document.getElementById("btn-home-scan-room"),
@@ -84,9 +83,6 @@ const els = {
   btnHomeInventory: document.getElementById("btn-home-inventory"),
   btnHomeReports: document.getElementById("btn-home-reports"),
   btnHomeViewAll: document.getElementById("btn-home-view-all"),
-  btnChipRooms: document.getElementById("btn-chip-rooms"),
-  btnChipInventory: document.getElementById("btn-chip-inventory"),
-  btnChipValue: document.getElementById("btn-chip-value"),
   btnHomeProtected: document.getElementById("btn-home-protected"),
   btnTabHome: document.getElementById("btn-tab-home"),
   btnTabInventory: document.getElementById("btn-tab-inventory"),
@@ -425,13 +421,6 @@ function init() {
   els.btnHomeInventory?.addEventListener("click", () => setHomePanel("inventory"));
   els.btnHomeReports?.addEventListener("click", () => void exportInsuranceReport());
   els.btnHomeViewAll?.addEventListener("click", () => setHomePanel("inventory"));
-  els.btnChipRooms?.addEventListener("click", () => {
-    setHomePanel("inventory");
-    homeRoomFilter = "all";
-    void renderHome();
-  });
-  els.btnChipInventory?.addEventListener("click", () => setHomePanel("inventory"));
-  els.btnChipValue?.addEventListener("click", () => toast("Item value tracking is coming soon"));
   els.btnHomeProtected?.addEventListener("click", () => void exportInsuranceReport());
   els.btnTabHome?.addEventListener("click", () => setHomePanel("dashboard"));
   els.btnTabInventory?.addEventListener("click", () => setHomePanel("inventory"));
@@ -1773,8 +1762,10 @@ function syncHomeTabButtons() {
 }
 
 function updateHomeDashboardStats(itemCount) {
-  if (els.homeStatItems) els.homeStatItems.textContent = String(itemCount);
-  if (els.homeStatValue) els.homeStatValue.textContent = "—";
+  if (els.homeItemMeta) {
+    const label = itemCount === 1 ? "Item" : "Items";
+    els.homeItemMeta.textContent = `${itemCount} ${label} • All Up to Date`;
+  }
 }
 
 /** @param {import("./storage.js").ApplianceRecord[]} list */
