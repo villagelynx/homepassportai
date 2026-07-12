@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=80" />
+    <link rel="stylesheet" href="./css/app.css?v=81" />
   </head>
   <body>
     <div id="app" class="app">
@@ -228,17 +228,23 @@
             </div>
           </div>
           <section class="home-hero-card" aria-label="My Home">
-            <div class="home-hero-card__frame">
-              <img
-                class="home-hero-card__img"
-                src="./images/home-my-home-card-compact.png?v=2"
-                alt=""
-                width="512"
-                height="300"
-                decoding="async"
-              />
+            <div class="home-hero-card__copy">
+              <h2 class="home-hero-card__title">
+                My Home
+                <span class="home-hero-card__chev" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </span>
+              </h2>
               <p class="home-hero-card__meta" id="home-item-meta">0 Items • All Up to Date</p>
             </div>
+            <img
+              class="home-hero-card__house"
+              src="./images/home-card-house-only.png?v=1"
+              alt=""
+              width="314"
+              height="228"
+              decoding="async"
+            />
           </section>
 
           <nav class="home-action-grid" aria-label="Quick actions">
