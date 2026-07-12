@@ -23,8 +23,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="HomePassportAI" />
     <title>HomePassportAI</title>
-    <link rel="icon" href="./icons/icon-192.png" type="image/png" />
-    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" href="./icons/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" sizes="180x180" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon@2x.png" sizes="360x360" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="canonical" href="https://homepassportai.com/" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -33,23 +34,26 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=92" />
+    <link rel="stylesheet" href="./css/app.css?v=93" />
   </head>
   <body>
     <div id="app" class="app">
       <header class="topbar">
         <div class="topbar__brand landing__banner-brand">
-          <button type="button" class="topbar__logo topbar__logo--brand" id="btn-home" data-nav="home" aria-label="Home">
-            <img
-              class="landing__banner-header-img"
-              src="./icons/brand-header.png?v=5"
-              srcset="./icons/brand-header.png?v=5 557w, ./icons/brand-header@2x.png?v=5 1114w, ./icons/brand-header@3x.png?v=5 1671w"
-              sizes="(min-width: 900px) 32rem, 28rem"
-              alt="HomePassportAI"
-              width="557"
-              height="113"
-              decoding="async"
-            />
+          <button type="button" class="topbar__logo topbar__logo--brand" id="btn-home" data-nav="home" aria-label="HomePassportAI home">
+            <span class="brand-lockup">
+              <img
+                class="brand-lockup__icon"
+                src="./icons/brand-mark.png?v=2"
+                alt=""
+                width="48"
+                height="46"
+                decoding="async"
+              />
+              <span class="brand-lockup__text" aria-hidden="true"
+                ><span class="brand-lockup__homepassport">HomePassport</span><span class="brand-lockup__ai">AI</span></span
+              >
+            </span>
           </button>
           <div class="landing__banner-meta">
             <p class="landing__banner-tagline">Scan, Organize, Protect, Peace of Mind</p>
@@ -110,16 +114,19 @@
           <header class="landing__banner">
             <div class="landing__banner-top">
               <div class="landing__banner-brand">
-                <img
-                  class="landing__banner-header-img"
-                  src="./icons/brand-header.png?v=5"
-                  srcset="./icons/brand-header.png?v=5 557w, ./icons/brand-header@2x.png?v=5 1114w, ./icons/brand-header@3x.png?v=5 1671w"
-                  sizes="(min-width: 900px) 32rem, 28rem"
-                  alt="HomePassportAI"
-                  width="557"
-                  height="113"
-                  decoding="async"
-                />
+                <div class="brand-lockup brand-lockup--landing" aria-label="HomePassportAI">
+                  <img
+                    class="brand-lockup__icon"
+                    src="./icons/brand-mark.png?v=2"
+                    alt=""
+                    width="56"
+                    height="54"
+                    decoding="async"
+                  />
+                  <span class="brand-lockup__text"
+                    ><span class="brand-lockup__homepassport">HomePassport</span><span class="brand-lockup__ai">AI</span></span
+                  >
+                </div>
                 <div class="landing__banner-meta">
                   <p class="landing__banner-tagline">Scan, Organize, Protect, Peace of Mind</p>
                   <p class="landing__build-tag" id="landing-build-tag">Phase A · build …</p>

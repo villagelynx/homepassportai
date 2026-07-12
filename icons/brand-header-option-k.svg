@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 160" role="img" aria-label="HomePassportAI">
+  <!-- Option K: Wider eaves, bold strokes -->
+  <g transform="translate(14 22) scale(1.6)">
+    <path
+      d="M24 58H44V36H58L34 6L8 36H24V58Z"
+      fill="none"
+      stroke="#1d6fd8"
+      stroke-width="5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <rect x="41" y="15" width="5.5" height="10" rx="0.5" fill="#22c55e" />
+    <path
+      d="M27 45l7 7 15-15"
+      fill="none"
+      stroke="#22c55e"
+      stroke-width="5"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+  </g>
+  <text
+    x="148"
+    y="102"
+    font-family="Montserrat, 'DM Sans', system-ui, sans-serif"
+    font-size="68"
+    font-weight="700"
+    letter-spacing="-0.02em"
+  >
+    <tspan fill="#1a2b41">HomePassport</tspan>
+    <tspan fill="#22c55e">AI</tspan>
+  </text>
+</svg>
