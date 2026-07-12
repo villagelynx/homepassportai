@@ -17,6 +17,9 @@
 [functions."health"]
   timeout = 10
 
+[functions."admin-stats"]
+  timeout = 26
+
 [[redirects]]
   from = "/api/analyze"
   to = "/.netlify/functions/analyze"
@@ -32,6 +35,11 @@
   to = "/.netlify/functions/health"
   status = 200
 
+[[redirects]]
+  from = "/api/admin/stats"
+  to = "/.netlify/functions/admin-stats"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -42,5 +50,5 @@
   for = "/.netlify/functions/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Headers = "Content-Type, X-OpenAI-Api-Key"
+    Access-Control-Allow-Headers = "Content-Type, X-OpenAI-Api-Key, Authorization"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
