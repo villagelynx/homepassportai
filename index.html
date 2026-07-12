@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=93" />
+    <link rel="stylesheet" href="./css/app.css?v=94" />
   </head>
   <body>
     <div id="app" class="app">
@@ -247,28 +247,74 @@
               <button type="button" class="btn btn--primary home-auth-cta__btn" id="btn-home-register">Register</button>
             </div>
           </div>
-          <section class="home-hero-card" aria-label="My Home">
-            <div class="home-hero-card__copy">
-              <h2 class="home-hero-card__title">
-                My Home
-                <span class="home-hero-card__chev" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <section class="home-promo-card" aria-label="Your Home">
+            <div class="home-promo-card__top">
+              <div class="home-promo-card__copy">
+                <h2 class="home-promo-card__headline">
+                  Your Home.
+                  <span class="home-promo-card__headline-accent">All in One Place.</span>
+                </h2>
+                <p class="home-promo-card__lede">
+                  The AI-powered home inventory app that keeps track of your belongings, appliances, important
+                  documents and more.
+                </p>
+              </div>
+              <img
+                class="home-promo-card__phone"
+                src="./images/landing-phone-straight.png?v=6"
+                alt=""
+                width="170"
+                height="340"
+                decoding="async"
+              />
+            </div>
+            <ul class="home-promo-card__features">
+              <li class="home-promo-card__feature">
+                <span class="home-promo-card__feature-icon home-promo-card__feature-icon--scan" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M4 7.5h3l1.1-1.7c.2-.3.5-.5.9-.5h5.9c.4 0 .7.2.9.5L17 7.5h3a1.5 1.5 0 0 1 1.5 1.5V18A1.5 1.5 0 0 1 20 19.5H4A1.5 1.5 0 0 1 2.5 18V9A1.5 1.5 0 0 1 4 7.5Z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
                 </span>
-              </h2>
-              <p class="home-hero-card__meta" id="home-item-meta">0 Items • All Up to Date</p>
-            </div>
-            <div class="home-hero-card__house-wrap" aria-hidden="true">
-            <img
-              class="home-hero-card__house"
-              src="./images/home-card-house-option-b-transparent.png?v=1"
-              srcset="./images/home-card-house-option-b-transparent.png?v=1 1280w"
-              sizes="220px"
-              alt=""
-              width="305"
-              height="173"
-              decoding="async"
-            />
-            </div>
+                <div>
+                  <strong>AI Item Scanning</strong>
+                  <p>Snap a photo and AI extracts the model, serial number, brand and more.</p>
+                </div>
+              </li>
+              <li class="home-promo-card__feature">
+                <span class="home-promo-card__feature-icon home-promo-card__feature-icon--inventory" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <div>
+                  <strong>Organized Inventory</strong>
+                  <p>Everything in your home, neatly organized by category and location.</p>
+                </div>
+              </li>
+              <li class="home-promo-card__feature">
+                <span class="home-promo-card__feature-icon home-promo-card__feature-icon--insurance" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </span>
+                <div>
+                  <strong>Insurance Ready</strong>
+                  <p>Generate detailed reports in seconds for insurance or peace of mind.</p>
+                </div>
+              </li>
+              <li class="home-promo-card__feature">
+                <span class="home-promo-card__feature-icon home-promo-card__feature-icon--secure" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                </span>
+                <div>
+                  <strong>Secure &amp; Private</strong>
+                  <p>Your data is encrypted and stored securely in the cloud.</p>
+                </div>
+              </li>
+              <li class="home-promo-card__feature">
+                <span class="home-promo-card__feature-icon home-promo-card__feature-icon--access" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 11h4m-2-2v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                </span>
+                <div>
+                  <strong>Access Anywhere</strong>
+                  <p>Available on all your devices. Share with family members.</p>
+                </div>
+              </li>
+            </ul>
           </section>
 
           <nav class="home-action-grid" aria-label="Quick actions">
