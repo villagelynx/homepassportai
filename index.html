@@ -384,8 +384,8 @@
           <div id="api-setup-banner" class="api-setup-banner" hidden>
             <p class="api-setup-banner__title">Set up AI on this device</p>
             <p class="api-setup-banner__text">
-              Add your own <strong>OpenAI API key</strong> in Settings to read product labels, scan room
-              videos, and auto-fill model and serial numbers.
+              Add your own <strong>OpenAI API key</strong> in Settings. AI features always use your key on
+              this device — never a shared developer key.
             </p>
             <button type="button" class="btn btn--secondary btn--block" data-nav="settings">
               Set up API key
@@ -477,6 +477,10 @@
           <label class="field">
             <span>Email</span>
             <input type="email" id="auth-email" class="input" autocomplete="email" required />
+          </label>
+          <label class="remember-email">
+            <input type="checkbox" id="auth-remember-email" />
+            <span>Remember email on this device</span>
           </label>
           <label class="field">
             <span>Password</span>
@@ -683,8 +687,8 @@
           <p class="step-header__label">Step 1 of 3</p>
           <h2>Appliance photo</h2>
           <p class="step-header__lede">
-            Capture the whole appliance. AI identification uses your OpenAI API key from Settings (or
-            enter details manually on the last step).
+            Capture the whole appliance. Add your OpenAI API key in Settings for AI identification, or
+            enter details manually on the last step.
           </p>
         </div>
         <div class="capture-card">
@@ -1032,7 +1036,8 @@
           <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
           <h2>Settings</h2>
           <p class="step-header__lede">
-            Your OpenAI API key is required on this device for AI label reading and room video scans.
+            Your OpenAI API key is required on this device for AI features. The app never uses a
+            shared developer key — only the key you enter below.
           </p>
         </div>
         <form id="settings-form" class="form settings-form">
@@ -1042,9 +1047,9 @@
               Paste a key from
               <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
                 >platform.openai.com</a
-              >. It stays on this device and is sent only when you analyze photos or room videos. You pay OpenAI
-              directly. Without a key you can still save items manually, share them, look up manuals, and build
-              insurance PDFs from saved data.
+              >. It stays on this device and is sent only when you run AI analysis. You pay OpenAI directly —
+              HomePassportAI does not provide or bill for shared AI usage. Without a key you can still save items
+              manually, share them, look up manuals, and build insurance PDFs from saved data.
             </p>
           </div>
           <p id="api-key-status" class="api-key-status" hidden></p>
