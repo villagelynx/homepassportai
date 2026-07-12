@@ -465,6 +465,35 @@ body {
   gap: 1rem;
 }
 
+.home-auth-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  background: var(--surface, #ffffff);
+}
+
+.home-auth-cta__text {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted, #4b5563);
+}
+
+.home-auth-cta__buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.home-auth-cta__btn {
+  padding-inline: 1.1rem;
+}
+
 .home-promo-card {
   padding: 1rem 0.9rem 0.85rem;
   border-radius: 18px;
@@ -825,7 +854,7 @@ body {
   z-index: 30;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  align-items: end;
+  align-items: center;
   gap: 0.15rem;
   width: min(100%, 520px);
   padding: 0.35rem 0.5rem calc(0.45rem + var(--safe-bottom));
@@ -855,21 +884,6 @@ body {
 
 .home-tabbar__btn.is-active {
   color: #1d6fd8;
-}
-
-.home-tabbar__btn--add {
-  position: relative;
-  top: -0.65rem;
-}
-
-.home-tabbar__btn--add svg {
-  width: 1.55rem;
-  height: 1.55rem;
-  padding: 0.55rem;
-  border-radius: 999px;
-  background: #1d6fd8;
-  color: #fff;
-  box-shadow: 0 8px 20px rgba(29, 111, 216, 0.35);
 }
 
 .home-view .fab {

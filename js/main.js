@@ -203,6 +203,9 @@ const els = {
   btnLandingHeaderRegister: document.getElementById("btn-landing-header-register"),
   btnLandingStart: document.getElementById("btn-landing-start"),
   btnLandingOffline: document.getElementById("btn-landing-offline"),
+  homeAuthCta: document.getElementById("home-auth-cta"),
+  btnHomeSignIn: document.getElementById("btn-home-sign-in"),
+  btnHomeRegister: document.getElementById("btn-home-register"),
   updatePasswordForm: document.getElementById("update-password-form"),
   newPassword: document.getElementById("new-password"),
   confirmPassword: document.getElementById("confirm-password"),
@@ -546,6 +549,8 @@ function init() {
   els.btnLandingHeaderSignIn?.addEventListener("click", () => showAuth("signin"));
   els.btnLandingHeaderRegister?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingStart?.addEventListener("click", () => showAuth("signup"));
+  els.btnHomeSignIn?.addEventListener("click", () => showAuth("signin"));
+  els.btnHomeRegister?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingOffline?.addEventListener("click", () => {
     allowOfflineUse = true;
     void enterApp();
@@ -1663,6 +1668,10 @@ async function renderHome() {
 
   updateHomeDashboardStats(list.length);
   renderRecentlyAdded(list);
+
+  if (els.homeAuthCta) {
+    els.homeAuthCta.hidden = !isSupabaseConfigured() || isSignedIn();
+  }
 
   if (els.homeSearch) {
     els.homeSearch.hidden = !hasInventory;

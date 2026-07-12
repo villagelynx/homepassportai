@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=69" />
+    <link rel="stylesheet" href="./css/app.css?v=71" />
   </head>
   <body>
     <div id="app" class="app">
@@ -223,6 +223,13 @@
       <!-- Home: dashboard + inventory -->
       <main id="view-home" class="view home-view" hidden>
         <div id="home-dashboard" class="home-dashboard">
+          <div class="home-auth-cta" id="home-auth-cta" hidden>
+            <p class="home-auth-cta__text">Sync and back up your inventory across devices.</p>
+            <div class="home-auth-cta__buttons">
+              <button type="button" class="btn btn--ghost home-auth-cta__btn" id="btn-home-sign-in">Sign In</button>
+              <button type="button" class="btn btn--primary home-auth-cta__btn" id="btn-home-register">Register</button>
+            </div>
+          </div>
           <section class="home-promo-card" aria-label="Home overview">
             <div class="home-promo-card__copy">
               <h2 class="home-promo-card__title">
@@ -235,7 +242,7 @@
             <div class="home-promo-card__visual">
               <img
                 class="home-promo-card__house"
-                src="./images/home-dashboard-house.png"
+                src="./images/my-home-house.png?v=2"
                 alt=""
                 width="348"
                 height="274"
