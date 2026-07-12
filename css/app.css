@@ -778,6 +778,12 @@ body {
   padding: 0.75rem 0.85rem calc(5.5rem + var(--safe-bottom));
 }
 
+.home-dashboard[hidden],
+.home-inventory-panel[hidden],
+.home-reports-panel[hidden] {
+  display: none !important;
+}
+
 .home-dashboard {
   display: flex;
   flex-direction: column;
