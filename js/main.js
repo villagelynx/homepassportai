@@ -1764,7 +1764,7 @@ function syncHomeTabButtons() {
 function updateHomeDashboardStats(itemCount) {
   if (els.homeItemMeta) {
     const label = itemCount === 1 ? "Item" : "Items";
-    els.homeItemMeta.textContent = `${itemCount} ${label}`;
+    els.homeItemMeta.textContent = `${itemCount} ${label} • All Up to Date`;
   }
 }
 
@@ -1774,7 +1774,7 @@ function renderRecentlyAdded(list) {
   els.homeRecentGrid.innerHTML = "";
   const recent = [...list]
     .sort((a, b) => new Date(b.scannedAt).getTime() - new Date(a.scannedAt).getTime())
-    .slice(0, 3);
+    .slice(0, 6);
 
   if (els.homeRecentEmpty) {
     els.homeRecentEmpty.hidden = recent.length > 0;

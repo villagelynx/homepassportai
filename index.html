@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=74" />
+    <link rel="stylesheet" href="./css/app.css?v=77" />
   </head>
   <body>
     <div id="app" class="app">
@@ -228,16 +228,26 @@
             </div>
           </div>
           <section class="home-hero-card" aria-label="My Home">
-            <div class="home-hero-card__copy">
-              <h2 class="home-hero-card__title">My Home</h2>
-              <p class="home-hero-card__meta" id="home-item-meta">0 Items</p>
-            </div>
+            <img
+              class="home-hero-card__img"
+              src="./images/home-my-home-card.png?v=1"
+              alt=""
+              width="512"
+              height="384"
+              decoding="async"
+            />
+            <p class="home-hero-card__meta" id="home-item-meta">0 Items • All Up to Date</p>
           </section>
 
           <nav class="home-action-grid" aria-label="Quick actions">
             <button type="button" class="home-action-card" id="btn-home-scan-room">
               <span class="home-action-card__icon home-action-card__icon--scan" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4M9 12h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                  <rect x="6.5" y="9.5" width="7" height="5.5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M13.5 11v3l3.5-1.75v-3.5L13.5 11Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                  <circle class="scan-record-dot" cx="17.5" cy="8.5" r="1.6" fill="#ef4444"/>
+                </svg>
               </span>
               <span class="home-action-card__title">Scan Room</span>
               <span class="home-action-card__sub">AI Room Scan</span>
