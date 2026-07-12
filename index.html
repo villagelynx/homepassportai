@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=87" />
+    <link rel="stylesheet" href="./css/app.css?v=88" />
   </head>
   <body>
     <div id="app" class="app">
@@ -282,7 +282,7 @@
                 <svg viewBox="0 0 24 24"><path d="M5 18V8M10 18V5M15 18v-7M20 18v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
               </span>
               <span class="home-action-card__title">Reports</span>
-              <span class="home-action-card__sub">Export &amp; Share</span>
+              <span class="home-action-card__sub">Docs &amp; PDFs</span>
             </button>
           </nav>
 
@@ -343,6 +343,47 @@
             <button type="button" class="linkish" id="btn-restore-inventory">Restore saved data</button>
           </div>
           <p id="search-no-results" class="empty-state" hidden>No matches for your search.</p>
+        </div>
+
+        <div id="home-reports-panel" class="home-reports-panel" hidden>
+          <div class="step-header step-header--compact">
+            <h2>Reports</h2>
+            <p class="step-header__lede">Scan home documents, export your inventory, and keep everything in one place.</p>
+          </div>
+          <div class="reports-hub">
+            <section class="reports-hub__section">
+              <h3 class="detail-section-title">Generate reports</h3>
+              <p class="settings-note">Download a PDF inventory with rooms, brands, model numbers, serials, and saved repair contractors.</p>
+              <button type="button" class="btn btn--secondary btn--block" id="btn-reports-insurance-pdf">
+                Download insurance inventory PDF
+              </button>
+            </section>
+            <section class="reports-hub__section">
+              <h3 class="detail-section-title">Scan documents</h3>
+              <p class="settings-note">Take a photo and AI will extract key details. Review everything before saving.</p>
+              <div class="reports-action-grid">
+                <button type="button" class="reports-action-card" id="btn-scan-insurance-policy">
+                  <span class="reports-action-card__icon reports-action-card__icon--insurance" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="reports-action-card__title">Insurance policy</span>
+                  <span class="reports-action-card__sub">Coverage, policy #, renewal</span>
+                </button>
+                <button type="button" class="reports-action-card" id="btn-scan-property-tax">
+                  <span class="reports-action-card__icon reports-action-card__icon--tax" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 4h16v4H4zM6 10h12v10H6z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 14h6M9 17h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </span>
+                  <span class="reports-action-card__title">Property tax bill</span>
+                  <span class="reports-action-card__sub">Assessed value, amount due</span>
+                </button>
+              </div>
+            </section>
+            <section class="reports-hub__section">
+              <h3 class="detail-section-title">Saved documents</h3>
+              <p id="reports-saved-empty" class="settings-note">No saved documents yet. Scan an insurance policy or tax bill above.</p>
+              <div id="reports-saved-list" class="reports-saved-list" hidden></div>
+            </section>
+          </div>
         </div>
 
         <nav class="home-tabbar" aria-label="Main navigation">
@@ -710,6 +751,143 @@
         </form>
       </main>
 
+      <!-- Document capture -->
+      <main id="view-scan-doc" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="reports">← Back</button>
+          <p class="step-header__label">Document scan</p>
+          <h2 id="scan-doc-title">Scan document</h2>
+          <p id="scan-doc-lede" class="step-header__lede">Take a clear photo of the document.</p>
+        </div>
+        <div class="capture-card">
+          <div id="preview-doc-photo" class="capture-card__preview capture-card__preview--empty">
+            <span>No photo yet</span>
+          </div>
+          <label class="btn btn--primary btn--block capture-btn" id="label-doc-photo">
+            <input type="file" id="input-doc-photo" accept="image/*" capture="environment" hidden />
+            Take document photo
+          </label>
+          <button type="button" class="btn btn--secondary btn--block" id="btn-retake-doc-photo" hidden>
+            Retake photo
+          </button>
+        </div>
+        <button type="button" class="btn btn--primary btn--block" id="btn-analyze-doc" disabled>Analyze document</button>
+      </main>
+
+      <!-- Document review -->
+      <main id="view-review-doc" class="view" hidden>
+        <div class="step-header">
+          <button type="button" class="btn btn--ghost btn--back" data-nav="scan-doc">← Back</button>
+          <h2 id="review-doc-title">Confirm details</h2>
+          <p class="step-header__lede">Check the extracted info. Edit anything that looks wrong.</p>
+        </div>
+        <div id="review-doc-photo" class="review-photos"></div>
+        <form id="review-doc-form" class="form">
+          <div id="review-doc-fields-insurance" class="review-doc-fields" hidden>
+            <label class="field">
+              <span>Label</span>
+              <input type="text" id="doc-field-nickname" class="input" placeholder="State Farm Homeowners 2026" />
+            </label>
+            <label class="field">
+              <span>Insurance company</span>
+              <input type="text" id="doc-field-insurer" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Policy number</span>
+              <input type="text" id="doc-field-policy-number" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Policy type</span>
+              <input type="text" id="doc-field-policy-type" class="input" placeholder="Homeowners" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Named insured(s)</span>
+              <input type="text" id="doc-field-named-insureds" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Property address</span>
+              <input type="text" id="doc-field-property-address" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Effective date</span>
+              <input type="text" id="doc-field-effective-date" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Expiration / renewal date</span>
+              <input type="text" id="doc-field-expiration-date" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Dwelling coverage</span>
+              <input type="text" id="doc-field-dwelling-coverage" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Personal property coverage</span>
+              <input type="text" id="doc-field-personal-property" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Liability coverage</span>
+              <input type="text" id="doc-field-liability" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Deductible</span>
+              <input type="text" id="doc-field-deductible" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Annual premium</span>
+              <input type="text" id="doc-field-premium" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Agent name</span>
+              <input type="text" id="doc-field-agent-name" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Agent phone</span>
+              <input type="text" id="doc-field-agent-phone" class="input" autocomplete="off" />
+            </label>
+          </div>
+          <div id="review-doc-fields-tax" class="review-doc-fields" hidden>
+            <label class="field">
+              <span>Label</span>
+              <input type="text" id="doc-field-tax-nickname" class="input" placeholder="King County Property Tax 2026" />
+            </label>
+            <label class="field">
+              <span>Taxing authority</span>
+              <input type="text" id="doc-field-taxing-authority" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Parcel / APN number</span>
+              <input type="text" id="doc-field-parcel" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Property address</span>
+              <input type="text" id="doc-field-tax-address" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Tax year</span>
+              <input type="text" id="doc-field-tax-year" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Assessed value</span>
+              <input type="text" id="doc-field-assessed-value" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Tax amount</span>
+              <input type="text" id="doc-field-tax-amount" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Due date(s)</span>
+              <input type="text" id="doc-field-due-dates" class="input" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Exemptions / notes</span>
+              <input type="text" id="doc-field-exemptions" class="input" autocomplete="off" />
+            </label>
+          </div>
+          <p id="doc-confidence-note" class="confidence-note" hidden></p>
+          <button type="submit" class="btn btn--primary btn--block">Save document</button>
+        </form>
+      </main>
+
       <!-- Guide: how to use & benefits -->
       <main id="view-guide" class="view" hidden>
         <div class="step-header">
@@ -1053,6 +1231,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=45"></script>
+    <script type="module" src="./js/main.js?v=46"></script>
   </body>
 </html>

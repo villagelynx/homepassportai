@@ -251,14 +251,6 @@ export async function checkAnalyzeServer() {
   }
 }
 
-/**
- * @typedef {import("./analyze-fields.js").mapInsurancePolicyResponse extends (p: infer P) => infer R ? R : never} InsurancePolicyResult
- */
-
-/**
- * @typedef {import("./analyze-fields.js").mapPropertyTaxResponse extends (p: infer P) => infer R ? R : never} PropertyTaxResult
- */
-
 /** @param {"insurancePolicy" | "propertyTax"} type @param {string} documentPhotoDataUrl */
 export async function analyzeDocumentPhoto(type, documentPhotoDataUrl) {
   /** @type {Record<string, string>} */

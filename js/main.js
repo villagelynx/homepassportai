@@ -19,8 +19,10 @@ import {
   updateUserPassword,
   wasSessionExpired,
 } from "./auth.js";
-import { analyzeAppliancePhotos, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, readFileAsDataUrl } from "./analyze.js";
+import { analyzeAppliancePhotos, analyzeDocumentPhoto, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
+import { addDocument, deleteDocument, loadDocuments } from "./document-storage.js";
+import { generateInsurancePdf } from "./insurance-report.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
 import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
@@ -61,6 +63,8 @@ const views = {
   guide: document.getElementById("view-guide"),
   detail: document.getElementById("view-detail"),
   editAppliance: document.getElementById("view-edit-appliance"),
+  scanDoc: document.getElementById("view-scan-doc"),
+  reviewDoc: document.getElementById("view-review-doc"),
 };
 
 const els = {
@@ -75,6 +79,7 @@ const els = {
   searchNoResults: document.getElementById("search-no-results"),
   homeDashboard: document.getElementById("home-dashboard"),
   homeInventoryPanel: document.getElementById("home-inventory-panel"),
+  homeReportsPanel: document.getElementById("home-reports-panel"),
   homeItemMeta: document.getElementById("home-item-meta"),
   homeRecentGrid: document.getElementById("home-recent-grid"),
   homeRecentEmpty: document.getElementById("home-recent-empty"),
@@ -215,6 +220,48 @@ const els = {
   btnRestoreInventory: document.getElementById("btn-restore-inventory"),
   inputImportBackup: document.getElementById("input-import-backup"),
   toast: document.getElementById("toast"),
+  btnReportsInsurancePdf: document.getElementById("btn-reports-insurance-pdf"),
+  btnScanInsurancePolicy: document.getElementById("btn-scan-insurance-policy"),
+  btnScanPropertyTax: document.getElementById("btn-scan-property-tax"),
+  reportsSavedEmpty: document.getElementById("reports-saved-empty"),
+  reportsSavedList: document.getElementById("reports-saved-list"),
+  scanDocTitle: document.getElementById("scan-doc-title"),
+  scanDocLede: document.getElementById("scan-doc-lede"),
+  previewDocPhoto: document.getElementById("preview-doc-photo"),
+  labelDocPhoto: document.getElementById("label-doc-photo"),
+  inputDocPhoto: document.getElementById("input-doc-photo"),
+  btnRetakeDocPhoto: document.getElementById("btn-retake-doc-photo"),
+  btnAnalyzeDoc: document.getElementById("btn-analyze-doc"),
+  reviewDocTitle: document.getElementById("review-doc-title"),
+  reviewDocPhoto: document.getElementById("review-doc-photo"),
+  reviewDocForm: document.getElementById("review-doc-form"),
+  reviewDocFieldsInsurance: document.getElementById("review-doc-fields-insurance"),
+  reviewDocFieldsTax: document.getElementById("review-doc-fields-tax"),
+  docConfidenceNote: document.getElementById("doc-confidence-note"),
+  docFieldNickname: document.getElementById("doc-field-nickname"),
+  docFieldInsurer: document.getElementById("doc-field-insurer"),
+  docFieldPolicyNumber: document.getElementById("doc-field-policy-number"),
+  docFieldPolicyType: document.getElementById("doc-field-policy-type"),
+  docFieldNamedInsureds: document.getElementById("doc-field-named-insureds"),
+  docFieldPropertyAddress: document.getElementById("doc-field-property-address"),
+  docFieldEffectiveDate: document.getElementById("doc-field-effective-date"),
+  docFieldExpirationDate: document.getElementById("doc-field-expiration-date"),
+  docFieldDwellingCoverage: document.getElementById("doc-field-dwelling-coverage"),
+  docFieldPersonalProperty: document.getElementById("doc-field-personal-property"),
+  docFieldLiability: document.getElementById("doc-field-liability"),
+  docFieldDeductible: document.getElementById("doc-field-deductible"),
+  docFieldPremium: document.getElementById("doc-field-premium"),
+  docFieldAgentName: document.getElementById("doc-field-agent-name"),
+  docFieldAgentPhone: document.getElementById("doc-field-agent-phone"),
+  docFieldTaxNickname: document.getElementById("doc-field-tax-nickname"),
+  docFieldTaxingAuthority: document.getElementById("doc-field-taxing-authority"),
+  docFieldParcel: document.getElementById("doc-field-parcel"),
+  docFieldTaxAddress: document.getElementById("doc-field-tax-address"),
+  docFieldTaxYear: document.getElementById("doc-field-tax-year"),
+  docFieldAssessedValue: document.getElementById("doc-field-assessed-value"),
+  docFieldTaxAmount: document.getElementById("doc-field-tax-amount"),
+  docFieldDueDates: document.getElementById("doc-field-due-dates"),
+  docFieldExemptions: document.getElementById("doc-field-exemptions"),
 };
 
 /** @type {{ appliancePhotoDataUrl: string | null, labelPhotoDataUrl: string | null, receiptPhotoDataUrl: string | null }} */
@@ -244,6 +291,13 @@ const roomScan = {
   frames: [],
   candidates: [],
   roomGuess: "Other",
+};
+
+/** @type {{ type: import("./document-storage.js").DocumentType | null, photoDataUrl: string | null, analysis: Record<string, string> | null }} */
+const documentScan = {
+  type: null,
+  photoDataUrl: null,
+  analysis: null,
 };
 
 let detailId = null;
@@ -422,12 +476,12 @@ function init() {
   els.btnHomeScanRoom?.addEventListener("click", () => startRoomScan());
   els.btnHomeAddItem?.addEventListener("click", () => startScan());
   els.btnHomeInventory?.addEventListener("click", () => setHomePanel("inventory"));
-  els.btnHomeReports?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnHomeReports?.addEventListener("click", () => openReportsHub());
   els.btnHomeViewAll?.addEventListener("click", () => setHomePanel("inventory"));
   els.btnHomeProtected?.addEventListener("click", () => void exportInsuranceReport());
   els.btnTabHome?.addEventListener("click", () => setHomePanel("dashboard"));
   els.btnTabInventory?.addEventListener("click", () => setHomePanel("inventory"));
-  els.btnTabReports?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnTabReports?.addEventListener("click", () => openReportsHub());
   els.btnTabSettings?.addEventListener("click", () => {
     renderSettings();
     showView("settings");
@@ -587,6 +641,16 @@ function init() {
   }
   els.btnExportBackup?.addEventListener("click", () => exportBackup());
   els.btnInsurancePdf?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnReportsInsurancePdf?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnScanInsurancePolicy?.addEventListener("click", () => startDocumentScan("insurancePolicy"));
+  els.btnScanPropertyTax?.addEventListener("click", () => startDocumentScan("propertyTax"));
+  els.inputDocPhoto?.addEventListener("change", () => void onDocumentPhoto());
+  els.btnRetakeDocPhoto?.addEventListener("click", () => clearDocumentPhoto());
+  els.btnAnalyzeDoc?.addEventListener("click", () => void runDocumentAnalysis());
+  els.reviewDocForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    void saveDocumentRecord();
+  });
   els.btnRestoreBackup?.addEventListener("click", () => void restoreInventory());
   els.btnRestoreInventory?.addEventListener("click", () => void restoreInventory());
   els.inputImportBackup?.addEventListener("change", () => void importBackupFile());
@@ -615,6 +679,10 @@ function init() {
         showView("settings");
       } else if (target === "guide") {
         showView("guide");
+      } else if (target === "reports") {
+        openReportsHub();
+      } else if (target === "scan-doc") {
+        showView("scanDoc");
       }
     });
   }
@@ -1579,6 +1647,311 @@ function clearSettingsApiKey() {
   toast("API key removed");
 }
 
+function openReportsHub() {
+  renderReportsHub();
+  setHomePanel("reports");
+  showView("home");
+}
+
+function renderReportsHub() {
+  const docs = loadDocuments();
+  if (els.reportsSavedEmpty) {
+    els.reportsSavedEmpty.hidden = docs.length > 0;
+  }
+  if (!els.reportsSavedList) return;
+  els.reportsSavedList.hidden = docs.length === 0;
+  els.reportsSavedList.innerHTML = "";
+
+  for (const doc of docs) {
+    const card = document.createElement("article");
+    card.className = "reports-saved-card";
+
+    const head = document.createElement("div");
+    head.className = "reports-saved-card__head";
+
+    const textWrap = document.createElement("div");
+    const title = document.createElement("p");
+    title.className = "reports-saved-card__title";
+    title.textContent = doc.nickname || documentTypeLabel(doc.type);
+
+    const type = document.createElement("p");
+    type.className = "reports-saved-card__type";
+    type.textContent = documentTypeLabel(doc.type);
+
+    const meta = document.createElement("p");
+    meta.className = "reports-saved-card__meta";
+    meta.textContent = documentSummaryLine(doc);
+
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "reports-saved-card__delete";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => {
+      if (!confirm(`Delete "${doc.nickname || documentTypeLabel(doc.type)}"?`)) return;
+      deleteDocument(doc.id);
+      renderReportsHub();
+      toast("Document removed");
+    });
+
+    textWrap.append(title, type, meta);
+    head.append(textWrap, del);
+    card.append(head);
+    els.reportsSavedList.append(card);
+  }
+}
+
+/** @param {import("./document-storage.js").DocumentType} type */
+function documentTypeLabel(type) {
+  return type === "insurancePolicy" ? "Insurance policy" : "Property tax bill";
+}
+
+/** @param {import("./document-storage.js").DocumentRecord} doc */
+function documentSummaryLine(doc) {
+  if (doc.type === "insurancePolicy") {
+    const fields = /** @type {import("./document-storage.js").InsurancePolicyFields} */ (doc.extracted);
+    const parts = [
+      fields.insurerName,
+      fields.policyNumber ? `Policy ${fields.policyNumber}` : "",
+      fields.expirationDate ? `Renews ${fields.expirationDate}` : "",
+    ].filter(Boolean);
+    return parts.join(" • ") || "Saved for your records";
+  }
+  const fields = /** @type {import("./document-storage.js").PropertyTaxFields} */ (doc.extracted);
+  const parts = [
+    fields.taxingAuthority,
+    fields.taxYear ? `Year ${fields.taxYear}` : "",
+    fields.taxAmount ? `Due ${fields.taxAmount}` : "",
+  ].filter(Boolean);
+  return parts.join(" • ") || "Saved for your records";
+}
+
+/** @param {import("./document-storage.js").DocumentType} type */
+function startDocumentScan(type) {
+  resetDocumentScan();
+  documentScan.type = type;
+  if (els.scanDocTitle) {
+    els.scanDocTitle.textContent =
+      type === "insurancePolicy" ? "Insurance policy" : "Property tax bill";
+  }
+  if (els.scanDocLede) {
+    els.scanDocLede.textContent =
+      type === "insurancePolicy"
+        ? "Photograph your declarations page, policy summary, or insurance ID card."
+        : "Photograph your county property tax bill or assessment notice.";
+  }
+  setCaptureLabelText(
+    els.labelDocPhoto,
+    "Take document photo",
+  );
+  showView("scanDoc");
+}
+
+function resetDocumentScan() {
+  documentScan.type = null;
+  documentScan.photoDataUrl = null;
+  documentScan.analysis = null;
+  setPreview(els.previewDocPhoto, null);
+  if (els.inputDocPhoto) els.inputDocPhoto.value = "";
+  if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = true;
+  if (els.btnRetakeDocPhoto) els.btnRetakeDocPhoto.hidden = true;
+  if (els.docConfidenceNote) els.docConfidenceNote.hidden = true;
+}
+
+async function onDocumentPhoto() {
+  const file = els.inputDocPhoto?.files?.[0];
+  if (!file) return;
+  try {
+    documentScan.photoDataUrl = await readFileAsDataUrl(file);
+    setPreview(els.previewDocPhoto, documentScan.photoDataUrl);
+    if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = false;
+    if (els.btnRetakeDocPhoto) els.btnRetakeDocPhoto.hidden = false;
+    setCaptureLabelText(els.labelDocPhoto, "Retake document photo");
+  } catch {
+    toast("Could not read photo");
+  }
+}
+
+function clearDocumentPhoto() {
+  documentScan.photoDataUrl = null;
+  if (els.inputDocPhoto) els.inputDocPhoto.value = "";
+  setPreview(els.previewDocPhoto, null);
+  if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = true;
+  if (els.btnRetakeDocPhoto) els.btnRetakeDocPhoto.hidden = true;
+  setCaptureLabelText(els.labelDocPhoto, "Take document photo");
+}
+
+async function runDocumentAnalysis() {
+  if (!documentScan.photoDataUrl || !documentScan.type) return;
+  if (!(await requireUserApiKeyForAi())) return;
+
+  if (els.btnAnalyzeDoc) {
+    els.btnAnalyzeDoc.disabled = true;
+    els.btnAnalyzeDoc.textContent = "Analyzing…";
+  }
+
+  try {
+    const photo = await compressDataUrl(documentScan.photoDataUrl, {
+      maxEdge: 1200,
+      quality: 0.78,
+    });
+    const result = await analyzeDocumentPhoto(documentScan.type, photo);
+    documentScan.analysis = result;
+    populateDocumentReviewForm(result);
+    showView("reviewDoc");
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Analysis failed");
+  } finally {
+    if (els.btnAnalyzeDoc) {
+      els.btnAnalyzeDoc.disabled = !documentScan.photoDataUrl;
+      els.btnAnalyzeDoc.textContent = "Analyze document";
+    }
+  }
+}
+
+/** @param {Record<string, string>} result */
+function populateDocumentReviewForm(result) {
+  const type = documentScan.type;
+  const isInsurance = type === "insurancePolicy";
+  if (els.reviewDocTitle) {
+    els.reviewDocTitle.textContent = isInsurance ? "Confirm policy details" : "Confirm tax bill details";
+  }
+  els.reviewDocFieldsInsurance?.toggleAttribute("hidden", !isInsurance);
+  els.reviewDocFieldsTax?.toggleAttribute("hidden", isInsurance);
+
+  const locationLabel = locationDisplayLabel(loadLocation());
+
+  if (isInsurance) {
+    if (els.docFieldNickname) {
+      els.docFieldNickname.value =
+        result.nickname ||
+        [result.insurerName, result.policyType].filter(Boolean).join(" ").trim();
+    }
+    if (els.docFieldInsurer) els.docFieldInsurer.value = result.insurerName || "";
+    if (els.docFieldPolicyNumber) els.docFieldPolicyNumber.value = result.policyNumber || "";
+    if (els.docFieldPolicyType) els.docFieldPolicyType.value = result.policyType || "";
+    if (els.docFieldNamedInsureds) els.docFieldNamedInsureds.value = result.namedInsureds || "";
+    if (els.docFieldPropertyAddress) {
+      els.docFieldPropertyAddress.value = result.propertyAddress || locationLabel;
+    }
+    if (els.docFieldEffectiveDate) els.docFieldEffectiveDate.value = result.effectiveDate || "";
+    if (els.docFieldExpirationDate) els.docFieldExpirationDate.value = result.expirationDate || "";
+    if (els.docFieldDwellingCoverage) els.docFieldDwellingCoverage.value = result.dwellingCoverage || "";
+    if (els.docFieldPersonalProperty) els.docFieldPersonalProperty.value = result.personalPropertyCoverage || "";
+    if (els.docFieldLiability) els.docFieldLiability.value = result.liabilityCoverage || "";
+    if (els.docFieldDeductible) els.docFieldDeductible.value = result.deductible || "";
+    if (els.docFieldPremium) els.docFieldPremium.value = result.annualPremium || "";
+    if (els.docFieldAgentName) els.docFieldAgentName.value = result.agentName || "";
+    if (els.docFieldAgentPhone) els.docFieldAgentPhone.value = result.agentPhone || "";
+  } else {
+    if (els.docFieldTaxNickname) {
+      els.docFieldTaxNickname.value =
+        result.nickname ||
+        [result.taxingAuthority, result.taxYear ? `Tax ${result.taxYear}` : ""].filter(Boolean).join(" ");
+    }
+    if (els.docFieldTaxingAuthority) els.docFieldTaxingAuthority.value = result.taxingAuthority || "";
+    if (els.docFieldParcel) els.docFieldParcel.value = result.parcelNumber || "";
+    if (els.docFieldTaxAddress) {
+      els.docFieldTaxAddress.value = result.propertyAddress || locationLabel;
+    }
+    if (els.docFieldTaxYear) els.docFieldTaxYear.value = result.taxYear || "";
+    if (els.docFieldAssessedValue) els.docFieldAssessedValue.value = result.assessedValue || "";
+    if (els.docFieldTaxAmount) els.docFieldTaxAmount.value = result.taxAmount || "";
+    if (els.docFieldDueDates) els.docFieldDueDates.value = result.dueDates || "";
+    if (els.docFieldExemptions) els.docFieldExemptions.value = result.exemptions || "";
+  }
+
+  if (els.docConfidenceNote) {
+    const c = result.confidence || "low";
+    els.docConfidenceNote.hidden = false;
+    if (result.demoMode) {
+      els.docConfidenceNote.textContent =
+        "Demo mode — add your OpenAI key in Settings to enable document extraction.";
+    } else {
+      els.docConfidenceNote.textContent = `Extraction confidence: ${c}. Please verify before saving.`;
+    }
+  }
+
+  if (els.reviewDocPhoto && documentScan.photoDataUrl) {
+    els.reviewDocPhoto.innerHTML = "";
+    const img = document.createElement("img");
+    img.src = documentScan.photoDataUrl;
+    img.alt = isInsurance ? "Insurance policy photo" : "Property tax bill photo";
+    els.reviewDocPhoto.append(img);
+  }
+}
+
+async function saveDocumentRecord() {
+  if (!documentScan.photoDataUrl || !documentScan.type) return;
+
+  const submitBtn = els.reviewDocForm?.querySelector('button[type="submit"]');
+  if (submitBtn instanceof HTMLButtonElement) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Saving…";
+  }
+
+  try {
+    const photo = await compressDataUrl(documentScan.photoDataUrl, {
+      maxEdge: 1200,
+      quality: 0.82,
+    });
+
+    /** @type {import("./document-storage.js").DocumentRecord} */
+    const record = {
+      id: crypto.randomUUID(),
+      type: documentScan.type,
+      nickname: "",
+      photoDataUrl: photo,
+      extracted: {},
+      confidence: documentScan.analysis?.confidence || "medium",
+      scannedAt: new Date().toISOString(),
+    };
+
+    if (documentScan.type === "insurancePolicy") {
+      record.nickname = els.docFieldNickname?.value.trim() || "Insurance policy";
+      record.extracted = {
+        insurerName: els.docFieldInsurer?.value.trim() || "",
+        policyNumber: els.docFieldPolicyNumber?.value.trim() || "",
+        policyType: els.docFieldPolicyType?.value.trim() || "",
+        namedInsureds: els.docFieldNamedInsureds?.value.trim() || "",
+        propertyAddress: els.docFieldPropertyAddress?.value.trim() || "",
+        effectiveDate: els.docFieldEffectiveDate?.value.trim() || "",
+        expirationDate: els.docFieldExpirationDate?.value.trim() || "",
+        dwellingCoverage: els.docFieldDwellingCoverage?.value.trim() || "",
+        personalPropertyCoverage: els.docFieldPersonalProperty?.value.trim() || "",
+        liabilityCoverage: els.docFieldLiability?.value.trim() || "",
+        deductible: els.docFieldDeductible?.value.trim() || "",
+        annualPremium: els.docFieldPremium?.value.trim() || "",
+        agentName: els.docFieldAgentName?.value.trim() || "",
+        agentPhone: els.docFieldAgentPhone?.value.trim() || "",
+      };
+    } else {
+      record.nickname = els.docFieldTaxNickname?.value.trim() || "Property tax bill";
+      record.extracted = {
+        taxingAuthority: els.docFieldTaxingAuthority?.value.trim() || "",
+        parcelNumber: els.docFieldParcel?.value.trim() || "",
+        propertyAddress: els.docFieldTaxAddress?.value.trim() || "",
+        taxYear: els.docFieldTaxYear?.value.trim() || "",
+        assessedValue: els.docFieldAssessedValue?.value.trim() || "",
+        taxAmount: els.docFieldTaxAmount?.value.trim() || "",
+        dueDates: els.docFieldDueDates?.value.trim() || "",
+        exemptions: els.docFieldExemptions?.value.trim() || "",
+      };
+    }
+
+    addDocument(record);
+    resetDocumentScan();
+    openReportsHub();
+    toast(`Saved ${record.nickname}`);
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not save document");
+  } finally {
+    if (submitBtn instanceof HTMLButtonElement) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Save document";
+    }
+  }
+}
+
 async function exportInsuranceReport() {
   const list = await loadAppliances();
   if (list.length === 0) {
@@ -1748,15 +2121,20 @@ function setHomePanel(panel) {
   homePanel = panel;
   els.homeDashboard?.toggleAttribute("hidden", panel !== "dashboard");
   els.homeInventoryPanel?.toggleAttribute("hidden", panel !== "inventory");
+  els.homeReportsPanel?.toggleAttribute("hidden", panel !== "reports");
   syncHomeTabButtons();
   if (panel === "inventory") {
     els.homeInventoryPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (panel === "reports") {
+    els.homeReportsPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
 function syncHomeTabButtons() {
   els.btnTabHome?.classList.toggle("is-active", homePanel === "dashboard");
   els.btnTabInventory?.classList.toggle("is-active", homePanel === "inventory");
+  els.btnTabReports?.classList.toggle("is-active", homePanel === "reports");
 }
 
 function updateHomeDashboardStats(itemCount) {
