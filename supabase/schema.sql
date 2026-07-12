@@ -14,6 +14,8 @@ create table if not exists appliances (
   serial_number text,
   color_description text,
   dimensions_description text,
+  estimated_current_value text,
+  suggested_retail_price text,
   appliance_photo_path text,
   label_photo_path text,
   receipt_photo_path text,
@@ -26,6 +28,8 @@ create table if not exists appliances (
 -- Run on existing projects:
 -- alter table appliances add column if not exists color_description text;
 -- alter table appliances add column if not exists dimensions_description text;
+-- alter table appliances add column if not exists estimated_current_value text;
+-- alter table appliances add column if not exists suggested_retail_price text;
 
 alter table appliances enable row level security;
 

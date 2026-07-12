@@ -98,6 +98,8 @@ const els = {
   btnSyncStatus: document.getElementById("btn-sync-status"),
   btnGuide: document.getElementById("btn-guide"),
   btnTopbarSignOut: document.getElementById("btn-topbar-sign-out"),
+  homePromoCard: document.querySelector(".home-promo-card"),
+  btnHomePromoToggle: document.getElementById("btn-home-promo-toggle"),
   btnSettings: document.getElementById("btn-settings"),
   btnAdd: document.getElementById("btn-add-appliance"),
   btnScanRoom: document.getElementById("btn-scan-room"),
@@ -143,6 +145,8 @@ const els = {
   fieldSerial: document.getElementById("field-serial"),
   fieldColor: document.getElementById("field-color"),
   fieldDimensions: document.getElementById("field-dimensions"),
+  fieldEstimatedValue: document.getElementById("field-estimated-value"),
+  fieldRetailPrice: document.getElementById("field-retail-price"),
   confidenceNote: document.getElementById("confidence-note"),
   detailTitle: document.getElementById("detail-title"),
   detailBody: document.getElementById("detail-body"),
@@ -177,6 +181,8 @@ const els = {
   editFieldSerial: document.getElementById("edit-field-serial"),
   editFieldColor: document.getElementById("edit-field-color"),
   editFieldDimensions: document.getElementById("edit-field-dimensions"),
+  editFieldEstimatedValue: document.getElementById("edit-field-estimated-value"),
+  editFieldRetailPrice: document.getElementById("edit-field-retail-price"),
   settingsForm: document.getElementById("settings-form"),
   fieldApiKey: document.getElementById("field-api-key"),
   fieldTheme: document.getElementById("field-theme"),
@@ -208,9 +214,6 @@ const els = {
   btnLandingHeaderRegister: document.getElementById("btn-landing-header-register"),
   btnLandingStart: document.getElementById("btn-landing-start"),
   btnLandingOffline: document.getElementById("btn-landing-offline"),
-  homeAuthCta: document.getElementById("home-auth-cta"),
-  btnHomeSignIn: document.getElementById("btn-home-sign-in"),
-  btnHomeRegister: document.getElementById("btn-home-register"),
   updatePasswordForm: document.getElementById("update-password-form"),
   newPassword: document.getElementById("new-password"),
   confirmPassword: document.getElementById("confirm-password"),
@@ -469,6 +472,7 @@ function setupSessionRefresh() {
 
 function init() {
   updateHeaderTooltips();
+  initHomePromoCard();
   populateRoomSelect(els.fieldRoomScan);
   populateRoomSelect(els.fieldRoom);
   populateRoomSelect(els.editFieldRoom);
@@ -580,7 +584,11 @@ function init() {
   });
   els.btnClearApiKey?.addEventListener("click", () => clearSettingsApiKey());
   els.btnSignOut?.addEventListener("click", () => void handleSignOut());
-  els.btnTopbarSignOut?.addEventListener("click", () => void handleSignOut());
+  els.btnTopbarSignOut?.addEventListener("click", () => {
+    if (isSignedIn()) void handleSignOut();
+    else showAuth("signin");
+  });
+  els.btnHomePromoToggle?.addEventListener("click", () => toggleHomePromoCard());
   els.btnSyncStatus?.addEventListener("click", () => {
     if (!isSupabaseConfigured()) return;
     if (isSignedIn()) {
@@ -605,8 +613,6 @@ function init() {
   els.btnLandingHeaderSignIn?.addEventListener("click", () => showAuth("signin"));
   els.btnLandingHeaderRegister?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingStart?.addEventListener("click", () => showAuth("signup"));
-  els.btnHomeSignIn?.addEventListener("click", () => showAuth("signin"));
-  els.btnHomeRegister?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingOffline?.addEventListener("click", () => {
     allowOfflineUse = true;
     void enterApp();
@@ -837,13 +843,58 @@ function updateHeaderTooltips() {
     els.btnSettings,
     "Settings — OpenAI API key, account sign-in, backup, and insurance PDF",
   );
-  setTopbarTip(els.btnTopbarSignOut, "Sign out of your account on this device");
 }
 
 function updateTopbarSignOut() {
   if (!els.btnTopbarSignOut) return;
-  const show = isSupabaseConfigured() && isSignedIn();
-  els.btnTopbarSignOut.hidden = !show;
+  if (!isSupabaseConfigured()) {
+    els.btnTopbarSignOut.hidden = true;
+    return;
+  }
+  const signedIn = isSignedIn();
+  els.btnTopbarSignOut.hidden = false;
+  els.btnTopbarSignOut.textContent = signedIn ? "Sign out" : "Sign in";
+  els.btnTopbarSignOut.classList.toggle("topbar__sign-out--sign-in", !signedIn);
+  setTopbarTip(
+    els.btnTopbarSignOut,
+    signedIn
+      ? "Sign out of your account on this device"
+      : "Sign in to sync and back up your inventory",
+  );
+}
+
+const HOME_PROMO_COLLAPSED_KEY = "homepassport-ai:home-promo-collapsed";
+
+function loadHomePromoCollapsed() {
+  try {
+    return localStorage.getItem(HOME_PROMO_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveHomePromoCollapsed(collapsed) {
+  try {
+    localStorage.setItem(HOME_PROMO_COLLAPSED_KEY, collapsed ? "1" : "0");
+  } catch {
+    // ignore
+  }
+}
+
+function setHomePromoCollapsed(collapsed) {
+  if (!els.homePromoCard || !els.btnHomePromoToggle) return;
+  els.homePromoCard.classList.toggle("is-collapsed", collapsed);
+  els.btnHomePromoToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+
+function toggleHomePromoCard() {
+  const collapsed = !els.homePromoCard?.classList.contains("is-collapsed");
+  setHomePromoCollapsed(collapsed);
+  saveHomePromoCollapsed(collapsed);
+}
+
+function initHomePromoCard() {
+  setHomePromoCollapsed(loadHomePromoCollapsed());
 }
 
 function updateSyncBanner() {
@@ -1080,6 +1131,8 @@ async function runRoomAnalysis() {
         brand: item.brand,
         modelNumber: item.modelNumber,
         serialNumber: item.serialNumber,
+        estimatedCurrentValue: item.estimatedCurrentValue || "",
+        suggestedRetailPrice: item.suggestedRetailPrice || "",
         confidence: item.confidence,
         frameIndex,
         photoDataUrl: roomScan.frames[frameIndex],
@@ -1196,7 +1249,14 @@ function renderRoomReview() {
 
 /** @param {HTMLElement} meta @param {RoomCandidate} item */
 function updateRoomMeta(meta, item) {
-  const bits = [item.brand, item.modelNumber, item.serialNumber, item.confidence ? `${item.confidence} confidence` : ""]
+  const bits = [
+    item.brand,
+    item.modelNumber,
+    item.serialNumber,
+    item.estimatedCurrentValue,
+    item.suggestedRetailPrice,
+    item.confidence ? `${item.confidence} confidence` : "",
+  ]
     .filter(Boolean)
     .join(" · ");
   meta.textContent = bits || "From room video";
@@ -1249,6 +1309,8 @@ async function saveRoomItems() {
         brand,
         modelNumber: item.modelNumber.trim(),
         serialNumber: item.serialNumber.trim(),
+        estimatedCurrentValue: item.estimatedCurrentValue?.trim() || "",
+        suggestedRetailPrice: item.suggestedRetailPrice?.trim() || "",
         appliancePhotoDataUrl: photo,
         labelPhotoDataUrl: null,
         receiptPhotoDataUrl: null,
@@ -1449,6 +1511,8 @@ async function runAnalysis() {
     els.fieldSerial.value = result.serialNumber || "";
     els.fieldColor.value = result.colorDescription || "";
     els.fieldDimensions.value = result.dimensionsDescription || "";
+    if (els.fieldEstimatedValue) els.fieldEstimatedValue.value = result.estimatedCurrentValue || "";
+    if (els.fieldRetailPrice) els.fieldRetailPrice.value = result.suggestedRetailPrice || "";
     els.fieldNickname.value =
       result.nickname ||
       [result.brand, result.applianceType].filter(Boolean).join(" ").trim();
@@ -1542,6 +1606,8 @@ async function saveRecord() {
       serialNumber: els.fieldSerial.value.trim(),
       colorDescription: els.fieldColor?.value.trim() ?? "",
       dimensionsDescription: els.fieldDimensions?.value.trim() ?? "",
+      estimatedCurrentValue: els.fieldEstimatedValue?.value.trim() ?? "",
+      suggestedRetailPrice: els.fieldRetailPrice?.value.trim() ?? "",
       appliancePhotoDataUrl: appliancePhoto,
       labelPhotoDataUrl: labelPhoto,
       receiptPhotoDataUrl: receiptPhoto,
@@ -2056,10 +2122,6 @@ async function renderHome() {
   updateHomeDashboardStats(list.length);
   renderRecentlyAdded(list, chipsEnabled);
 
-  if (els.homeAuthCta) {
-    els.homeAuthCta.hidden = !isSupabaseConfigured() || isSignedIn();
-  }
-
   if (els.homeSearch) {
     els.homeSearch.hidden = !hasInventory;
   }
@@ -2270,7 +2332,7 @@ function renderRecentlyAdded(list, chipsEnabled = loadRoomChipsEnabled()) {
     room.textContent = roomDisplayName(item.room);
     const price = document.createElement("p");
     price.className = "home-recent-card__price";
-    price.textContent = "—";
+    price.textContent = item.estimatedCurrentValue || item.suggestedRetailPrice || "—";
     body.append(name, room, price);
 
     btn.append(imgWrap, body);
@@ -2288,6 +2350,8 @@ function applianceMatchesSearch(item, query) {
     item.serialNumber,
     item.colorDescription,
     item.dimensionsDescription,
+    item.estimatedCurrentValue,
+    item.suggestedRetailPrice,
     item.room,
     item.applianceType,
   ]
@@ -2412,6 +2476,8 @@ async function openDetail(id) {
       <div><dt>Serial</dt><dd>${escapeHtml(item.serialNumber || "—")}</dd></div>
       <div><dt>Color</dt><dd>${escapeHtml(item.colorDescription || "—")}</dd></div>
       <div><dt>Dimensions</dt><dd>${escapeHtml(item.dimensionsDescription || "—")}</dd></div>
+      <div><dt>Est. replacement value</dt><dd>${escapeHtml(item.estimatedCurrentValue || "—")}</dd></div>
+      <div><dt>Suggested retail</dt><dd>${escapeHtml(item.suggestedRetailPrice || "—")}</dd></div>
       <div><dt>Scanned</dt><dd>${escapeHtml(scanned)}</dd></div>
     </dl>
   `;
@@ -2623,6 +2689,8 @@ function formatApplianceShareText(item) {
     item.serialNumber ? `Serial: ${item.serialNumber}` : "",
     item.colorDescription ? `Color: ${item.colorDescription}` : "",
     item.dimensionsDescription ? `Dimensions: ${item.dimensionsDescription}` : "",
+    item.estimatedCurrentValue ? `Est. value: ${item.estimatedCurrentValue}` : "",
+    item.suggestedRetailPrice ? `Retail (MSRP): ${item.suggestedRetailPrice}` : "",
     "— HomePassportAI",
   ].filter(Boolean);
   return lines.join("\n");
@@ -2696,6 +2764,8 @@ async function openEditAppliance() {
   if (els.editFieldSerial) els.editFieldSerial.value = item.serialNumber || "";
   if (els.editFieldColor) els.editFieldColor.value = item.colorDescription || "";
   if (els.editFieldDimensions) els.editFieldDimensions.value = item.dimensionsDescription || "";
+  if (els.editFieldEstimatedValue) els.editFieldEstimatedValue.value = item.estimatedCurrentValue || "";
+  if (els.editFieldRetailPrice) els.editFieldRetailPrice.value = item.suggestedRetailPrice || "";
 
   showView("editAppliance");
 }
@@ -2711,6 +2781,8 @@ async function saveEditAppliance() {
   const serialNumber = els.editFieldSerial?.value.trim() ?? "";
   const colorDescription = els.editFieldColor?.value.trim() ?? "";
   const dimensionsDescription = els.editFieldDimensions?.value.trim() ?? "";
+  const estimatedCurrentValue = els.editFieldEstimatedValue?.value.trim() ?? "";
+  const suggestedRetailPrice = els.editFieldRetailPrice?.value.trim() ?? "";
 
   const submitBtn = els.editForm?.querySelector('button[type="submit"]');
   if (submitBtn instanceof HTMLButtonElement) {
@@ -2732,6 +2804,8 @@ async function saveEditAppliance() {
       serialNumber,
       colorDescription,
       dimensionsDescription,
+      estimatedCurrentValue,
+      suggestedRetailPrice,
     });
 
     await renderHome();

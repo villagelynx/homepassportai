@@ -174,6 +174,12 @@ export async function analyzeRoomFrames(frames) {
       brand: String(item.brand || ""),
       modelNumber: String(item.modelNumber || item.model_number || ""),
       serialNumber: String(item.serialNumber || item.serial_number || ""),
+      estimatedCurrentValue: String(
+        item.estimatedCurrentValue || item.estimated_current_value || "",
+      ).trim(),
+      suggestedRetailPrice: String(
+        item.suggestedRetailPrice || item.suggested_retail_price || "",
+      ).trim(),
       confidence: String(item.confidence || "medium").toLowerCase(),
       frameIndex: Number(item.frameIndex ?? item.frame_index ?? 0) || 0,
     })),

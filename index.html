@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=97" />
+    <link rel="stylesheet" href="./css/app.css?v=98" />
   </head>
   <body>
     <div id="app" class="app">
@@ -94,7 +94,7 @@
             id="btn-topbar-sign-out"
             hidden
           >
-            Sign out
+            Sign in
           </button>
         </div>
         <button type="button" class="topbar__settings topbar__tip" id="btn-settings" data-nav="settings" aria-label="Settings">
@@ -163,7 +163,7 @@
                   </span>
                   <div>
                     <strong>AI Item Scanning</strong>
-                    <p>Snap a photo and AI extracts model, serial, and brand — or video-scan a room to spot your items and create separate listings.</p>
+                    <p>Snap a photo and AI extracts model, serial, and brand — or video-scan a room to spot your items and create separate listings. AI can also estimate replacement value and retail price.</p>
                   </div>
                 </li>
                 <li class="landing__feature">
@@ -181,7 +181,7 @@
                   </span>
                   <div>
                     <strong>Insurance Ready</strong>
-                    <p>Generate detailed reports in seconds for insurance or peace of mind.</p>
+                    <p>Generate insurance-ready reports with estimated values and retail prices for replacement.</p>
                   </div>
                 </li>
                 <li class="landing__feature">
@@ -240,14 +240,21 @@
       <!-- Home: dashboard + inventory -->
       <main id="view-home" class="view home-view" hidden>
         <div id="home-dashboard" class="home-dashboard">
-          <div class="home-auth-cta" id="home-auth-cta" hidden>
-            <p class="home-auth-cta__text">Sync and back up your inventory across devices.</p>
-            <div class="home-auth-cta__buttons">
-              <button type="button" class="btn btn--ghost home-auth-cta__btn" id="btn-home-sign-in">Sign In</button>
-              <button type="button" class="btn btn--primary home-auth-cta__btn" id="btn-home-register">Register</button>
-            </div>
-          </div>
           <section class="home-promo-card" aria-label="Home features">
+            <button
+              type="button"
+              class="home-promo-card__toggle"
+              id="btn-home-promo-toggle"
+              aria-expanded="true"
+              aria-controls="home-promo-features"
+            >
+              <span class="home-promo-card__toggle-label">Why HomePassportAI</span>
+              <span class="home-promo-card__toggle-meta">5 features</span>
+              <svg class="home-promo-card__toggle-chev" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+            </button>
+            <div class="home-promo-card__features-wrap" id="home-promo-features">
             <ul class="home-promo-card__features">
               <li class="home-promo-card__feature">
                 <span class="home-promo-card__feature-icon home-promo-card__feature-icon--scan" aria-hidden="true">
@@ -255,7 +262,7 @@
                 </span>
                 <div>
                   <strong>AI Item Scanning</strong>
-                  <p>Snap a photo and AI extracts model, serial, and brand — or video-scan a room to spot your items and create separate listings.</p>
+                  <p>Snap a photo and AI extracts model, serial, and brand — or video-scan a room to spot your items and create separate listings. AI can also estimate replacement value and retail price.</p>
                 </div>
               </li>
               <li class="home-promo-card__feature">
@@ -273,7 +280,7 @@
                 </span>
                 <div>
                   <strong>Insurance Ready</strong>
-                  <p>Generate detailed reports in seconds for insurance or peace of mind.</p>
+                  <p>Generate insurance-ready reports with estimated values and retail prices for replacement.</p>
                 </div>
               </li>
               <li class="home-promo-card__feature">
@@ -295,6 +302,7 @@
                 </div>
               </li>
             </ul>
+            </div>
           </section>
 
           <nav class="home-action-grid" aria-label="Quick actions">
@@ -793,6 +801,15 @@
             <span>Dimensions</span>
             <input type="text" id="field-dimensions" class="input" placeholder="e.g. large wall painting, ~36 in wide" autocomplete="off" />
           </label>
+          <label class="field">
+            <span>Est. replacement value</span>
+            <input type="text" id="field-estimated-value" class="input" placeholder="e.g. $850" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Suggested retail (MSRP)</span>
+            <input type="text" id="field-retail-price" class="input" placeholder="e.g. $1,199" autocomplete="off" />
+          </label>
+          <p class="field-hint">AI estimates for insurance documentation — edit if needed.</p>
           <p id="confidence-note" class="confidence-note" hidden></p>
           <button type="submit" class="btn btn--primary btn--block">Save to HomePassportAI</button>
         </form>
@@ -1241,6 +1258,14 @@
           <label class="field">
             <span>Dimensions</span>
             <input type="text" id="edit-field-dimensions" class="input" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Est. replacement value</span>
+            <input type="text" id="edit-field-estimated-value" class="input" placeholder="e.g. $850" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span>Suggested retail (MSRP)</span>
+            <input type="text" id="edit-field-retail-price" class="input" placeholder="e.g. $1,199" autocomplete="off" />
           </label>
           <button type="submit" class="btn btn--primary btn--block">Save changes</button>
         </form>

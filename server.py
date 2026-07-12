@@ -41,7 +41,11 @@ Return JSON only with these keys:
 - nickname: short friendly label combining brand/artist + type
 - color_description: visible colors, finish, or material or empty string
 - dimensions_description: approximate size only if reasonably inferable else empty string
+- estimated_current_value: estimated current replacement value in USD with $ based on type, brand, model, age, and condition. Empty if unable to estimate confidently.
+- suggested_retail_price: original MSRP or typical new retail in USD with $ when reasonably known. Empty if unknown.
 - signature_regions: for paintings/artwork with visible signatures near corners only. Up to 2 boxes as percent 0-100: [{"corner":"top_left"|"top_right"|"bottom_left"|"bottom_right","x_percent","y_percent","width_percent","height_percent"}]. Empty array otherwise.
+
+Value fields are approximate AI estimates for insurance documentation, not professional appraisals. Do not invent prices without reasonable basis.
 
 Read the label image carefully when provided. If unreadable, use empty strings and lower confidence."""
 
@@ -51,7 +55,7 @@ Image 1: close-up label or signature area.
 
 Return JSON only with these keys:
 - appliance_type, brand, model_number, serial_number, confidence, nickname (empty string)
-- color_description, dimensions_description (from label if visible, else empty)
+- color_description, dimensions_description, estimated_current_value, suggested_retail_price (from label/item if estimable, else empty)
 
 Read carefully. If unreadable, use empty strings and low confidence."""
 
@@ -68,6 +72,8 @@ Return JSON only with these keys:
 - nickname: short friendly label
 - color_description: visible colors/finish/material or empty string
 - dimensions_description: approximate size only if inferable else empty string
+- estimated_current_value: estimated current replacement value in USD with $; empty if unknown
+- suggested_retail_price: original MSRP or new retail in USD with $; empty if unknown
 - signature_regions: for paintings with visible corner signatures — up to 2 percent bounding boxes as above; else []
 
 For artwork put artist in brand, title/medium in model_number, inscription in serial_number when readable."""
@@ -112,6 +118,8 @@ Return JSON only:
       "model_number": "model if readable else empty string",
       "serial_number": "",
       "confidence": "high" | "medium" | "low",
+      "estimated_current_value": "USD with $ if estimable else empty string",
+      "suggested_retail_price": "original MSRP or new retail with $ if known else empty string",
       "frame_index": 0
     }
   ]
@@ -121,7 +129,8 @@ Rules:
 - Deduplicate the same physical item across frames.
 - frame_index is the 0-based index of the best frame showing that item.
 - Prefer 3–20 items; do not invent items you cannot see.
-- model_number / serial_number will usually be empty from a room walk-through."""
+- model_number / serial_number will usually be empty from a room walk-through.
+- estimated_current_value and suggested_retail_price: approximate USD values with $ when reasonably inferable; else empty."""
 
 
 def load_dotenv() -> None:
@@ -243,6 +252,12 @@ def analyze_with_openai(
         ).strip(),
         "dimensionsDescription": str(
             data.get("dimensions_description") or data.get("dimensionsDescription") or ""
+        ).strip(),
+        "estimatedCurrentValue": str(
+            data.get("estimated_current_value") or data.get("estimatedCurrentValue") or ""
+        ).strip(),
+        "suggestedRetailPrice": str(
+            data.get("suggested_retail_price") or data.get("suggestedRetailPrice") or ""
         ).strip(),
         "signatureRegions": signature_regions if isinstance(signature_regions, list) else [],
     }
@@ -370,6 +385,12 @@ def analyze_room_with_openai(api_key: str, frames: list[str]) -> dict[str, Any]:
                 "brand": brand,
                 "modelNumber": str(item.get("model_number") or item.get("modelNumber") or "").strip(),
                 "serialNumber": str(item.get("serial_number") or item.get("serialNumber") or "").strip(),
+                "estimatedCurrentValue": str(
+                    item.get("estimated_current_value") or item.get("estimatedCurrentValue") or ""
+                ).strip(),
+                "suggestedRetailPrice": str(
+                    item.get("suggested_retail_price") or item.get("suggestedRetailPrice") or ""
+                ).strip(),
                 "confidence": str(item.get("confidence") or "medium").strip().lower(),
                 "frameIndex": frame_index,
             }
