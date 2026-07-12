@@ -475,12 +475,12 @@ function init() {
   els.btnScanRoom?.addEventListener("click", () => startRoomScan());
   els.btnHomeScanRoom?.addEventListener("click", () => startRoomScan());
   els.btnHomeAddItem?.addEventListener("click", () => startScan());
-  els.btnHomeInventory?.addEventListener("click", () => setHomePanel("inventory"));
+  els.btnHomeInventory?.addEventListener("click", () => openInventoryPanel());
   els.btnHomeReports?.addEventListener("click", () => openReportsHub());
-  els.btnHomeViewAll?.addEventListener("click", () => setHomePanel("inventory"));
+  els.btnHomeViewAll?.addEventListener("click", () => openInventoryPanel());
   els.btnHomeProtected?.addEventListener("click", () => void exportInsuranceReport());
   els.btnTabHome?.addEventListener("click", () => setHomePanel("dashboard"));
-  els.btnTabInventory?.addEventListener("click", () => setHomePanel("inventory"));
+  els.btnTabInventory?.addEventListener("click", () => openInventoryPanel());
   els.btnTabReports?.addEventListener("click", () => openReportsHub());
   els.btnTabSettings?.addEventListener("click", () => {
     renderSettings();
@@ -2115,6 +2115,12 @@ async function renderHome() {
 
   void updateApiSetupBanner();
   syncHomeTabButtons();
+}
+
+function openInventoryPanel() {
+  homeRoomFilter = "all";
+  setHomePanel("inventory");
+  void renderHome();
 }
 
 function setHomePanel(panel) {
