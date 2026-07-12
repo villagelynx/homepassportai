@@ -1564,6 +1564,7 @@ function refreshToLatestVersion() {
   try {
     const url = new URL(location.href);
     url.searchParams.set("update", String(Date.now()));
+    url.searchParams.set("v", String(Date.now()));
     location.replace(url.toString());
   } catch {
     location.reload();
