@@ -47,8 +47,12 @@ function writePng(size, outName) {
   }
 }
 
+writePng(1024, "icon-1024.png");
 writePng(512, "icon-512.png");
+writePng(384, "icon-384.png");
 writePng(192, "icon-192.png");
+writePng(360, "apple-touch-icon@2x.png");
 writePng(180, "apple-touch-icon.png");
 
-console.log("Wrote icons/icon-512.png, icon-192.png, apple-touch-icon.png");
+console.log("Wrote icons/icon-1024.png, icon-512.png, icon-384.png, icon-192.png, apple-touch-icon.png");
+console.log("For full sharp asset set (brand header, house, phone), run: python3 scripts/render-sharp-assets.py");
