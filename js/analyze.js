@@ -252,6 +252,56 @@ export async function checkAnalyzeServer() {
 }
 
 /**
+ * @typedef {import("./analyze-fields.js").mapInsurancePolicyResponse extends (p: infer P) => infer R ? R : never} InsurancePolicyResult
+ */
+
+/**
+ * @typedef {import("./analyze-fields.js").mapPropertyTaxResponse extends (p: infer P) => infer R ? R : never} PropertyTaxResult
+ */
+
+/** @param {"insurancePolicy" | "propertyTax"} type @param {string} documentPhotoDataUrl */
+export async function analyzeDocumentPhoto(type, documentPhotoDataUrl) {
+  /** @type {Record<string, string>} */
+  const headers = { "Content-Type": "application/json" };
+  const apiKey = loadApiKey();
+  if (apiKey) {
+    headers["X-OpenAI-Api-Key"] = apiKey;
+  }
+
+  const body = {
+    mode: type,
+    documentPhotoDataUrl,
+  };
+
+  let res;
+  try {
+    res = await fetch(config.analyzeApiUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error(
+      "Cannot reach the Mac server. Same Wi-Fi? Run ./serve.sh and use the http:// address shown (port 8080)."
+    );
+  }
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(formatAnalyzeError(text, res));
+  }
+
+  if (!res.ok) {
+    throw new Error(data.error || formatAnalyzeError(text, res));
+  }
+
+  return data;
+}
+
+/**
  * @param {File} file
  * @returns {Promise<string>} data URL
  */
