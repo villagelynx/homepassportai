@@ -537,7 +537,6 @@ body {
   object-position: bottom right;
   margin-right: -6%;
   margin-bottom: -2px;
-  image-rendering: auto;
 }
 
 @media (min-width: 480px) {
@@ -2263,7 +2262,6 @@ body {
   flex: 1 1 auto;
 }
 
-.topbar__logo--brand picture,
 .topbar__logo--brand .landing__banner-header-img {
   display: block;
 }
