@@ -2495,11 +2495,44 @@ body {
     background: #ffffff;
     border-bottom: 1px solid #e8edf2;
     backdrop-filter: none;
+    color: #1a2b41;
+  }
+
+  .topbar__brand .landing__banner-tagline {
+    color: #4b5563;
   }
 
   .topbar__info,
   .topbar__settings,
   .topbar__sync {
-    color: #1a2b41;
+    background: #f4f7fb;
+    border-color: #e2e8f0;
+  }
+
+  .topbar__info,
+  .topbar__settings {
+    color: #1d6fd8;
+  }
+
+  .topbar__info:active,
+  .topbar__settings:active {
+    background: #e8f0fa;
+  }
+
+  .topbar__settings-icon,
+  .topbar__info-icon {
+    color: currentColor;
+  }
+
+  #view-auth .password-toggle,
+  #view-update-password .password-toggle {
+    color: #64748b;
+  }
+
+  #view-auth .password-toggle:hover,
+  #view-update-password .password-toggle:hover,
+  #view-auth .password-toggle.is-visible,
+  #view-update-password .password-toggle.is-visible {
+    color: #1d6fd8;
   }
 }
