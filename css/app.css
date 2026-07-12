@@ -447,10 +447,11 @@ body {
   gap: 0.15rem;
   min-height: 8.5rem;
   padding: 0.85rem 0.45rem 0.35rem 0.95rem;
+  border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  background: linear-gradient(180deg, #2b8fe6 0%, #45aaf0 50%, #58c44f 50%, #6fd456 100%);
-  color: #ffffff;
+  background: #ffffff;
+  color: #1a2b41;
 }
 
 .home-hero-card__copy {
@@ -467,13 +468,14 @@ body {
   font-size: 1.2rem;
   font-weight: 700;
   line-height: 1.1;
+  color: #1a2b41;
 }
 
 .home-hero-card__chev {
   display: inline-flex;
   width: 0.9rem;
   height: 0.9rem;
-  opacity: 0.92;
+  color: #5b6472;
 }
 
 .home-hero-card__chev svg {
@@ -487,7 +489,7 @@ body {
   font-size: 0.74rem;
   font-weight: 500;
   line-height: 1.2;
-  opacity: 0.95;
+  color: #5b6472;
 }
 
 .home-hero-card__house {
