@@ -237,6 +237,31 @@ body {
   display: block;
 }
 
+.topbar__sign-out {
+  flex-shrink: 0;
+  height: 2rem;
+  padding: 0 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.topbar__sign-out[hidden] {
+  display: none !important;
+}
+
+.topbar__sign-out:active {
+  transform: scale(0.96);
+  background: var(--surface-2);
+}
+
 .topbar__settings {
   flex-shrink: 0;
   width: 2.4rem;
@@ -2504,7 +2529,8 @@ body {
 
   .topbar__info,
   .topbar__settings,
-  .topbar__sync {
+  .topbar__sync,
+  .topbar__sign-out {
     background: #f4f7fb;
     border-color: #e2e8f0;
   }
@@ -2512,6 +2538,15 @@ body {
   .topbar__info,
   .topbar__settings {
     color: #1d6fd8;
+  }
+
+  .topbar__sign-out {
+    color: #64748b;
+  }
+
+  .topbar__sign-out:active {
+    background: #e8f0fa;
+    color: #b42318;
   }
 
   .topbar__info:active,
