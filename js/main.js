@@ -1369,6 +1369,13 @@ async function saveRoomItems() {
 }
 
 /** @param {keyof typeof views} name */
+function scrollAppToTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+}
+
+/** @param {keyof typeof views} name */
 function showView(name) {
   for (const [key, el] of Object.entries(views)) {
     if (!el) continue;
@@ -1382,6 +1389,7 @@ function showView(name) {
   if (name !== "landing") {
     els.btnLandingBackApp?.setAttribute("hidden", "");
   }
+  scrollAppToTop();
 }
 
 function resetScan() {
