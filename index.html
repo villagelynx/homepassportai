@@ -33,7 +33,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=71" />
+    <link rel="stylesheet" href="./css/app.css?v=72" />
   </head>
   <body>
     <div id="app" class="app">
@@ -230,50 +230,24 @@
               <button type="button" class="btn btn--primary home-auth-cta__btn" id="btn-home-register">Register</button>
             </div>
           </div>
-          <section class="home-promo-card" aria-label="Home overview">
-            <div class="home-promo-card__copy">
-              <h2 class="home-promo-card__title">
-                Your Home. Your Inventory. Your <span class="home-promo-card__accent">Peace of Mind.</span>
+          <section class="home-hero-card" aria-label="My Home">
+            <div class="home-hero-card__copy">
+              <h2 class="home-hero-card__title">
+                My Home
+                <span class="home-hero-card__chev" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </span>
               </h2>
-              <p class="home-promo-card__lede">
-                The smart way to document, organize and protect everything in your home.
-              </p>
+              <p class="home-hero-card__meta" id="home-item-meta">0 Items • All Up to Date</p>
             </div>
-            <div class="home-promo-card__visual">
-              <img
-                class="home-promo-card__house"
-                src="./images/my-home-house.png?v=2"
-                alt=""
-                width="348"
-                height="274"
-                decoding="async"
-              />
-              <div class="home-promo-chips" aria-label="Home highlights">
-                <button type="button" class="home-promo-chip home-promo-chip--rooms" id="btn-chip-rooms">Rooms</button>
-                <button type="button" class="home-promo-chip home-promo-chip--inventory" id="btn-chip-inventory">Inventory</button>
-                <button type="button" class="home-promo-chip home-promo-chip--value" id="btn-chip-value">Value</button>
-              </div>
-            </div>
-            <div class="home-promo-stats">
-              <div class="home-promo-stat">
-                <span class="home-promo-stat__icon home-promo-stat__icon--items" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M4 8h16v12H4zM8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
-                </span>
-                <div>
-                  <p class="home-promo-stat__label">Items Tracked</p>
-                  <p class="home-promo-stat__value home-promo-stat__value--green" id="home-stat-items">0</p>
-                </div>
-              </div>
-              <div class="home-promo-stat">
-                <span class="home-promo-stat__icon home-promo-stat__icon--value" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 3 4 7v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V7l-8-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-                </span>
-                <div>
-                  <p class="home-promo-stat__label">Total Value</p>
-                  <p class="home-promo-stat__value home-promo-stat__value--blue" id="home-stat-value">—</p>
-                </div>
-              </div>
-            </div>
+            <img
+              class="home-hero-card__house"
+              src="./images/home-card-house.png?v=2"
+              alt=""
+              width="398"
+              height="229"
+              decoding="async"
+            />
           </section>
 
           <nav class="home-action-grid" aria-label="Quick actions">
