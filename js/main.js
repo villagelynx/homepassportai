@@ -129,6 +129,12 @@ const els = {
   btnRetakeReceipt: document.getElementById("btn-retake-receipt"),
   btnRetakeBoth: document.getElementById("btn-retake-both"),
   labelAppliancePhoto: document.getElementById("label-appliance-photo"),
+  toolbarAppliance: document.getElementById("toolbar-appliance"),
+  toolbarLabel: document.getElementById("toolbar-label"),
+  toolbarReceipt: document.getElementById("toolbar-receipt"),
+  toolbarRoomVideo: document.getElementById("toolbar-room-video"),
+  toolbarDetailLabel: document.getElementById("toolbar-detail-label"),
+  toolbarDocPhoto: document.getElementById("toolbar-doc-photo"),
   labelLabelPhoto: document.getElementById("label-label-photo"),
   labelReceiptPhoto: document.getElementById("label-receipt-photo"),
   inputReceipt: document.getElementById("input-receipt-photo"),
@@ -1059,8 +1065,7 @@ function resetRoomScan() {
   setRoomVideoPreview(null);
   setRoomScanStatus("");
   if (els.btnAnalyzeRoom) els.btnAnalyzeRoom.disabled = true;
-  if (els.btnClearRoomVideo) els.btnClearRoomVideo.hidden = true;
-  setCaptureLabelText(els.labelRoomVideo, "Record room video");
+  updateRoomVideoCaptureUi();
   if (els.roomReviewList) els.roomReviewList.innerHTML = "";
   if (els.btnSaveRoomItems) els.btnSaveRoomItems.disabled = true;
 }
@@ -1113,8 +1118,7 @@ async function onRoomVideoSelected() {
   roomScan.frames = [];
   roomScan.candidates = [];
   setRoomVideoPreview(roomScan.videoUrl);
-  if (els.btnClearRoomVideo) els.btnClearRoomVideo.hidden = false;
-  setCaptureLabelText(els.labelRoomVideo, "Re-record room video");
+  updateRoomVideoCaptureUi();
   if (els.btnAnalyzeRoom) els.btnAnalyzeRoom.disabled = true;
   setRoomScanStatus("Pulling still frames from your video…");
 
@@ -1405,31 +1409,51 @@ function updateCaptureButtons() {
   const hasLabel = Boolean(scan.labelPhotoDataUrl);
   const hasReceipt = Boolean(scan.receiptPhotoDataUrl);
 
-  if (els.btnRetakeAppliance) els.btnRetakeAppliance.hidden = !hasAppliance;
-  if (els.btnRetakeLabel) els.btnRetakeLabel.hidden = !hasLabel;
-  if (els.btnRetakeReceipt) els.btnRetakeReceipt.hidden = !hasReceipt;
+  if (els.toolbarAppliance) els.toolbarAppliance.hidden = !hasAppliance;
+  if (els.toolbarLabel) els.toolbarLabel.hidden = !hasLabel;
+  if (els.toolbarReceipt) els.toolbarReceipt.hidden = !hasReceipt;
+  if (els.labelAppliancePhoto) els.labelAppliancePhoto.hidden = hasAppliance;
+  if (els.labelLabelPhoto) els.labelLabelPhoto.hidden = hasLabel;
+  if (els.labelReceiptPhoto) els.labelReceiptPhoto.hidden = hasReceipt;
 
-  setCaptureLabelText(
-    els.labelAppliancePhoto,
-    hasAppliance ? "Retake appliance photo" : "Take appliance photo"
-  );
-  setCaptureLabelText(
-    els.labelLabelPhoto,
-    hasLabel ? "Retake label photo" : "Take label photo"
-  );
-  setCaptureLabelText(
-    els.labelReceiptPhoto,
-    hasReceipt ? "Retake receipt photo" : "Take receipt photo"
-  );
+  setCaptureLabelText(els.labelAppliancePhoto, "Take appliance photo");
+  setCaptureLabelText(els.labelLabelPhoto, "Take label photo");
+  setCaptureLabelText(els.labelReceiptPhoto, "Take receipt photo");
 }
 
 /** @param {HTMLElement | null} labelEl @param {string} text */
 function setCaptureLabelText(labelEl, text) {
   if (!labelEl) return;
-  const input = labelEl.querySelector("input");
-  labelEl.textContent = "";
-  if (input) labelEl.appendChild(input);
-  labelEl.appendChild(document.createTextNode(text));
+  labelEl.textContent = text;
+}
+
+function updateDetailLabelCaptureUi() {
+  const hasPhoto = Boolean(detailLabelPending.dataUrl);
+  const layout = document.querySelector(".detail-label-capture .capture-layout");
+  if (layout) layout.classList.toggle("capture-layout--split", hasPhoto);
+  if (els.toolbarDetailLabel) els.toolbarDetailLabel.hidden = !hasPhoto;
+  if (els.labelDetailLabelPhoto) {
+    els.labelDetailLabelPhoto.hidden = hasPhoto;
+    setCaptureLabelText(els.labelDetailLabelPhoto, "Take label photo");
+  }
+}
+
+function updateDocumentCaptureUi() {
+  const hasPhoto = Boolean(documentScan.photoDataUrl);
+  if (els.toolbarDocPhoto) els.toolbarDocPhoto.hidden = !hasPhoto;
+  if (els.labelDocPhoto) {
+    els.labelDocPhoto.hidden = hasPhoto;
+    setCaptureLabelText(els.labelDocPhoto, "Take document photo");
+  }
+}
+
+function updateRoomVideoCaptureUi() {
+  const hasVideo = Boolean(roomScan.videoUrl);
+  if (els.toolbarRoomVideo) els.toolbarRoomVideo.hidden = !hasVideo;
+  if (els.labelRoomVideo) {
+    els.labelRoomVideo.hidden = hasVideo;
+    setCaptureLabelText(els.labelRoomVideo, "Record room video");
+  }
 }
 
 function clearAppliancePhoto() {
@@ -1861,8 +1885,8 @@ function resetDocumentScan() {
   setPreview(els.previewDocPhoto, null);
   if (els.inputDocPhoto) els.inputDocPhoto.value = "";
   if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = true;
-  if (els.btnRetakeDocPhoto) els.btnRetakeDocPhoto.hidden = true;
   if (els.docConfidenceNote) els.docConfidenceNote.hidden = true;
+  updateDocumentCaptureUi();
 }
 
 async function onDocumentPhoto() {
@@ -1872,8 +1896,7 @@ async function onDocumentPhoto() {
     documentScan.photoDataUrl = await readFileAsDataUrl(file);
     setPreview(els.previewDocPhoto, documentScan.photoDataUrl);
     if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = false;
-    if (els.btnRetakeDocPhoto) els.btnRetakeDocPhoto.hidden = false;
-    setCaptureLabelText(els.labelDocPhoto, "Retake document photo");
+    updateDocumentCaptureUi();
   } catch {
     toast("Could not read photo");
   }
@@ -1884,8 +1907,7 @@ function clearDocumentPhoto() {
   if (els.inputDocPhoto) els.inputDocPhoto.value = "";
   setPreview(els.previewDocPhoto, null);
   if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = true;
-  if (els.btnRetakeDocPhoto) els.btnRetakeDocPhoto.hidden = true;
-  setCaptureLabelText(els.labelDocPhoto, "Take document photo");
+  updateDocumentCaptureUi();
 }
 
 async function runDocumentAnalysis() {
@@ -2519,11 +2541,8 @@ async function openDetail(id) {
       ? "Take a new close-up to replace the model/serial label photo."
       : "No label yet — snap a close-up of the manufacturer sticker or rating plate.";
   }
-  setCaptureLabelText(
-    els.labelDetailLabelPhoto,
-    item.labelPhotoDataUrl ? "Retake label photo" : "Take label photo"
-  );
-  if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
+  setCaptureLabelText(els.labelDetailLabelPhoto, "Take label photo");
+  updateDetailLabelCaptureUi();
   if (els.btnShareAppliance) {
     els.btnShareAppliance.hidden = false;
     els.btnShareAppliance.textContent =
@@ -2542,8 +2561,8 @@ function resetDetailLabelCapture() {
   detailLabelPending.suggestions = null;
   if (els.inputDetailLabelPhoto) els.inputDetailLabelPhoto.value = "";
   setPreview(els.previewDetailLabelPhoto, null);
-  if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = true;
   if (els.labelDetailLabelPhoto) els.labelDetailLabelPhoto.classList.remove("capture-btn--busy");
+  updateDetailLabelCaptureUi();
   hideDetailLabelReview();
 }
 
@@ -2623,7 +2642,7 @@ async function onDetailLabelPhotoSelected() {
     const dataUrl = await readFileAsDataUrl(file);
     detailLabelPending.dataUrl = dataUrl;
     setPreview(els.previewDetailLabelPhoto, dataUrl);
-    if (els.btnClearDetailLabelPhoto) els.btnClearDetailLabelPhoto.hidden = false;
+    updateDetailLabelCaptureUi();
 
     if (!(await requireUserApiKeyForAi())) return;
 
