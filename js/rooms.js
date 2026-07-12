@@ -1,4 +1,29 @@
 /** Canonical room order for grouping, filter chips, and select lists. */
+export const BUILDING_GROUP_LABEL = "Building";
+
+/** @readonly Filter chip id for all building subcategories. */
+export const BUILDING_FILTER_ID = "building";
+
+/** Home systems and structural categories grouped under Building. */
+export const BUILDING_ROOMS = [
+  "Flooring",
+  "Bathroom fixtures",
+  "Kitchen fixtures",
+  "Plumbing and heating",
+  "Lighting",
+  "Fireplace",
+  "Windows",
+  "Doors",
+];
+
+export const OUTDOOR_GROUP_LABEL = "Outdoor";
+
+/** @readonly Filter chip id for deck, patio, and general outdoor items. */
+export const OUTDOOR_FILTER_ID = "outdoor-group";
+
+/** Outdoor living subcategories grouped under Outdoor. */
+export const OUTDOOR_ROOMS = ["Deck", "Patio"];
+
 export const ROOM_ORDER = [
   "Kitchen",
   "Pantry",
@@ -21,13 +46,37 @@ export const ROOM_ORDER = [
   "Basement",
   "Attic",
   "Utility",
+  ...BUILDING_ROOMS,
+  ...OUTDOOR_ROOMS,
   "Outdoor",
   "Other",
 ];
 
+/** @param {string} room */
+export function isBuildingRoom(room) {
+  return BUILDING_ROOMS.includes(room);
+}
+
+/** @param {string} room */
+export function isOutdoorGroupRoom(room) {
+  return OUTDOOR_ROOMS.includes(room) || room === "Outdoor";
+}
+
 /** @type {Record<string, string>} */
 const ROOM_LABELS = {
   Utility: "Utility / mechanical",
+  Flooring: "Flooring",
+  "Bathroom fixtures": "Bathroom fixtures",
+  "Kitchen fixtures": "Kitchen fixtures",
+  "Plumbing and heating": "Plumbing and heating",
+  Lighting: "Lighting",
+  Fireplace: "Fireplace",
+  Windows: "Windows",
+  Doors: "Doors",
+  Building: "Building",
+  Deck: "Deck",
+  Patio: "Patio",
+  Outdoor: "Outdoor (yard & garden)",
 };
 
 /** @type {Record<string, string>} */
@@ -53,6 +102,17 @@ const ROOM_ICONS = {
   Basement: "🏚️",
   Attic: "📦",
   Utility: "⚙️",
+  Flooring: "🪵",
+  "Bathroom fixtures": "🚿",
+  "Kitchen fixtures": "🍳",
+  "Plumbing and heating": "🔧",
+  Lighting: "💡",
+  Fireplace: "🔥",
+  Windows: "🪟",
+  Doors: "🚪",
+  Building: "🏗️",
+  Deck: "🪵",
+  Patio: "⛱️",
   Outdoor: "🌳",
   Other: "📍",
 };
@@ -97,6 +157,17 @@ const ROOM_ICON_PATHS = {
   utility: ["M12 9a3 3 0 1 0 0 .01", "M12 3v2", "M12 19v2", "M5.6 5.6l1.4 1.4", "M17 17l1.4 1.4", "M3 12h2", "M19 12h2", "M5.6 18.4l1.4-1.4", "M17 7l1.4-1.4"],
   outdoor: ["M12 4v2", "M12 18v2", "M4.9 7.1l1.4 1.4", "M17.7 16.5l1.4 1.4", "M3 12h2", "M19 12h2", "M4.9 16.9l1.4-1.4", "M17.7 6.9l1.4-1.4", "M8 20h8"],
   other: ["M5 4h14v16H5z", "M9 12h6"],
+  flooring: ["M4 18h16", "M4 14h6v4H4z", "M10 14h10v4H10z", "M4 10h16"],
+  "bathroom-fixtures": ["M8 10h8", "M10 10v8", "M14 10v8", "M6 18h12"],
+  "kitchen-fixtures": ["M6 8h12v10H6z", "M9 8V5h6v3"],
+  plumbing: ["M10 4v4", "M14 4v4", "M8 8h8v3", "M12 11v9"],
+  lighting: ["M12 3v2", "M8 10a4 4 0 1 0 8 0", "M10 18h4v3h-4z"],
+  fireplace: ["M6 20h12", "M8 20V10l4-4 4 4v10", "M12 14v2"],
+  windows: ["M4 6h16v12H4z", "M12 6v12", "M4 12h16"],
+  doors: ["M8 4h8v16H8z", "M14 12h.01"],
+  building: ["M4 20V9l8-5 8 5v11", "M10 20v-6h4v6"],
+  deck: ["M4 18h16", "M6 14h3v4H6z", "M15 14h3v4h-3z", "M4 10h16"],
+  patio: ["M5 18h14", "M8 18V8h8v10", "M11 8V5h2v3"],
 };
 
 /** @type {Record<string, string>} */
@@ -116,6 +187,17 @@ const ROOM_ICON_KIND = {
   Basement: "basement",
   Attic: "attic",
   Utility: "utility",
+  Flooring: "flooring",
+  "Bathroom fixtures": "bathroom-fixtures",
+  "Kitchen fixtures": "kitchen-fixtures",
+  "Plumbing and heating": "plumbing",
+  Lighting: "lighting",
+  Fireplace: "fireplace",
+  Windows: "windows",
+  Doors: "doors",
+  Building: "building",
+  Deck: "deck",
+  Patio: "patio",
   Outdoor: "outdoor",
   Other: "other",
 };
@@ -208,11 +290,39 @@ export function mapRoomGuess(guess) {
     utility: "Utility",
     "utility / mechanical": "Utility",
     mechanical: "Utility",
+    flooring: "Flooring",
+    floor: "Flooring",
+    hardwood: "Flooring",
+    tile: "Flooring",
+    carpet: "Flooring",
+    "bathroom fixtures": "Bathroom fixtures",
+    "bath fixtures": "Bathroom fixtures",
+    "kitchen fixtures": "Kitchen fixtures",
+    plumbing: "Plumbing and heating",
+    heating: "Plumbing and heating",
+    hvac: "Plumbing and heating",
+    furnace: "Plumbing and heating",
+    "water heater": "Plumbing and heating",
+    lighting: "Lighting",
+    lights: "Lighting",
+    "light fixtures": "Lighting",
+    fireplace: "Fireplace",
+    hearth: "Fireplace",
+    windows: "Windows",
+    window: "Windows",
+    doors: "Doors",
+    door: "Doors",
+    deck: "Deck",
+    patio: "Patio",
+    barbecue: "Deck",
+    barbeque: "Deck",
+    bbq: "Deck",
+    grill: "Deck",
+    "outdoor furniture": "Deck",
     outdoor: "Outdoor",
     outside: "Outdoor",
-    patio: "Outdoor",
-    deck: "Outdoor",
     yard: "Outdoor",
+    garden: "Outdoor",
     other: "Other",
   };
   return map[g] || "Other";
