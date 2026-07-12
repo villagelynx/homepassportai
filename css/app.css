@@ -1256,10 +1256,6 @@ body {
   min-height: 0;
 }
 
-.capture-card__toolbar--side {
-  margin-bottom: 0.75rem;
-}
-
 @media (max-width: 520px) {
   .capture-layout--split {
     grid-template-columns: 1fr;
