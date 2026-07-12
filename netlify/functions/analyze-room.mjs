@@ -15,6 +15,8 @@ Return JSON only:
       "model_number": "model if readable else empty string",
       "serial_number": "",
       "confidence": "high" | "medium" | "low",
+      "estimated_current_value": "USD with $ if estimable else empty string",
+      "suggested_retail_price": "original MSRP or new retail with $ if known else empty string",
       "frame_index": 0
     }
   ]
@@ -24,7 +26,8 @@ Rules:
 - Deduplicate the same physical item across frames.
 - frame_index is the 0-based index of the best frame showing that item.
 - Prefer 3–20 items; do not invent items you cannot see.
-- model_number / serial_number will usually be empty from a room walk-through.`;
+- model_number / serial_number will usually be empty from a room walk-through.
+- estimated_current_value and suggested_retail_price: approximate USD values with $ when reasonably inferable from visible type/brand/model; else empty.`;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -159,6 +162,12 @@ function normalizeItems(parsed, frameCount) {
         brand,
         modelNumber: String(item.model_number || item.modelNumber || "").trim(),
         serialNumber: String(item.serial_number || item.serialNumber || "").trim(),
+        estimatedCurrentValue: String(
+          item.estimated_current_value || item.estimatedCurrentValue || "",
+        ).trim(),
+        suggestedRetailPrice: String(
+          item.suggested_retail_price || item.suggestedRetailPrice || "",
+        ).trim(),
         confidence: String(item.confidence || "medium").trim().toLowerCase(),
         frameIndex: clamped,
       };

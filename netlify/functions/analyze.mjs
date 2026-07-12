@@ -175,7 +175,7 @@ export async function handler(event) {
           },
         ],
         response_format: { type: "json_object" },
-        max_tokens: 750,
+        max_tokens: 850,
       }),
     });
 

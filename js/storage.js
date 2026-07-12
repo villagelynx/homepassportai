@@ -35,6 +35,8 @@ import {
  * @property {string | null} [receiptPhotoDataUrl]
  * @property {string} [colorDescription]
  * @property {string} [dimensionsDescription]
+ * @property {string} [estimatedCurrentValue]
+ * @property {string} [suggestedRetailPrice]
  * @property {string} confidence
  * @property {string} scannedAt ISO timestamp
  * @property {{ name: string, phone: string, website: string, notes: string } | null} [repairCompany]

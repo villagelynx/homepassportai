@@ -2,7 +2,10 @@ import { normalizeSignatureRegions } from "./signature-label.js";
 
 const SHARED_INVENTORY_FIELDS = `
 - color_description: visible colors, finish, or material (e.g. "stainless steel", "matte white", "gilt wood frame") or empty string
-- dimensions_description: approximate size only if reasonably inferable from the photo (e.g. "large wall painting", "~36 in wide refrigerator") else empty — do not invent precise measurements without a clear scale reference`;
+- dimensions_description: approximate size only if reasonably inferable from the photo (e.g. "large wall painting", "~36 in wide refrigerator") else empty — do not invent precise measurements without a clear scale reference
+- estimated_current_value: estimated current replacement value in USD with $ (e.g. "$850") based on type, brand, model, age, and condition cues. For insurance documentation. Empty if unable to estimate confidently.
+- suggested_retail_price: original MSRP or typical new retail price in USD with $ when reasonably known for this product. Empty if unknown.
+Value fields are approximate AI estimates for insurance documentation, not professional appraisals. Do not invent prices without reasonable basis.`;
 
 const ARTWORK_SIGNATURE_FIELDS = `
 - signature_regions: for paintings, prints, or artwork with visible artist signatures or inscriptions near corners ONLY. Up to 2 tight bounding boxes as percent of the full image (0–100): [{ "corner": "top_left"|"top_right"|"bottom_left"|"bottom_right", "x_percent", "y_percent", "width_percent", "height_percent" }]. Empty array if not artwork or no signature visible.
@@ -186,6 +189,12 @@ export function mapAnalyzeResponse(parsed) {
     colorDescription: String(parsed.color_description || parsed.colorDescription || "").trim(),
     dimensionsDescription: String(
       parsed.dimensions_description || parsed.dimensionsDescription || "",
+    ).trim(),
+    estimatedCurrentValue: String(
+      parsed.estimated_current_value || parsed.estimatedCurrentValue || "",
+    ).trim(),
+    suggestedRetailPrice: String(
+      parsed.suggested_retail_price || parsed.suggestedRetailPrice || "",
     ).trim(),
     signatureRegions: normalizeSignatureRegions(
       parsed.signature_regions || parsed.signatureRegions,

@@ -49,6 +49,8 @@ async function rowToRecord(row) {
     serialNumber: row.serial_number || "",
     colorDescription: row.color_description || "",
     dimensionsDescription: row.dimensions_description || "",
+    estimatedCurrentValue: row.estimated_current_value || "",
+    suggestedRetailPrice: row.suggested_retail_price || "",
     appliancePhotoDataUrl: appliancePhotoDataUrl || "",
     labelPhotoDataUrl: labelPhotoDataUrl || "",
     receiptPhotoDataUrl: receiptPhotoDataUrl,
@@ -128,6 +130,8 @@ export async function addCloudAppliance(record) {
     serial_number: record.serialNumber,
     color_description: record.colorDescription || null,
     dimensions_description: record.dimensionsDescription || null,
+    estimated_current_value: record.estimatedCurrentValue || null,
+    suggested_retail_price: record.suggestedRetailPrice || null,
     appliance_photo_path: appliancePath,
     label_photo_path: labelPath,
     receipt_photo_path: receiptPath,
@@ -160,6 +164,8 @@ export async function updateCloudAppliance(id, updates) {
   if (updates.serialNumber != null) payload.serial_number = updates.serialNumber;
   if (updates.colorDescription != null) payload.color_description = updates.colorDescription;
   if (updates.dimensionsDescription != null) payload.dimensions_description = updates.dimensionsDescription;
+  if (updates.estimatedCurrentValue != null) payload.estimated_current_value = updates.estimatedCurrentValue;
+  if (updates.suggestedRetailPrice != null) payload.suggested_retail_price = updates.suggestedRetailPrice;
   if (updates.confidence != null) payload.confidence = updates.confidence;
   if (updates.repairCompany !== undefined) payload.repair_company = updates.repairCompany;
 

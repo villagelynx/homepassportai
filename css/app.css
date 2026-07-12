@@ -304,6 +304,12 @@ body {
   display: none !important;
 }
 
+.topbar__sign-out--sign-in {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  background: var(--accent-dim);
+}
+
 .topbar__sign-out:active {
   transform: scale(0.96);
   background: var(--surface-2);
@@ -513,12 +519,85 @@ body {
 }
 
 .home-promo-card {
-  padding: 0.95rem 0.95rem 1rem;
+  padding: 0.75rem 0.95rem 0.95rem;
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
   overflow: hidden;
+}
+
+.home-promo-card__toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.15rem 0;
+  margin-bottom: 0.55rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-promo-card__toggle-label {
+  font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a2b41;
+}
+
+.home-promo-card__toggle-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.home-promo-card__toggle-chev {
+  width: 1rem;
+  height: 1rem;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.home-promo-card.is-collapsed .home-promo-card__toggle-chev {
+  transform: rotate(-90deg);
+}
+
+.home-promo-card__features-wrap {
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  max-height: 1200px;
+  opacity: 1;
+}
+
+.home-promo-card.is-collapsed .home-promo-card__features-wrap {
+  max-height: 0;
+  opacity: 0;
+}
+
+.home-promo-card.is-collapsed .home-promo-card__toggle {
+  margin-bottom: 0;
+}
+
+:root[data-theme="dark"] .home-promo-card__toggle-label,
+:root:not([data-theme="light"]) .home-promo-card__toggle-label {
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .home-promo-card__toggle-label {
+    color: #1a2b41;
+  }
+}
+
+:root[data-theme="light"] .home-promo-card__toggle-label {
+  color: #1a2b41;
 }
 
 .home-promo-card__features {
@@ -703,35 +782,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-}
-
-.home-auth-cta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid var(--border, #e2e8f0);
-  border-radius: 14px;
-  background: var(--surface, #ffffff);
-}
-
-.home-auth-cta__text {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--text-muted, #4b5563);
-}
-
-.home-auth-cta__buttons {
-  display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.home-auth-cta__btn {
-  padding-inline: 1.1rem;
 }
 
 .home-action-grid {
@@ -2425,10 +2475,6 @@ body {
   .landing__build-tag,
   #build-tag,
   #landing-build-tag {
-    display: none !important;
-  }
-
-  .home-auth-cta {
     display: none !important;
   }
 
