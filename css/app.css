@@ -441,39 +441,79 @@ body {
 }
 
 .home-hero-card {
-  display: block;
-  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 8.75rem;
+  align-items: end;
+  gap: 0.15rem;
+  min-height: 8.5rem;
+  padding: 0.85rem 0.45rem 0.35rem 0.95rem;
   border-radius: 16px;
   overflow: hidden;
-  background: #3d9fe8;
+  background: linear-gradient(180deg, #2b8fe6 0%, #45aaf0 50%, #58c44f 50%, #6fd456 100%);
+  color: #ffffff;
 }
 
-.home-hero-card__frame {
-  position: relative;
-  display: block;
-  width: 100%;
-  line-height: 0;
+.home-hero-card__copy {
+  align-self: start;
+  padding-top: 0.1rem;
 }
 
-.home-hero-card__img {
-  display: block;
+.home-hero-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin: 0 0 0.2rem;
+  font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.home-hero-card__chev {
+  display: inline-flex;
+  width: 0.9rem;
+  height: 0.9rem;
+  opacity: 0.92;
+}
+
+.home-hero-card__chev svg {
   width: 100%;
-  height: auto;
+  height: 100%;
 }
 
 .home-hero-card__meta {
-  position: absolute;
-  top: 16.5%;
-  left: 5.5%;
   margin: 0;
-  padding: 0;
   font-family: "Montserrat", "DM Sans", system-ui, sans-serif;
-  font-size: clamp(0.6rem, 2.5vw, 0.76rem);
+  font-size: 0.74rem;
   font-weight: 500;
   line-height: 1.2;
-  color: #ffffff;
-  white-space: nowrap;
-  pointer-events: none;
+  opacity: 0.95;
+}
+
+.home-hero-card__house {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 7.25rem;
+  object-fit: contain;
+  object-position: bottom right;
+  align-self: end;
+}
+
+@media (min-width: 480px) {
+  .home-hero-card {
+    grid-template-columns: minmax(0, 1fr) 10rem;
+    min-height: 9rem;
+    padding: 1rem 0.55rem 0.45rem 1.1rem;
+  }
+
+  .home-hero-card__title {
+    font-size: 1.3rem;
+  }
+
+  .home-hero-card__house {
+    max-height: 7.75rem;
+  }
 }
 
 @media (max-width: 520px) {
