@@ -56,6 +56,124 @@ ${ARTWORK_SIGNATURE_FIELDS}
 
 If no label photo is provided, leave model_number and serial_number empty unless printed on the item.`;
 
+export const ANALYZE_INSURANCE_POLICY_PROMPT = `You analyze a photo of a homeowners or renters insurance policy document, declarations page, or insurance ID card for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- insurer_name: insurance company name
+- policy_number: policy or account number
+- policy_type: e.g. Homeowners, Renters, Condo
+- named_insureds: primary named insured(s), comma-separated if multiple
+- property_address: insured property address
+- effective_date: policy start date as shown
+- expiration_date: policy end or renewal date
+- dwelling_coverage: dwelling or structure coverage limit with $ if shown
+- personal_property_coverage: personal property or contents limit with $ if shown
+- liability_coverage: liability limit with $ if shown
+- deductible: deductible amount(s) with $ if shown
+- annual_premium: total premium with $ if shown
+- agent_name: agent or agency name if shown
+- agent_phone: agent phone if shown
+- nickname: short friendly label like "State Farm Homeowners 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If the image is not an insurance document, use empty strings and low confidence.`;
+
+export const ANALYZE_PROPERTY_TAX_PROMPT = `You analyze a photo of a property tax bill, tax assessment notice, or county tax statement for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority: county, city, or assessor name
+- parcel_number: parcel, APN, or tax ID number
+- property_address: property address on the bill
+- tax_year: assessment or tax year
+- assessed_value: total assessed value with $ if shown
+- tax_amount: total tax due with $ if shown
+- due_dates: payment due date(s) as shown on bill
+- exemptions: any exemptions, homestead, or special assessments noted
+- nickname: short friendly label like "King County Property Tax 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If the image is not a property tax document, use empty strings and low confidence.`;
+
+/** @param {object} parsed */
+export function mapInsurancePolicyResponse(parsed) {
+  return {
+    insurerName: String(parsed.insurer_name || parsed.insurerName || "").trim(),
+    policyNumber: String(parsed.policy_number || parsed.policyNumber || "").trim(),
+    policyType: String(parsed.policy_type || parsed.policyType || "").trim(),
+    namedInsureds: String(parsed.named_insureds || parsed.namedInsureds || "").trim(),
+    propertyAddress: String(parsed.property_address || parsed.propertyAddress || "").trim(),
+    effectiveDate: String(parsed.effective_date || parsed.effectiveDate || "").trim(),
+    expirationDate: String(parsed.expiration_date || parsed.expirationDate || "").trim(),
+    dwellingCoverage: String(parsed.dwelling_coverage || parsed.dwellingCoverage || "").trim(),
+    personalPropertyCoverage: String(
+      parsed.personal_property_coverage || parsed.personalPropertyCoverage || "",
+    ).trim(),
+    liabilityCoverage: String(parsed.liability_coverage || parsed.liabilityCoverage || "").trim(),
+    deductible: String(parsed.deductible || "").trim(),
+    annualPremium: String(parsed.annual_premium || parsed.annualPremium || "").trim(),
+    agentName: String(parsed.agent_name || parsed.agentName || "").trim(),
+    agentPhone: String(parsed.agent_phone || parsed.agentPhone || "").trim(),
+    nickname: String(parsed.nickname || "").trim(),
+    confidence: String(parsed.confidence || "medium").trim().toLowerCase(),
+  };
+}
+
+/** @param {object} parsed */
+export function mapPropertyTaxResponse(parsed) {
+  return {
+    taxingAuthority: String(parsed.taxing_authority || parsed.taxingAuthority || "").trim(),
+    parcelNumber: String(parsed.parcel_number || parsed.parcelNumber || "").trim(),
+    propertyAddress: String(parsed.property_address || parsed.propertyAddress || "").trim(),
+    taxYear: String(parsed.tax_year || parsed.taxYear || "").trim(),
+    assessedValue: String(parsed.assessed_value || parsed.assessedValue || "").trim(),
+    taxAmount: String(parsed.tax_amount || parsed.taxAmount || "").trim(),
+    dueDates: String(parsed.due_dates || parsed.dueDates || "").trim(),
+    exemptions: String(parsed.exemptions || "").trim(),
+    nickname: String(parsed.nickname || "").trim(),
+    confidence: String(parsed.confidence || "medium").trim().toLowerCase(),
+  };
+}
+
+/** @param {boolean} [demoMode] */
+export function emptyInsurancePolicyResponse(demoMode = false) {
+  return {
+    insurerName: "",
+    policyNumber: "",
+    policyType: "",
+    namedInsureds: "",
+    propertyAddress: "",
+    effectiveDate: "",
+    expirationDate: "",
+    dwellingCoverage: "",
+    personalPropertyCoverage: "",
+    liabilityCoverage: "",
+    deductible: "",
+    annualPremium: "",
+    agentName: "",
+    agentPhone: "",
+    nickname: "",
+    confidence: "low",
+    ...(demoMode ? { demoMode: true } : {}),
+  };
+}
+
+/** @param {boolean} [demoMode] */
+export function emptyPropertyTaxResponse(demoMode = false) {
+  return {
+    taxingAuthority: "",
+    parcelNumber: "",
+    propertyAddress: "",
+    taxYear: "",
+    assessedValue: "",
+    taxAmount: "",
+    dueDates: "",
+    exemptions: "",
+    nickname: "",
+    confidence: "low",
+    ...(demoMode ? { demoMode: true } : {}),
+  };
+}
+
 /** @param {object} parsed */
 export function mapAnalyzeResponse(parsed) {
   return {

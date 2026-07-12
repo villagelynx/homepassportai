@@ -1,8 +1,14 @@
 import {
   ANALYZE_APPLIANCE_ONLY_PROMPT,
+  ANALYZE_INSURANCE_POLICY_PROMPT,
   ANALYZE_LABEL_ONLY_PROMPT,
+  ANALYZE_PROPERTY_TAX_PROMPT,
   ANALYZE_PROMPT,
+  emptyInsurancePolicyResponse,
+  emptyPropertyTaxResponse,
   mapAnalyzeResponse,
+  mapInsurancePolicyResponse,
+  mapPropertyTaxResponse,
 } from "../../js/analyze-fields.js";
 
 const CORS = {
@@ -12,6 +18,7 @@ const CORS = {
 };
 
 const MAX_BODY_BYTES = 5_500_000;
+const DOCUMENT_MODES = new Set(["insurancePolicy", "propertyTax"]);
 
 /** @param {number} code @param {object} payload */
 function respond(code, payload) {
@@ -47,9 +54,70 @@ export async function handler(event) {
       return respond(400, { error: "Invalid JSON" });
     }
 
+    const mode = String(body.mode || "").trim();
+    const documentPhoto = body.documentPhotoDataUrl || body.document_photo;
     const appliance = body.appliancePhotoDataUrl || body.appliance_photo;
     const label = body.labelPhotoDataUrl || body.label_photo;
-    const labelOnly = body.mode === "labelOnly";
+    const labelOnly = mode === "labelOnly";
+
+    if (DOCUMENT_MODES.has(mode)) {
+      if (!documentPhoto) {
+        return respond(400, { error: "documentPhotoDataUrl is required" });
+      }
+
+      const apiKey = (
+        event.headers["x-openai-api-key"] ||
+        event.headers["X-OpenAI-Api-Key"] ||
+        process.env.OPENAI_API_KEY ||
+        ""
+      ).trim();
+
+      if (!apiKey) {
+        return respond(
+          200,
+          mode === "insurancePolicy"
+            ? emptyInsurancePolicyResponse(true)
+            : emptyPropertyTaxResponse(true),
+        );
+      }
+
+      const prompt =
+        mode === "insurancePolicy" ? ANALYZE_INSURANCE_POLICY_PROMPT : ANALYZE_PROPERTY_TAX_PROMPT;
+      const mapper =
+        mode === "insurancePolicy" ? mapInsurancePolicyResponse : mapPropertyTaxResponse;
+
+      const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                { type: "image_url", image_url: { url: documentPhoto } },
+              ],
+            },
+          ],
+          response_format: { type: "json_object" },
+          max_tokens: 900,
+        }),
+      });
+
+      const data = await openaiRes.json();
+      if (!openaiRes.ok) {
+        const msg = data?.error?.message || "OpenAI request failed";
+        return respond(500, { error: msg });
+      }
+
+      const raw = data.choices?.[0]?.message?.content || "{}";
+      const parsed = JSON.parse(raw);
+      return respond(200, mapper(parsed));
+    }
 
     if (labelOnly) {
       if (!label) {
