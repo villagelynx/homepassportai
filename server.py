@@ -7,6 +7,7 @@ import json
 import mimetypes
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -179,6 +180,162 @@ def resolve_port() -> int:
         return int(port_env)
     return 8080
 
+
+def parse_admin_emails(raw: str) -> list[str]:
+    return [email.strip().lower() for email in raw.split(",") if email.strip()]
+
+
+def supabase_request(
+    url: str,
+    *,
+    api_key: str,
+    method: str = "GET",
+    body: dict[str, Any] | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> tuple[int, dict[str, str], bytes]:
+    headers = {
+        "apikey": api_key,
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    if extra_headers:
+        headers.update(extra_headers)
+    data = json.dumps(body).encode("utf-8") if body is not None else None
+    req = Request(url, data=data, headers=headers, method=method)
+    try:
+        with urlopen(req, timeout=15) as res:
+            return res.status, dict(res.headers.items()), res.read()
+    except HTTPError as exc:
+        return exc.code, dict(exc.headers.items()), exc.read()
+
+
+def verify_supabase_user(supabase_url: str, anon_key: str, access_token: str) -> dict[str, Any] | None:
+    req = Request(
+        f"{supabase_url}/auth/v1/user",
+        headers={
+            "apikey": anon_key,
+            "Authorization": f"Bearer {access_token}",
+        },
+        method="GET",
+    )
+    try:
+        with urlopen(req, timeout=15) as res:
+            return json.loads(res.read().decode("utf-8"))
+    except HTTPError:
+        return None
+
+
+def list_supabase_users(supabase_url: str, service_key: str) -> list[dict[str, Any]]:
+    users: list[dict[str, Any]] = []
+    page = 1
+    while True:
+        status, _, raw = supabase_request(
+            f"{supabase_url}/auth/v1/admin/users?page={page}&per_page=1000",
+            api_key=service_key,
+        )
+        if status != 200:
+            raise RuntimeError(f"Failed to list users ({status}): {raw.decode('utf-8', errors='replace')}")
+        data = json.loads(raw.decode("utf-8"))
+        batch = data.get("users") or []
+        users.extend(batch)
+        if len(batch) < 1000:
+            break
+        page += 1
+    return users
+
+
+def fetch_inventory_stats(supabase_url: str, service_key: str) -> dict[str, Any]:
+    status, headers, raw = supabase_request(
+        f"{supabase_url}/rest/v1/rpc/admin_inventory_stats",
+        api_key=service_key,
+        method="POST",
+        body={},
+    )
+    if status == 200:
+        data = json.loads(raw.decode("utf-8"))
+        return {
+            "totalItems": int(data.get("total_items") or 0),
+            "usersWithInventory": int(data.get("users_with_inventory") or 0),
+        }
+
+    status, headers, _ = supabase_request(
+        f"{supabase_url}/rest/v1/appliances?select=id",
+        api_key=service_key,
+        method="HEAD",
+        extra_headers={"Prefer": "count=exact"},
+    )
+    content_range = headers.get("Content-Range") or headers.get("content-range") or ""
+    total_items = int(content_range.split("/")[-1]) if "/" in content_range else 0
+    return {"totalItems": total_items, "usersWithInventory": None}
+
+
+def compute_user_stats(users: list[dict[str, Any]]) -> dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    seven_days_ago = now - timedelta(days=7)
+    thirty_days_ago = now - timedelta(days=30)
+    signups_last_7 = 0
+    signups_last_30 = 0
+    by_date: dict[str, int] = {}
+
+    for user in users:
+        created_raw = user.get("created_at") or ""
+        try:
+            created = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if created >= seven_days_ago:
+            signups_last_7 += 1
+        if created >= thirty_days_ago:
+            signups_last_30 += 1
+        date_key = created_raw[:10]
+        if date_key:
+            by_date[date_key] = by_date.get(date_key, 0) + 1
+
+    recent_signups = [
+        {"date": date, "count": count}
+        for date, count in sorted(by_date.items(), reverse=True)[:14]
+    ]
+
+    return {
+        "totalUsers": len(users),
+        "signupsLast7Days": signups_last_7,
+        "signupsLast30Days": signups_last_30,
+        "recentSignups": recent_signups,
+    }
+
+
+def build_admin_stats(access_token: str) -> tuple[int, dict[str, Any]]:
+    supabase_url = (os.environ.get("SUPABASE_URL") or "").strip()
+    anon_key = (os.environ.get("SUPABASE_ANON_KEY") or "").strip()
+    service_key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
+    admin_emails = parse_admin_emails(os.environ.get("ADMIN_EMAILS") or "")
+
+    if not supabase_url or not anon_key or not service_key:
+        return 503, {"error": "Admin stats are not configured on the server."}
+    if not admin_emails:
+        return 503, {"error": "ADMIN_EMAILS is not configured."}
+    if not access_token:
+        return 401, {"error": "Sign in required."}
+
+    user = verify_supabase_user(supabase_url, anon_key, access_token)
+    email = str((user or {}).get("email") or "").strip().lower()
+    if not email:
+        return 401, {"error": "Invalid or expired session."}
+    if email not in admin_emails:
+        return 403, {"error": "Admin access required."}
+
+    users = list_supabase_users(supabase_url, service_key)
+    inventory = fetch_inventory_stats(supabase_url, service_key)
+    stats = compute_user_stats(users)
+
+    return 200, {
+        "ok": True,
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "adminEmail": email,
+        **stats,
+        "totalInventoryItems": inventory["totalItems"],
+        "usersWithInventory": inventory["usersWithInventory"],
+    }
 
 
 def verify_openai_key(api_key: str) -> dict[str, Any]:
@@ -563,7 +720,7 @@ class Handler(BaseHTTPRequestHandler):
     def end_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-OpenAI-Api-Key")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-OpenAI-Api-Key, Authorization")
         self.send_header("X-HomePassportAI", "1")
         super().end_headers()
 
@@ -588,6 +745,16 @@ class Handler(BaseHTTPRequestHandler):
                     "port": resolve_port(),
                 },
             )
+            return
+        if path == "/api/admin/stats":
+            auth_header = self.headers.get("Authorization") or ""
+            access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+            try:
+                code, payload = build_admin_stats(access_token)
+                self._json(code, payload)
+            except Exception as exc:
+                print(f"Admin stats error: {exc}", file=sys.stderr)
+                self._json(500, {"error": str(exc)})
             return
         if path in ("", "/"):
             self._send_file("index.html")

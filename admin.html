@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Admin — HomePassportAI</title>
+    <link rel="icon" href="./icons/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="stylesheet" href="./css/app.css?v=100" />
+  </head>
+  <body class="admin-page">
+    <main class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <p class="admin-header__eyebrow">HomePassportAI</p>
+          <h1 class="admin-header__title">Admin dashboard</h1>
+        </div>
+        <a class="linkish admin-header__back" href="./">← Back to app</a>
+      </header>
+
+      <section id="admin-config-missing" class="admin-card admin-card--warning" hidden>
+        <h2>Cloud sync not configured</h2>
+        <p class="settings-note">Supabase credentials are required for the admin dashboard.</p>
+      </section>
+
+      <section id="admin-signin" class="admin-card" hidden>
+        <h2>Sign in</h2>
+        <p class="settings-note">Use an admin account listed in <code>ADMIN_EMAILS</code>.</p>
+        <form id="admin-signin-form" class="form">
+          <label>
+            <span>Email</span>
+            <input type="email" id="admin-email" class="input" autocomplete="email" required />
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" id="admin-password" class="input" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="btn btn--primary btn--block" id="btn-admin-signin">Sign in</button>
+        </form>
+        <p id="admin-signin-error" class="admin-error" hidden></p>
+      </section>
+
+      <section id="admin-dashboard" class="admin-dashboard" hidden>
+        <div class="admin-toolbar">
+          <p class="settings-note" id="admin-signed-in-as"></p>
+          <div class="admin-toolbar__actions">
+            <button type="button" class="btn btn--secondary" id="btn-admin-refresh">Refresh</button>
+            <button type="button" class="btn btn--ghost" id="btn-admin-signout">Sign out</button>
+          </div>
+        </div>
+
+        <p id="admin-stats-error" class="admin-error" hidden></p>
+        <p id="admin-stats-loading" class="settings-note">Loading stats…</p>
+
+        <div id="admin-stats-grid" class="admin-stats-grid" hidden>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__label">Registered users</p>
+            <p class="admin-stat-card__value" id="stat-total-users">—</p>
+          </article>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__label">Signups (7 days)</p>
+            <p class="admin-stat-card__value" id="stat-signups-7">—</p>
+          </article>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__label">Signups (30 days)</p>
+            <p class="admin-stat-card__value" id="stat-signups-30">—</p>
+          </article>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__label">Users with inventory</p>
+            <p class="admin-stat-card__value" id="stat-users-inventory">—</p>
+          </article>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__label">Total inventory items</p>
+            <p class="admin-stat-card__value" id="stat-total-items">—</p>
+          </article>
+        </div>
+
+        <section id="admin-recent-signups" class="admin-card" hidden>
+          <h2>Recent signups by day</h2>
+          <div id="admin-recent-signups-list" class="admin-recent-list"></div>
+        </section>
+
+        <p id="admin-generated-at" class="settings-note admin-generated-at" hidden></p>
+      </section>
+    </main>
+
+    <script type="module" src="./js/admin.js?v=1"></script>
+  </body>
+</html>

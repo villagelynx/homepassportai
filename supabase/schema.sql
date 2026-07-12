@@ -95,3 +95,16 @@ create policy "Users delete own photos"
     bucket_id = 'appliance-photos'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- Admin inventory aggregates (called server-side with service role only)
+create or replace function admin_inventory_stats()
+returns json
+language sql
+security definer
+set search_path = public
+as $$
+  select json_build_object(
+    'total_items', (select count(*)::int from appliances),
+    'users_with_inventory', (select count(distinct user_id)::int from appliances)
+  );
+$$;
