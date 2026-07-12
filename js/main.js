@@ -181,6 +181,8 @@ const els = {
   btnSignOut: document.getElementById("btn-sign-out"),
   btnGoSignIn: document.getElementById("btn-go-sign-in"),
   btnRefreshVersion: document.getElementById("btn-refresh-version"),
+  btnShowLanding: document.getElementById("btn-show-landing"),
+  btnLandingBackApp: document.getElementById("btn-landing-back-app"),
   settingsInstall: document.getElementById("settings-install"),
   settingsInstallNote: document.getElementById("settings-install-note"),
   settingsInstallSteps: document.getElementById("settings-install-steps"),
@@ -533,6 +535,14 @@ function init() {
   });
   els.btnGoSignIn?.addEventListener("click", () => showAuth("signin"));
   els.btnRefreshVersion?.addEventListener("click", () => refreshToLatestVersion());
+  els.btnShowLanding?.addEventListener("click", () => {
+    els.btnLandingBackApp?.removeAttribute("hidden");
+    showView("landing");
+  });
+  els.btnLandingBackApp?.addEventListener("click", () => {
+    els.btnLandingBackApp?.setAttribute("hidden", "");
+    showView("home");
+  });
   els.btnLandingSignIn?.addEventListener("click", () => showAuth("signin"));
   els.btnLandingRegister?.addEventListener("click", () => showAuth("signup"));
   els.btnLandingHeaderSignIn?.addEventListener("click", () => showAuth("signin"));
@@ -1192,6 +1202,9 @@ function showView(name) {
   const app = document.getElementById("app");
   app?.classList.toggle("app--landing", name === "landing");
   app?.classList.toggle("app--home-tabbar", name === "home");
+  if (name !== "landing") {
+    els.btnLandingBackApp?.setAttribute("hidden", "");
+  }
 }
 
 function resetScan() {
