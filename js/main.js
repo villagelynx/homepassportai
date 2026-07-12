@@ -73,6 +73,7 @@ const els = {
   roomFilterChips: document.getElementById("room-filter-chips"),
   emptyState: document.getElementById("empty-state"),
   searchNoResults: document.getElementById("search-no-results"),
+  homeItemMeta: document.getElementById("home-item-meta"),
   apiSetupBanner: document.getElementById("api-setup-banner"),
   btnSyncStatus: document.getElementById("btn-sync-status"),
   btnGuide: document.getElementById("btn-guide"),
@@ -1618,6 +1619,8 @@ async function renderHome() {
   const chipsEnabled = loadRoomChipsEnabled();
   const hasInventory = list.length > 0;
 
+  updateHomeHeroMeta(list.length);
+
   if (els.homeSearch) {
     els.homeSearch.hidden = !hasInventory;
   }
@@ -1699,6 +1702,14 @@ async function renderHome() {
   }
 
   void updateApiSetupBanner();
+}
+
+function updateHomeHeroMeta(itemCount) {
+  if (!els.homeItemMeta) return;
+  const label = itemCount === 1 ? "1 Item" : `${itemCount} Items`;
+  const status =
+    itemCount === 0 ? "Start scanning to build your inventory" : "All Up to Date";
+  els.homeItemMeta.textContent = `${label} • ${status}`;
 }
 
 /** @param {import("./storage.js").ApplianceRecord} item @param {string} query */
