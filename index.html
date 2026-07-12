@@ -1170,16 +1170,16 @@
           <div class="capture-layout">
             <div class="capture-layout__photo">
               <input type="file" id="input-detail-label-photo" accept="image/*" capture="environment" hidden />
+              <div class="capture-card__toolbar" id="toolbar-detail-label" hidden>
+                <label class="btn btn--secondary capture-toolbar-btn" for="input-detail-label-photo" id="label-detail-label-retake">Retake label photo</label>
+                <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-clear-detail-label-photo">Clear &amp; retake</button>
+              </div>
               <div id="preview-detail-label-photo" class="capture-card__preview capture-card__preview--empty">
                 <span>No photo yet</span>
               </div>
               <label class="btn btn--primary btn--block capture-btn" for="input-detail-label-photo" id="label-detail-label-photo">Take label photo</label>
             </div>
             <div class="capture-layout__side">
-              <div class="capture-card__toolbar capture-card__toolbar--side" id="toolbar-detail-label" hidden>
-                <label class="btn btn--secondary capture-toolbar-btn" for="input-detail-label-photo" id="label-detail-label-retake">Retake label photo</label>
-                <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-clear-detail-label-photo">Clear &amp; retake</button>
-              </div>
               <div id="detail-label-review" class="detail-label-review" hidden>
                 <p id="detail-label-analyze-status" class="hint" hidden>Analyzing label…</p>
                 <form id="detail-label-review-form" class="form">
