@@ -145,6 +145,7 @@ const els = {
   labelReceiptPhoto: document.getElementById("label-receipt-photo"),
   inputReceipt: document.getElementById("input-receipt-photo"),
   btnAnalyze: document.getElementById("btn-analyze"),
+  btnManualReview: document.getElementById("btn-manual-review"),
   btnSkipReceipt: document.getElementById("btn-skip-receipt"),
   btnSkipLabel: document.getElementById("btn-skip-label"),
   labelHintText: document.getElementById("label-hint-text"),
@@ -354,12 +355,29 @@ const detailLabelPending = {
   suggestions: null,
 };
 
-/** Secure contexts only (HTTPS / localhost). HTTP on iPhone needs a fallback. */
+/** Valid UUID even on iPhone HTTP (192.168.x.x is not a secure context — no crypto.randomUUID). */
 function newRecordId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
+    try {
+      return crypto.randomUUID();
+    } catch {
+      // Fall through — some WebViews throw even when the function exists.
+    }
   }
-  return `hp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  // Last resort: still UUID-shaped so Postgres `uuid` columns accept it.
+  const s = () =>
+    Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .slice(1);
+  return `${s()}${s()}-${s()}-4${s().slice(1)}-a${s().slice(1)}-${s()}${s()}${s()}`;
 }
 
 function setBuildTagText(suffix = "") {
@@ -564,6 +582,7 @@ function init() {
     toast("Photos cleared — start over");
   });
   els.btnAnalyze?.addEventListener("click", () => void runAnalysis());
+  els.btnManualReview?.addEventListener("click", () => void openManualReview());
   els.reviewForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     void saveRecord();
@@ -1584,26 +1603,85 @@ function setPreview(container, dataUrl) {
 async function onAppliancePhoto() {
   const file = els.inputAppliance?.files?.[0];
   if (!file) return;
-  scan.appliancePhotoDataUrl = await readFileAsDataUrl(file);
-  setPreview(els.previewAppliance, scan.appliancePhotoDataUrl);
-  if (els.btnToStep2) els.btnToStep2.disabled = false;
-  updateCaptureButtons();
+  try {
+    scan.appliancePhotoDataUrl = await readAndCompressPhoto(file, { maxEdge: 1280, quality: 0.78 });
+    setPreview(els.previewAppliance, scan.appliancePhotoDataUrl);
+    if (els.btnToStep2) els.btnToStep2.disabled = false;
+    updateCaptureButtons();
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not read photo");
+  }
 }
 
 async function onLabelPhoto() {
   const file = els.inputLabel?.files?.[0];
   if (!file) return;
-  scan.labelPhotoDataUrl = await readFileAsDataUrl(file);
-  setPreview(els.previewLabel, scan.labelPhotoDataUrl);
-  updateCaptureButtons();
+  try {
+    scan.labelPhotoDataUrl = await readAndCompressPhoto(file, { maxEdge: 1280, quality: 0.78 });
+    setPreview(els.previewLabel, scan.labelPhotoDataUrl);
+    updateCaptureButtons();
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not read photo");
+  }
 }
 
 async function onReceiptPhoto() {
   const file = els.inputReceipt?.files?.[0];
   if (!file) return;
-  scan.receiptPhotoDataUrl = await readFileAsDataUrl(file);
-  setPreview(els.previewReceipt, scan.receiptPhotoDataUrl);
-  updateCaptureButtons();
+  try {
+    scan.receiptPhotoDataUrl = await readAndCompressPhoto(file, { maxEdge: 1280, quality: 0.78 });
+    setPreview(els.previewReceipt, scan.receiptPhotoDataUrl);
+    updateCaptureButtons();
+  } catch (err) {
+    toast(err instanceof Error ? err.message : "Could not read photo");
+  }
+}
+
+/** @param {File} file @param {{ maxEdge?: number, quality?: number }} [opts] */
+async function readAndCompressPhoto(file, opts = {}) {
+  const raw = await readFileAsDataUrl(file);
+  try {
+    return await compressDataUrl(raw, opts);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error
+        ? err.message
+        : "Could not process photo — take a new photo with the camera (avoid HEIC from Files)",
+    );
+  }
+}
+
+function populateReviewPhotos() {
+  if (!els.reviewPhotos) return;
+  els.reviewPhotos.innerHTML = "";
+  const photos = [["Photo", scan.appliancePhotoDataUrl]];
+  if (scan.labelPhotoDataUrl) photos.push(["Label / signature", scan.labelPhotoDataUrl]);
+  if (scan.receiptPhotoDataUrl) photos.push(["Receipt", scan.receiptPhotoDataUrl]);
+  for (const [label, url] of photos) {
+    if (!url) continue;
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = label;
+    els.reviewPhotos.append(img);
+  }
+}
+
+async function openManualReview() {
+  if (!scan.appliancePhotoDataUrl) {
+    toast("Take a photo first");
+    showView("scan1");
+    return;
+  }
+
+  if (!els.fieldNickname?.value.trim()) els.fieldNickname.value = "Painting";
+  if (!els.fieldType?.value.trim()) els.fieldType.value = "Painting";
+  if (els.confidenceNote) {
+    els.confidenceNote.hidden = false;
+    els.confidenceNote.textContent =
+      "Manual entry — fill in artist, title, and room, then save. AI analysis is optional.";
+  }
+  populateReviewPhotos();
+  showView("review");
 }
 
 async function runAnalysis() {
@@ -1673,23 +1751,7 @@ async function runAnalysis() {
       }
     }
 
-    if (els.reviewPhotos) {
-      els.reviewPhotos.innerHTML = "";
-      const photos = [["Appliance", scan.appliancePhotoDataUrl]];
-      if (scan.labelPhotoDataUrl) {
-        photos.push(["Label", scan.labelPhotoDataUrl]);
-      }
-      if (scan.receiptPhotoDataUrl) {
-        photos.push(["Receipt", scan.receiptPhotoDataUrl]);
-      }
-      for (const [label, url] of photos) {
-        const img = document.createElement("img");
-        img.src = url;
-        img.alt = label;
-        els.reviewPhotos.append(img);
-      }
-    }
-
+    populateReviewPhotos();
     showView("review");
   } catch (err) {
     toast(err instanceof Error ? err.message : "Analysis failed");
@@ -1702,7 +1764,11 @@ async function runAnalysis() {
 }
 
 async function saveRecord() {
-  if (!scan.appliancePhotoDataUrl) return;
+  if (!scan.appliancePhotoDataUrl) {
+    toast("Take a photo first");
+    return;
+  }
+  if (!requireCloudSave()) return;
 
   const submitBtn = els.reviewForm?.querySelector('button[type="submit"]');
   if (submitBtn instanceof HTMLButtonElement) {
@@ -1711,10 +1777,15 @@ async function saveRecord() {
   }
 
   try {
-    const appliancePhoto = await compressDataUrl(scan.appliancePhotoDataUrl);
-    const labelPhoto = scan.labelPhotoDataUrl ? await compressDataUrl(scan.labelPhotoDataUrl) : null;
+    const appliancePhoto = await compressDataUrl(scan.appliancePhotoDataUrl, {
+      maxEdge: 1200,
+      quality: 0.8,
+    });
+    const labelPhoto = scan.labelPhotoDataUrl
+      ? await compressDataUrl(scan.labelPhotoDataUrl, { maxEdge: 1200, quality: 0.8 })
+      : null;
     const receiptPhoto = scan.receiptPhotoDataUrl
-      ? await compressDataUrl(scan.receiptPhotoDataUrl)
+      ? await compressDataUrl(scan.receiptPhotoDataUrl, { maxEdge: 1200, quality: 0.8 })
       : null;
 
     const type = els.fieldType.value.trim();
@@ -1722,7 +1793,7 @@ async function saveRecord() {
     const room = els.fieldRoom.value;
     const defaultName =
       [brand, type].filter(Boolean).join(" ").trim() ||
-      (room !== "Other" ? `${room} appliance` : "Appliance");
+      (room !== "Other" ? `${room} item` : "Item");
 
     const record = {
       id: newRecordId(),
@@ -1751,7 +1822,14 @@ async function saveRecord() {
     showView("home");
     toast(`Saved “${record.nickname}”`);
   } catch (err) {
-    toast(err instanceof Error ? err.message : "Could not save");
+    console.error(err);
+    const msg =
+      err instanceof Error
+        ? err.message
+        : typeof err === "object" && err && "message" in err
+          ? String(/** @type {{ message?: unknown }} */ (err).message || "")
+          : "";
+    toast(msg || "Could not save — check your connection and try again");
   } finally {
     if (submitBtn instanceof HTMLButtonElement) {
       submitBtn.disabled = false;
@@ -2099,7 +2177,7 @@ async function saveDocumentRecord() {
 
     /** @type {import("./document-storage.js").DocumentRecord} */
     const record = {
-      id: crypto.randomUUID(),
+      id: newRecordId(),
       type: documentScan.type,
       nickname: "",
       photoDataUrl: photo,
