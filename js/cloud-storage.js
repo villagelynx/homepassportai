@@ -9,12 +9,33 @@ const BUCKET = "appliance-photos";
 
 /** @param {string} dataUrl */
 function dataUrlToBlob(dataUrl) {
+  if (!dataUrl || !dataUrl.includes(",")) {
+    throw new Error("Photo data is missing — retake the photo and try again.");
+  }
   const [meta, b64] = dataUrl.split(",");
+  if (!b64) throw new Error("Photo data is incomplete — retake the photo and try again.");
   const mime = /data:(.*?);/.exec(meta)?.[1] || "image/jpeg";
-  const bin = atob(b64);
-  const bytes = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-  return new Blob([bytes], { type: mime });
+  try {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime.startsWith("image/") ? "image/jpeg" : mime });
+  } catch {
+    throw new Error("Could not prepare photo for upload — try a smaller photo.");
+  }
+}
+
+/** @param {unknown} err @param {string} fallback */
+function cloudErrorMessage(err, fallback) {
+  if (!err) return fallback;
+  if (typeof err === "string" && err.trim()) return err;
+  if (err instanceof Error && err.message) return err.message;
+  if (typeof err === "object") {
+    const o = /** @type {Record<string, unknown>} */ (err);
+    const msg = o.message || o.error_description || o.error || o.msg;
+    if (typeof msg === "string" && msg.trim()) return msg;
+  }
+  return fallback;
 }
 
 /** @param {string | null | undefined} path */
@@ -69,13 +90,14 @@ async function rowToRecord(row) {
 async function uploadPhoto(userId, applianceId, name, dataUrl) {
   const supabase = await getSupabase();
   if (!supabase) throw new Error("Cloud sync is not configured.");
+  if (!dataUrl) throw new Error(`Missing ${name} photo — retake and try again.`);
   const path = `${userId}/${applianceId}/${name}.jpg`;
   const blob = dataUrlToBlob(dataUrl);
   const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
     upsert: true,
     contentType: "image/jpeg",
   });
-  if (error) throw error;
+  if (error) throw new Error(cloudErrorMessage(error, `Could not upload ${name} photo.`));
   return path;
 }
 
@@ -110,14 +132,24 @@ export async function addCloudAppliance(record) {
   const session = getSession();
   const userId = session?.user?.id;
   if (!supabase || !userId) throw new Error("Sign in to save to the cloud.");
+  if (!record?.appliancePhotoDataUrl) {
+    throw new Error("Photo is required to save this item.");
+  }
 
-  const appliancePath = await uploadPhoto(userId, record.id, "appliance", record.appliancePhotoDataUrl);
-  const labelPath = record.labelPhotoDataUrl
-    ? await uploadPhoto(userId, record.id, "label", record.labelPhotoDataUrl)
-    : null;
-  const receiptPath = record.receiptPhotoDataUrl
-    ? await uploadPhoto(userId, record.id, "receipt", record.receiptPhotoDataUrl)
-    : null;
+  let appliancePath;
+  let labelPath = null;
+  let receiptPath = null;
+  try {
+    appliancePath = await uploadPhoto(userId, record.id, "appliance", record.appliancePhotoDataUrl);
+    labelPath = record.labelPhotoDataUrl
+      ? await uploadPhoto(userId, record.id, "label", record.labelPhotoDataUrl)
+      : null;
+    receiptPath = record.receiptPhotoDataUrl
+      ? await uploadPhoto(userId, record.id, "receipt", record.receiptPhotoDataUrl)
+      : null;
+  } catch (err) {
+    throw new Error(cloudErrorMessage(err, "Could not upload photos. Check your connection and try again."));
+  }
 
   const { error } = await supabase.from("appliances").insert({
     id: record.id,
@@ -140,8 +172,25 @@ export async function addCloudAppliance(record) {
     scanned_at: record.scannedAt,
   });
 
-  if (error) throw error;
-  return getCloudAppliance(record.id);
+  if (error) throw new Error(cloudErrorMessage(error, "Could not save item to the cloud."));
+
+  try {
+    const saved = await getCloudAppliance(record.id);
+    if (saved) return saved;
+  } catch {
+    // Insert succeeded — return local record so save still completes.
+  }
+
+  return {
+    ...record,
+    labelPhotoDataUrl: record.labelPhotoDataUrl ?? null,
+    receiptPhotoDataUrl: record.receiptPhotoDataUrl ?? null,
+    _photoPaths: {
+      appliance: appliancePath,
+      label: labelPath || undefined,
+      receipt: receiptPath || undefined,
+    },
+  };
 }
 
 /** @param {string} id @param {Partial<ApplianceRecord>} updates */
