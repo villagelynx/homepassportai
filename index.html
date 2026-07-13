@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=99" />
+    <link rel="stylesheet" href="./css/app.css?v=100" />
   </head>
   <body>
     <div id="app" class="app">
@@ -640,7 +640,7 @@
           </p>
         </div>
         <div class="capture-card">
-          <input type="file" id="input-room-video" accept="video/*" capture="environment" hidden />
+          <input type="file" id="input-room-video" class="capture-file-input" accept="video/*" capture="environment" />
           <div class="capture-card__toolbar" id="toolbar-room-video" hidden>
             <label class="btn btn--secondary capture-toolbar-btn" for="input-room-video" id="label-room-video-retake">Re-record room video</label>
             <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-clear-room-video">Clear &amp; re-record</button>
@@ -692,7 +692,7 @@
           </p>
         </div>
         <div class="capture-card">
-          <input type="file" id="input-appliance-photo" accept="image/*" capture="environment" hidden />
+          <input type="file" id="input-appliance-photo" class="capture-file-input" accept="image/*" capture="environment" />
           <div class="capture-card__toolbar" id="toolbar-appliance" hidden>
             <label class="btn btn--secondary capture-toolbar-btn" for="input-appliance-photo" id="label-appliance-retake">Retake appliance photo</label>
             <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-appliance">Clear &amp; retake</button>
@@ -720,7 +720,7 @@
           <p id="label-hint-text">After your appliance photo, we’ll show where the label is usually located.</p>
         </aside>
         <div class="capture-card">
-          <input type="file" id="input-label-photo" accept="image/*" capture="environment" hidden />
+          <input type="file" id="input-label-photo" class="capture-file-input" accept="image/*" capture="environment" />
           <div class="capture-card__toolbar" id="toolbar-label" hidden>
             <label class="btn btn--secondary capture-toolbar-btn" for="input-label-photo" id="label-label-retake">Retake label photo</label>
             <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-label">Clear &amp; retake</button>
@@ -743,7 +743,7 @@
           <p class="step-header__lede">Snap the receipt if you have it — handy for warranty and repair. You can skip this step.</p>
         </div>
         <div class="capture-card">
-          <input type="file" id="input-receipt-photo" accept="image/*" capture="environment" hidden />
+          <input type="file" id="input-receipt-photo" class="capture-file-input" accept="image/*" capture="environment" />
           <div class="capture-card__toolbar" id="toolbar-receipt" hidden>
             <label class="btn btn--secondary capture-toolbar-btn" for="input-receipt-photo" id="label-receipt-retake">Retake receipt photo</label>
             <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-receipt">Clear &amp; retake</button>
@@ -824,7 +824,7 @@
           <p id="scan-doc-lede" class="step-header__lede">Take a clear photo of the document.</p>
         </div>
         <div class="capture-card">
-          <input type="file" id="input-doc-photo" accept="image/*" capture="environment" hidden />
+          <input type="file" id="input-doc-photo" class="capture-file-input" accept="image/*" capture="environment" />
           <div class="capture-card__toolbar" id="toolbar-doc-photo" hidden>
             <label class="btn btn--secondary capture-toolbar-btn" for="input-doc-photo" id="label-doc-retake">Retake document photo</label>
             <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-retake-doc-photo">Clear &amp; retake</button>
@@ -1174,7 +1174,7 @@
           </p>
           <div class="capture-layout">
             <div class="capture-layout__photo">
-              <input type="file" id="input-detail-label-photo" accept="image/*" capture="environment" hidden />
+              <input type="file" id="input-detail-label-photo" class="capture-file-input" accept="image/*" capture="environment" />
               <div class="capture-card__toolbar" id="toolbar-detail-label" hidden>
                 <label class="btn btn--secondary capture-toolbar-btn" for="input-detail-label-photo" id="label-detail-label-retake">Retake label photo</label>
                 <button type="button" class="btn btn--secondary capture-toolbar-btn" id="btn-clear-detail-label-photo">Clear &amp; retake</button>
