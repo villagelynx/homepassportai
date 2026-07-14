@@ -2819,6 +2819,26 @@ body {
   color: #2d8a45;
 }
 
+.reports-action-card__icon--assessment {
+  background: #fff4e5;
+  color: #d97706;
+}
+
+.reports-action-card__icon--deferment {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.reports-action-card__icon--utilities {
+  background: #e0f7fa;
+  color: #0891b2;
+}
+
+.reports-action-card__icon--map {
+  background: #eef2f6;
+  color: #475569;
+}
+
 .reports-action-card__title {
   font-size: 0.95rem;
   font-weight: 600;

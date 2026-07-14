@@ -345,7 +345,7 @@ export async function generateFacebookMarketplaceListing(item, photos) {
   return /** @type {MarketplaceListingResult} */ (data);
 }
 
-/** @param {"insurancePolicy" | "propertyTax"} type @param {string} documentPhotoDataUrl */
+/** @param {import("./document-types.js").DocumentType} type @param {string} documentPhotoDataUrl */
 export async function analyzeDocumentPhoto(type, documentPhotoDataUrl) {
   /** @type {Record<string, string>} */
   const headers = userApiKeyHeaders();

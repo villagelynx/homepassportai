@@ -100,6 +100,46 @@ Return JSON only with these keys (use empty string if not visible):
 
 Read carefully. Do not invent values. If not a property tax document, use empty strings and low confidence."""
 
+ANALYZE_PROPERTY_ASSESSMENT_PROMPT = """You analyze a photo of a property assessment notice, valuation statement, or assessor appraisal for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority, parcel_number, property_address, tax_year, assessed_value
+- tax_amount (land/improvement split if shown), due_dates, exemptions
+- nickname: short friendly label like "County Assessment 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values."""
+
+ANALYZE_PROPERTY_TAX_DEFERMENT_PROMPT = """You analyze a photo of a property tax deferment / deferral approval or notice for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority, parcel_number, property_address, tax_year, assessed_value
+- tax_amount (amount deferred), due_dates, exemptions (program/status)
+- nickname: short friendly label like "Senior Tax Deferment 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values."""
+
+ANALYZE_TAX_UTILITIES_PROMPT = """You analyze a photo of a utility tax statement or utilities bill for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority, parcel_number (or account #), property_address, tax_year
+- assessed_value, tax_amount, due_dates, exemptions
+- nickname: short friendly label like "Utilities Bill March 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values."""
+
+ANALYZE_PROPERTY_MAP_PROMPT = """You analyze a photo of a property parcel map, plat map, or assessor map for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority (source/county), parcel_number, property_address, tax_year
+- assessed_value (map/page reference), tax_amount (lot size if shown), due_dates, exemptions (legal description notes)
+- nickname: short friendly label like "Parcel Map Lot 12"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values."""
+
 ANALYZE_FACEBOOK_MARKETPLACE_PROMPT = """You help a homeowner create a Facebook Marketplace listing to sell a household item they inventoried in a home app.
 
 You receive item details (type, brand, model, color, dimensions, estimated values) and one or more photos: main item photo, optional label/serial close-up, optional purchase receipt.
@@ -118,7 +158,14 @@ Return JSON only with these keys:
 
 Do not invent model numbers or features not supported by the item data or photos. If a receipt photo is provided, you may note original purchase receipt is available."""
 
-DOCUMENT_MODES = {"insurancePolicy", "propertyTax"}
+DOCUMENT_MODES = {
+    "insurancePolicy",
+    "propertyTax",
+    "propertyAssessment",
+    "propertyTaxDeferment",
+    "taxUtilities",
+    "propertyMap",
+}
 
 ROOM_PROMPT = """You analyze still frames from a ~60 second smartphone video of a home room for an inventory app.
 
@@ -513,6 +560,20 @@ def map_facebook_marketplace_response(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def document_prompt_for_mode(mode: str) -> str:
+    if mode == "insurancePolicy":
+        return ANALYZE_INSURANCE_POLICY_PROMPT
+    if mode == "propertyAssessment":
+        return ANALYZE_PROPERTY_ASSESSMENT_PROMPT
+    if mode == "propertyTaxDeferment":
+        return ANALYZE_PROPERTY_TAX_DEFERMENT_PROMPT
+    if mode == "taxUtilities":
+        return ANALYZE_TAX_UTILITIES_PROMPT
+    if mode == "propertyMap":
+        return ANALYZE_PROPERTY_MAP_PROMPT
+    return ANALYZE_PROPERTY_TAX_PROMPT
+
+
 def analyze_document_with_openai(api_key: str, mode: str, document_data_url: str) -> dict[str, str]:
     if not api_key:
         raise RuntimeError("No OpenAI API key provided.")
@@ -523,11 +584,7 @@ def analyze_document_with_openai(api_key: str, mode: str, document_data_url: str
 
     client = OpenAI(api_key=api_key)
     model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
-    prompt = (
-        ANALYZE_INSURANCE_POLICY_PROMPT
-        if mode == "insurancePolicy"
-        else ANALYZE_PROPERTY_TAX_PROMPT
-    )
+    prompt = document_prompt_for_mode(mode)
     content: list[dict[str, Any]] = [
         {"type": "text", "text": prompt},
         {"type": "image_url", "image_url": {"url": document_data_url}},

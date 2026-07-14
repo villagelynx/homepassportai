@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=100" />
+    <link rel="stylesheet" href="./css/app.css?v=101" />
   </head>
   <body>
     <div id="app" class="app">
@@ -431,11 +431,39 @@
                   <span class="reports-action-card__title">Property tax bill</span>
                   <span class="reports-action-card__sub">Assessed value, amount due</span>
                 </button>
+                <button type="button" class="reports-action-card" id="btn-scan-property-assessment">
+                  <span class="reports-action-card__icon reports-action-card__icon--assessment" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 20V9l8-5 8 5v11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                  </span>
+                  <span class="reports-action-card__title">Property assessment</span>
+                  <span class="reports-action-card__sub">Land &amp; improvement values</span>
+                </button>
+                <button type="button" class="reports-action-card" id="btn-scan-property-tax-deferment">
+                  <span class="reports-action-card__icon reports-action-card__icon--deferment" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v4l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                  </span>
+                  <span class="reports-action-card__title">Property tax deferment</span>
+                  <span class="reports-action-card__sub">Deferral status &amp; amounts</span>
+                </button>
+                <button type="button" class="reports-action-card" id="btn-scan-tax-utilities">
+                  <span class="reports-action-card__icon reports-action-card__icon--utilities" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 10-14h-7l1-6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                  </span>
+                  <span class="reports-action-card__title">Tax utilities</span>
+                  <span class="reports-action-card__sub">Utility tax or utility bills</span>
+                </button>
+                <button type="button" class="reports-action-card" id="btn-scan-property-map">
+                  <span class="reports-action-card__icon reports-action-card__icon--map" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M9 4 3 6.5V20l6-2.5L15 20l6-2.5V4L15 6.5 9 4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 4v13.5M15 6.5V20" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+                  </span>
+                  <span class="reports-action-card__title">Property map</span>
+                  <span class="reports-action-card__sub">Parcel / plat / assessor map</span>
+                </button>
               </div>
             </section>
             <section class="reports-hub__section">
               <h3 class="detail-section-title">Saved documents</h3>
-              <p id="reports-saved-empty" class="settings-note">No saved documents yet. Scan an insurance policy or tax bill above.</p>
+              <p id="reports-saved-empty" class="settings-note">No saved documents yet. Scan a document above to get started.</p>
               <div id="reports-saved-list" class="reports-saved-list" hidden></div>
             </section>
           </div>
@@ -841,6 +869,12 @@
           <label class="btn btn--primary btn--block capture-btn" for="input-doc-photo" id="label-doc-photo">Take document photo</label>
         </div>
         <button type="button" class="btn btn--primary btn--block" id="btn-analyze-doc" disabled>Analyze document</button>
+        <button type="button" class="btn btn--secondary btn--block" id="btn-manual-doc-review" disabled>
+          Enter details manually
+        </button>
+        <p class="settings-note" style="margin-top: 0.65rem">
+          Manual entry saves the photo without AI. Analyze is optional if your API key is set up on this device.
+        </p>
       </main>
 
       <!-- Document review -->
@@ -920,11 +954,11 @@
               <input type="text" id="doc-field-tax-nickname" class="input" placeholder="King County Property Tax 2026" />
             </label>
             <label class="field">
-              <span>Taxing authority</span>
+              <span id="doc-tax-label-authority">Taxing authority</span>
               <input type="text" id="doc-field-taxing-authority" class="input" autocomplete="off" />
             </label>
             <label class="field">
-              <span>Parcel / APN number</span>
+              <span>Parcel / APN / account</span>
               <input type="text" id="doc-field-parcel" class="input" autocomplete="off" />
             </label>
             <label class="field">
@@ -932,23 +966,23 @@
               <input type="text" id="doc-field-tax-address" class="input" autocomplete="off" />
             </label>
             <label class="field">
-              <span>Tax year</span>
+              <span id="doc-tax-label-year">Tax year</span>
               <input type="text" id="doc-field-tax-year" class="input" autocomplete="off" />
             </label>
             <label class="field">
-              <span>Assessed value</span>
+              <span id="doc-tax-label-assessed">Assessed value</span>
               <input type="text" id="doc-field-assessed-value" class="input" autocomplete="off" />
             </label>
             <label class="field">
-              <span>Tax amount</span>
+              <span id="doc-tax-label-amount">Tax amount</span>
               <input type="text" id="doc-field-tax-amount" class="input" autocomplete="off" />
             </label>
             <label class="field">
-              <span>Due date(s)</span>
+              <span id="doc-tax-label-dates">Due date(s)</span>
               <input type="text" id="doc-field-due-dates" class="input" autocomplete="off" />
             </label>
             <label class="field">
-              <span>Exemptions / notes</span>
+              <span id="doc-tax-label-notes">Exemptions / notes</span>
               <input type="text" id="doc-field-exemptions" class="input" autocomplete="off" />
             </label>
           </div>
@@ -1364,6 +1398,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=53"></script>
+    <script type="module" src="./js/main.js?v=55"></script>
   </body>
 </html>

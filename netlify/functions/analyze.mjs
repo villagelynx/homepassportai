@@ -1,15 +1,15 @@
 import {
   ANALYZE_APPLIANCE_ONLY_PROMPT,
   ANALYZE_FACEBOOK_MARKETPLACE_PROMPT,
-  ANALYZE_INSURANCE_POLICY_PROMPT,
   ANALYZE_LABEL_ONLY_PROMPT,
-  ANALYZE_PROPERTY_TAX_PROMPT,
   ANALYZE_PROMPT,
+  documentPromptForMode,
   mapAnalyzeResponse,
   mapFacebookMarketplaceResponse,
   mapInsurancePolicyResponse,
   mapPropertyTaxResponse,
 } from "../../js/analyze-fields.js";
+import { ALL_DOCUMENT_MODES } from "../../js/document-types.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +18,7 @@ const CORS = {
 };
 
 const MAX_BODY_BYTES = 5_500_000;
-const DOCUMENT_MODES = new Set(["insurancePolicy", "propertyTax"]);
+const DOCUMENT_MODES = new Set(ALL_DOCUMENT_MODES);
 const USER_API_KEY_REQUIRED = "OpenAI API key required. Add your own key in Settings.";
 
 /** @param {import("@netlify/functions").HandlerEvent} event */
@@ -133,8 +133,7 @@ export async function handler(event) {
         return respond(401, { error: USER_API_KEY_REQUIRED });
       }
 
-      const prompt =
-        mode === "insurancePolicy" ? ANALYZE_INSURANCE_POLICY_PROMPT : ANALYZE_PROPERTY_TAX_PROMPT;
+      const prompt = documentPromptForMode(mode);
       const mapper =
         mode === "insurancePolicy" ? mapInsurancePolicyResponse : mapPropertyTaxResponse;
 

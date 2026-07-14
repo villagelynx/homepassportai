@@ -1,7 +1,7 @@
 const STORAGE_KEY = "homepassport-ai:documents:v1";
 
 /**
- * @typedef {"insurancePolicy" | "propertyTax"} DocumentType
+ * @typedef {"insurancePolicy" | "propertyTax" | "propertyAssessment" | "propertyTaxDeferment" | "taxUtilities" | "propertyMap"} DocumentType
  */
 
 /**
@@ -40,7 +40,7 @@ const STORAGE_KEY = "homepassport-ai:documents:v1";
  * @property {DocumentType} type
  * @property {string} nickname
  * @property {string} photoDataUrl
- * @property {InsurancePolicyFields | PropertyTaxFields} extracted
+ * @property {InsurancePolicyFields | PropertyTaxFields | Record<string, string>} extracted
  * @property {string} confidence
  * @property {string} scannedAt ISO timestamp
  */

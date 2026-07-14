@@ -22,6 +22,11 @@ import {
 import { analyzeAppliancePhotos, analyzeDocumentPhoto, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, generateFacebookMarketplaceListing, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
 import { addDocument, deleteDocument, loadDocuments } from "./document-storage.js";
+import {
+  documentTypeLabel,
+  getDocumentTypeMeta,
+  isTaxLikeDocument,
+} from "./document-types.js";
 import { generateInsurancePdf } from "./insurance-report.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
@@ -256,6 +261,10 @@ const els = {
   btnReportsInsurancePdf: document.getElementById("btn-reports-insurance-pdf"),
   btnScanInsurancePolicy: document.getElementById("btn-scan-insurance-policy"),
   btnScanPropertyTax: document.getElementById("btn-scan-property-tax"),
+  btnScanPropertyAssessment: document.getElementById("btn-scan-property-assessment"),
+  btnScanPropertyTaxDeferment: document.getElementById("btn-scan-property-tax-deferment"),
+  btnScanTaxUtilities: document.getElementById("btn-scan-tax-utilities"),
+  btnScanPropertyMap: document.getElementById("btn-scan-property-map"),
   reportsSavedEmpty: document.getElementById("reports-saved-empty"),
   reportsSavedList: document.getElementById("reports-saved-list"),
   scanDocTitle: document.getElementById("scan-doc-title"),
@@ -265,6 +274,7 @@ const els = {
   inputDocPhoto: document.getElementById("input-doc-photo"),
   btnRetakeDocPhoto: document.getElementById("btn-retake-doc-photo"),
   btnAnalyzeDoc: document.getElementById("btn-analyze-doc"),
+  btnManualDocReview: document.getElementById("btn-manual-doc-review"),
   reviewDocTitle: document.getElementById("review-doc-title"),
   reviewDocPhoto: document.getElementById("review-doc-photo"),
   reviewDocForm: document.getElementById("review-doc-form"),
@@ -287,6 +297,12 @@ const els = {
   docFieldAgentName: document.getElementById("doc-field-agent-name"),
   docFieldAgentPhone: document.getElementById("doc-field-agent-phone"),
   docFieldTaxNickname: document.getElementById("doc-field-tax-nickname"),
+  docTaxLabelAuthority: document.getElementById("doc-tax-label-authority"),
+  docTaxLabelYear: document.getElementById("doc-tax-label-year"),
+  docTaxLabelAssessed: document.getElementById("doc-tax-label-assessed"),
+  docTaxLabelAmount: document.getElementById("doc-tax-label-amount"),
+  docTaxLabelDates: document.getElementById("doc-tax-label-dates"),
+  docTaxLabelNotes: document.getElementById("doc-tax-label-notes"),
   docFieldTaxingAuthority: document.getElementById("doc-field-taxing-authority"),
   docFieldParcel: document.getElementById("doc-field-parcel"),
   docFieldTaxAddress: document.getElementById("doc-field-tax-address"),
@@ -726,9 +742,16 @@ function init() {
   els.btnReportsInsurancePdf?.addEventListener("click", () => void exportInsuranceReport());
   els.btnScanInsurancePolicy?.addEventListener("click", () => startDocumentScan("insurancePolicy"));
   els.btnScanPropertyTax?.addEventListener("click", () => startDocumentScan("propertyTax"));
+  els.btnScanPropertyAssessment?.addEventListener("click", () => startDocumentScan("propertyAssessment"));
+  els.btnScanPropertyTaxDeferment?.addEventListener("click", () =>
+    startDocumentScan("propertyTaxDeferment"),
+  );
+  els.btnScanTaxUtilities?.addEventListener("click", () => startDocumentScan("taxUtilities"));
+  els.btnScanPropertyMap?.addEventListener("click", () => startDocumentScan("propertyMap"));
   els.inputDocPhoto?.addEventListener("change", () => void onDocumentPhoto());
   els.btnRetakeDocPhoto?.addEventListener("click", () => clearDocumentPhoto());
   els.btnAnalyzeDoc?.addEventListener("click", () => void runDocumentAnalysis());
+  els.btnManualDocReview?.addEventListener("click", () => openManualDocumentReview());
   els.reviewDocForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     void saveDocumentRecord();
@@ -1536,6 +1559,64 @@ function updateDocumentCaptureUi() {
     els.labelDocPhoto.hidden = hasPhoto;
     setCaptureLabelText(els.labelDocPhoto, "Take document photo");
   }
+  if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = !hasPhoto;
+  if (els.btnManualDocReview) els.btnManualDocReview.disabled = !hasPhoto;
+}
+
+function openManualDocumentReview() {
+  if (!documentScan.photoDataUrl || !documentScan.type) {
+    toast("Take a document photo first");
+    return;
+  }
+
+  const meta = getDocumentTypeMeta(documentScan.type);
+  documentScan.analysis = null;
+
+  /** @type {Record<string, string>} */
+  const empty = {
+    nickname: meta.defaultNickname,
+    confidence: "manual",
+  };
+
+  if (documentScan.type === "insurancePolicy") {
+    populateDocumentReviewForm({
+      insurerName: "",
+      policyNumber: "",
+      policyType: "",
+      namedInsureds: "",
+      propertyAddress: "",
+      effectiveDate: "",
+      expirationDate: "",
+      dwellingCoverage: "",
+      personalPropertyCoverage: "",
+      liabilityCoverage: "",
+      deductible: "",
+      annualPremium: "",
+      agentName: "",
+      agentPhone: "",
+      ...empty,
+    });
+  } else {
+    populateDocumentReviewForm({
+      taxingAuthority: "",
+      parcelNumber: "",
+      propertyAddress: "",
+      taxYear: "",
+      assessedValue: "",
+      taxAmount: "",
+      dueDates: "",
+      exemptions: "",
+      ...empty,
+    });
+  }
+
+  if (els.docConfidenceNote) {
+    els.docConfidenceNote.hidden = false;
+    els.docConfidenceNote.textContent =
+      "Manual entry — fill in what you know, then save. AI analysis is optional.";
+  }
+
+  showView("reviewDoc");
 }
 
 function updateRoomVideoCaptureUi() {
@@ -1983,11 +2064,6 @@ function renderReportsHub() {
   }
 }
 
-/** @param {import("./document-storage.js").DocumentType} type */
-function documentTypeLabel(type) {
-  return type === "insurancePolicy" ? "Insurance policy" : "Property tax bill";
-}
-
 /** @param {import("./document-storage.js").DocumentRecord} doc */
 function documentSummaryLine(doc) {
   if (doc.type === "insurancePolicy") {
@@ -2003,29 +2079,19 @@ function documentSummaryLine(doc) {
   const parts = [
     fields.taxingAuthority,
     fields.taxYear ? `Year ${fields.taxYear}` : "",
-    fields.taxAmount ? `Due ${fields.taxAmount}` : "",
+    fields.taxAmount || fields.assessedValue || "",
   ].filter(Boolean);
-  return parts.join(" • ") || "Saved for your records";
+  return parts.join(" • ") || documentTypeLabel(doc.type);
 }
 
 /** @param {import("./document-storage.js").DocumentType} type */
 function startDocumentScan(type) {
   resetDocumentScan();
   documentScan.type = type;
-  if (els.scanDocTitle) {
-    els.scanDocTitle.textContent =
-      type === "insurancePolicy" ? "Insurance policy" : "Property tax bill";
-  }
-  if (els.scanDocLede) {
-    els.scanDocLede.textContent =
-      type === "insurancePolicy"
-        ? "Photograph your declarations page, policy summary, or insurance ID card."
-        : "Photograph your county property tax bill or assessment notice.";
-  }
-  setCaptureLabelText(
-    els.labelDocPhoto,
-    "Take document photo",
-  );
+  const meta = getDocumentTypeMeta(type);
+  if (els.scanDocTitle) els.scanDocTitle.textContent = meta.scanTitle;
+  if (els.scanDocLede) els.scanDocLede.textContent = meta.scanLede;
+  setCaptureLabelText(els.labelDocPhoto, "Take document photo");
   showView("scanDoc");
 }
 
@@ -2035,7 +2101,6 @@ function resetDocumentScan() {
   documentScan.analysis = null;
   setPreview(els.previewDocPhoto, null);
   if (els.inputDocPhoto) els.inputDocPhoto.value = "";
-  if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = true;
   if (els.docConfidenceNote) els.docConfidenceNote.hidden = true;
   updateDocumentCaptureUi();
 }
@@ -2046,7 +2111,6 @@ async function onDocumentPhoto() {
   try {
     documentScan.photoDataUrl = await readFileAsDataUrl(file);
     setPreview(els.previewDocPhoto, documentScan.photoDataUrl);
-    if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = false;
     updateDocumentCaptureUi();
   } catch {
     toast("Could not read photo");
@@ -2057,7 +2121,6 @@ function clearDocumentPhoto() {
   documentScan.photoDataUrl = null;
   if (els.inputDocPhoto) els.inputDocPhoto.value = "";
   setPreview(els.previewDocPhoto, null);
-  if (els.btnAnalyzeDoc) els.btnAnalyzeDoc.disabled = true;
   updateDocumentCaptureUi();
 }
 
@@ -2086,18 +2149,20 @@ async function runDocumentAnalysis() {
       els.btnAnalyzeDoc.disabled = !documentScan.photoDataUrl;
       els.btnAnalyzeDoc.textContent = "Analyze document";
     }
+    if (els.btnManualDocReview) els.btnManualDocReview.disabled = !documentScan.photoDataUrl;
   }
 }
 
 /** @param {Record<string, string>} result */
 function populateDocumentReviewForm(result) {
   const type = documentScan.type;
+  const meta = getDocumentTypeMeta(type || "propertyTax");
   const isInsurance = type === "insurancePolicy";
-  if (els.reviewDocTitle) {
-    els.reviewDocTitle.textContent = isInsurance ? "Confirm policy details" : "Confirm tax bill details";
-  }
+  const taxLike = isTaxLikeDocument(type || "propertyTax");
+
+  if (els.reviewDocTitle) els.reviewDocTitle.textContent = meta.reviewTitle;
   els.reviewDocFieldsInsurance?.toggleAttribute("hidden", !isInsurance);
-  els.reviewDocFieldsTax?.toggleAttribute("hidden", isInsurance);
+  els.reviewDocFieldsTax?.toggleAttribute("hidden", !taxLike);
 
   const locationLabel = locationDisplayLabel(loadLocation());
 
@@ -2123,11 +2188,25 @@ function populateDocumentReviewForm(result) {
     if (els.docFieldPremium) els.docFieldPremium.value = result.annualPremium || "";
     if (els.docFieldAgentName) els.docFieldAgentName.value = result.agentName || "";
     if (els.docFieldAgentPhone) els.docFieldAgentPhone.value = result.agentPhone || "";
-  } else {
+  } else if (taxLike) {
+    const labels = meta.taxLabels;
+    if (labels) {
+      if (els.docTaxLabelAuthority) els.docTaxLabelAuthority.textContent = labels.authority;
+      if (els.docTaxLabelYear) els.docTaxLabelYear.textContent = labels.year;
+      if (els.docTaxLabelAssessed) els.docTaxLabelAssessed.textContent = labels.assessed;
+      if (els.docTaxLabelAmount) els.docTaxLabelAmount.textContent = labels.amount;
+      if (els.docTaxLabelDates) els.docTaxLabelDates.textContent = labels.dates;
+      if (els.docTaxLabelNotes) els.docTaxLabelNotes.textContent = labels.notes;
+      if (els.docFieldTaxNickname instanceof HTMLInputElement) {
+        els.docFieldTaxNickname.placeholder = labels.nicknamePlaceholder;
+      }
+    }
     if (els.docFieldTaxNickname) {
       els.docFieldTaxNickname.value =
         result.nickname ||
-        [result.taxingAuthority, result.taxYear ? `Tax ${result.taxYear}` : ""].filter(Boolean).join(" ");
+        [result.taxingAuthority, result.taxYear ? `${meta.label} ${result.taxYear}` : meta.label]
+          .filter(Boolean)
+          .join(" ");
     }
     if (els.docFieldTaxingAuthority) els.docFieldTaxingAuthority.value = result.taxingAuthority || "";
     if (els.docFieldParcel) els.docFieldParcel.value = result.parcelNumber || "";
@@ -2156,7 +2235,7 @@ function populateDocumentReviewForm(result) {
     els.reviewDocPhoto.innerHTML = "";
     const img = document.createElement("img");
     img.src = documentScan.photoDataUrl;
-    img.alt = isInsurance ? "Insurance policy photo" : "Property tax bill photo";
+    img.alt = `${meta.label} photo`;
     els.reviewDocPhoto.append(img);
   }
 }
@@ -2183,7 +2262,7 @@ async function saveDocumentRecord() {
       nickname: "",
       photoDataUrl: photo,
       extracted: {},
-      confidence: documentScan.analysis?.confidence || "medium",
+      confidence: documentScan.analysis?.confidence || "manual",
       scannedAt: new Date().toISOString(),
     };
 
@@ -2206,7 +2285,8 @@ async function saveDocumentRecord() {
         agentPhone: els.docFieldAgentPhone?.value.trim() || "",
       };
     } else {
-      record.nickname = els.docFieldTaxNickname?.value.trim() || "Property tax bill";
+      const meta = getDocumentTypeMeta(documentScan.type);
+      record.nickname = els.docFieldTaxNickname?.value.trim() || meta.defaultNickname;
       record.extracted = {
         taxingAuthority: els.docFieldTaxingAuthority?.value.trim() || "",
         parcelNumber: els.docFieldParcel?.value.trim() || "",
