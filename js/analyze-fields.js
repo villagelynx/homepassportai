@@ -97,6 +97,89 @@ Return JSON only with these keys (use empty string if not visible):
 
 Read carefully. Do not invent values. If the image is not a property tax document, use empty strings and low confidence.`;
 
+export const ANALYZE_PROPERTY_ASSESSMENT_PROMPT = `You analyze a photo of a property assessment notice, valuation statement, or assessor appraisal for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority: assessor, county, or appraisal district name
+- parcel_number: parcel, APN, or account number
+- property_address: property address on the notice
+- tax_year: assessment or valuation year
+- assessed_value: total assessed or market value with $ if shown
+- tax_amount: land vs improvement values or other value breakdown if shown (otherwise empty)
+- due_dates: notice date, appeal deadline, or effective dates if shown
+- exemptions: property class, exemptions, or valuation notes
+- nickname: short friendly label like "County Assessment 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If the image is not an assessment document, use empty strings and low confidence.`;
+
+export const ANALYZE_PROPERTY_TAX_DEFERMENT_PROMPT = `You analyze a photo of a property tax deferment / deferral approval, renewal, or program notice for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority: program name, county, or agency
+- parcel_number: parcel, APN, or account number
+- property_address: property address on the document
+- tax_year: tax year or program year
+- assessed_value: assessed value if shown
+- tax_amount: amount deferred or balance deferred with $ if shown
+- due_dates: effective dates, renewal dates, or compliance deadlines
+- exemptions: program type (senior, disability, etc.), status, or conditions
+- nickname: short friendly label like "Senior Tax Deferment 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If the image is not a deferment document, use empty strings and low confidence.`;
+
+export const ANALYZE_TAX_UTILITIES_PROMPT = `You analyze a photo of a utility tax statement, municipal utility bill, or utilities tax line item document for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority: utility company or city/county utility department
+- parcel_number: account number or service ID if shown (put account # here when no parcel)
+- property_address: service address
+- tax_year: billing period or year
+- assessed_value: any tax base or meter info if shown (otherwise empty)
+- tax_amount: amount due / total with $ if shown
+- due_dates: due date(s) or billing date
+- exemptions: account notes, late fees, or other remarks
+- nickname: short friendly label like "Utilities Bill March 2026"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If the image is not a utilities/tax utilities document, use empty strings and low confidence.`;
+
+export const ANALYZE_PROPERTY_MAP_PROMPT = `You analyze a photo of a property parcel map, plat map, assessor map, or survey snippet for a home documentation app.
+
+Return JSON only with these keys (use empty string if not visible):
+- taxing_authority: county, city, or map source name
+- parcel_number: parcel, APN, lot, or block identifier
+- property_address: property address if labeled on the map
+- tax_year: map year, edition, or revision year if shown
+- assessed_value: map book/page, sheet number, or reference code if shown
+- tax_amount: lot size, acreage, or dimensions if shown
+- due_dates: recorded date or map date if shown
+- exemptions: legal description excerpt or other map notes
+- nickname: short friendly label like "Parcel Map Lot 12"
+- confidence: "high", "medium", or "low"
+
+Read carefully. Do not invent values. If the image is not a property map, use empty strings and low confidence.`;
+
+/** @param {string} mode */
+export function documentPromptForMode(mode) {
+  switch (mode) {
+    case "insurancePolicy":
+      return ANALYZE_INSURANCE_POLICY_PROMPT;
+    case "propertyAssessment":
+      return ANALYZE_PROPERTY_ASSESSMENT_PROMPT;
+    case "propertyTaxDeferment":
+      return ANALYZE_PROPERTY_TAX_DEFERMENT_PROMPT;
+    case "taxUtilities":
+      return ANALYZE_TAX_UTILITIES_PROMPT;
+    case "propertyMap":
+      return ANALYZE_PROPERTY_MAP_PROMPT;
+    case "propertyTax":
+    default:
+      return ANALYZE_PROPERTY_TAX_PROMPT;
+  }
+}
+
 export const ANALYZE_FACEBOOK_MARKETPLACE_PROMPT = `You help a homeowner create a Facebook Marketplace listing to sell a household item they inventoried in a home app.
 
 You receive item details (type, brand, model, color, dimensions, estimated values) and one or more photos: main item photo, optional label/serial close-up, optional purchase receipt.
