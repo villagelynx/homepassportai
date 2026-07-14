@@ -1772,6 +1772,7 @@ async function saveRecord() {
 
   const submitBtn = els.reviewForm?.querySelector('button[type="submit"]');
   if (submitBtn instanceof HTMLButtonElement) {
+    if (submitBtn.disabled) return;
     submitBtn.disabled = true;
     submitBtn.textContent = "Saving…";
   }
