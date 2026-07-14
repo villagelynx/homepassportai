@@ -126,6 +126,15 @@ export async function getCloudAppliance(id) {
   return rowToRecord(data);
 }
 
+/** @param {unknown} err */
+function isDuplicateKeyError(err) {
+  if (!err || typeof err !== "object") return false;
+  const o = /** @type {Record<string, unknown>} */ (err);
+  const code = String(o.code || "");
+  const message = String(o.message || o.error || "");
+  return code === "23505" || /duplicate key/i.test(message) || /unique constraint/i.test(message);
+}
+
 /** @param {ApplianceRecord} record */
 export async function addCloudAppliance(record) {
   const supabase = await getSupabase();
@@ -134,6 +143,14 @@ export async function addCloudAppliance(record) {
   if (!supabase || !userId) throw new Error("Sign in to save to the cloud.");
   if (!record?.appliancePhotoDataUrl) {
     throw new Error("Photo is required to save this item.");
+  }
+
+  // Already in the cloud (e.g. migrate retry or double-tap) — treat as success.
+  try {
+    const existing = await getCloudAppliance(record.id);
+    if (existing) return existing;
+  } catch {
+    // Continue with insert.
   }
 
   let appliancePath;
@@ -151,7 +168,7 @@ export async function addCloudAppliance(record) {
     throw new Error(cloudErrorMessage(err, "Could not upload photos. Check your connection and try again."));
   }
 
-  const { error } = await supabase.from("appliances").insert({
+  const payload = {
     id: record.id,
     user_id: userId,
     nickname: record.nickname,
@@ -170,9 +187,28 @@ export async function addCloudAppliance(record) {
     confidence: record.confidence,
     repair_company: record.repairCompany,
     scanned_at: record.scannedAt,
-  });
+  };
 
-  if (error) throw new Error(cloudErrorMessage(error, "Could not save item to the cloud."));
+  const { error } = await supabase.from("appliances").insert(payload);
+
+  if (error) {
+    // Save already landed (retry / race) — succeed with the existing row.
+    if (isDuplicateKeyError(error)) {
+      const existing = await getCloudAppliance(record.id);
+      if (existing) return existing;
+      return {
+        ...record,
+        labelPhotoDataUrl: record.labelPhotoDataUrl ?? null,
+        receiptPhotoDataUrl: record.receiptPhotoDataUrl ?? null,
+        _photoPaths: {
+          appliance: appliancePath,
+          label: labelPath || undefined,
+          receipt: receiptPath || undefined,
+        },
+      };
+    }
+    throw new Error(cloudErrorMessage(error, "Could not save item to the cloud."));
+  }
 
   try {
     const saved = await getCloudAppliance(record.id);
@@ -257,6 +293,14 @@ export async function deleteCloudAppliance(id) {
 /** @param {ApplianceRecord[]} localRecords */
 export async function migrateLocalToCloud(localRecords) {
   for (const record of localRecords) {
-    await addCloudAppliance(record);
+    try {
+      const existing = await getCloudAppliance(record.id);
+      if (existing) continue;
+      await addCloudAppliance(record);
+    } catch (err) {
+      if (isDuplicateKeyError(err)) continue;
+      // Don't abort the whole migration on one bad row — continue with the rest.
+      console.warn("Could not migrate appliance", record.id, err);
+    }
   }
 }
