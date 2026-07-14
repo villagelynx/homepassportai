@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=102" />
+    <link rel="stylesheet" href="./css/app.css?v=103" />
   </head>
   <body>
     <div id="app" class="app">
@@ -342,7 +342,17 @@
           </nav>
 
           <section class="home-recent" aria-labelledby="home-recent-title">
-            <div id="room-filter-chips" class="room-filter-chips" role="tablist" aria-label="Filter by room" hidden></div>
+            <div id="home-filter-toolbar" class="home-filter-toolbar" hidden>
+              <div class="home-filter-axis" role="group" aria-label="Filter by">
+                <button type="button" class="home-filter-axis__btn is-active" id="btn-filter-axis-room" data-axis="room">
+                  Rooms
+                </button>
+                <button type="button" class="home-filter-axis__btn" id="btn-filter-axis-type" data-axis="type">
+                  Groups
+                </button>
+              </div>
+              <div id="room-filter-chips" class="room-filter-chips" role="tablist" aria-label="Filter by room"></div>
+            </div>
             <div class="home-recent__head">
               <h3 class="home-recent__title" id="home-recent-title">Recently Added</h3>
               <button type="button" class="home-recent__view-all" id="btn-home-view-all">View All</button>
@@ -370,7 +380,7 @@
                 type="search"
                 id="input-home-search"
                 class="input home-search__input"
-                placeholder="Search nickname, brand, model, serial…"
+                placeholder="Search type, room, nickname, brand, model…"
                 autocomplete="off"
                 autocorrect="off"
                 spellcheck="false"
@@ -1210,10 +1220,10 @@
             </select>
           </label>
           <label class="field field--switch">
-            <span>Room filter chips</span>
+            <span>Filter chips</span>
             <input type="checkbox" id="field-room-chips" class="switch-input" checked />
           </label>
-          <p class="settings-note">Show room filter pills on the home inventory list.</p>
+          <p class="settings-note">Show Rooms / Groups filter pills on the home dashboard.</p>
           <div id="settings-account" class="settings-account" hidden>
             <h3 class="detail-section-title">Account</h3>
             <p id="settings-email" class="settings-email"></p>
@@ -1461,6 +1471,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=56"></script>
+    <script type="module" src="./js/main.js?v=57"></script>
   </body>
 </html>
