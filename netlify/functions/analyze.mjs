@@ -10,21 +10,22 @@ import {
   mapPropertyTaxResponse,
 } from "../../js/analyze-fields.js";
 import { ALL_DOCUMENT_MODES } from "../../js/document-types.js";
+import {
+  resolveAiProvider,
+  resolveUserApiKey,
+  userApiKeyRequiredMessage,
+  visionJson,
+} from "./lib/vision.mjs";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, X-OpenAI-Api-Key",
+  "Access-Control-Allow-Headers":
+    "Content-Type, X-OpenAI-Api-Key, X-Anthropic-Api-Key, X-AI-Provider",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 const MAX_BODY_BYTES = 5_500_000;
 const DOCUMENT_MODES = new Set(ALL_DOCUMENT_MODES);
-const USER_API_KEY_REQUIRED = "OpenAI API key required. Add your own key in Settings.";
-
-/** @param {import("@netlify/functions").HandlerEvent} event */
-function resolveUserApiKey(event) {
-  return (event.headers["x-openai-api-key"] || event.headers["X-OpenAI-Api-Key"] || "").trim();
-}
 
 /** @param {number} code @param {object} payload */
 function respond(code, payload) {
@@ -60,6 +61,12 @@ export async function handler(event) {
       return respond(400, { error: "Invalid JSON" });
     }
 
+    const provider = resolveAiProvider(event);
+    const apiKey = resolveUserApiKey(event, provider);
+    if (!apiKey) {
+      return respond(401, { error: userApiKeyRequiredMessage(provider) });
+    }
+
     const mode = String(body.mode || "").trim();
     const documentPhoto = body.documentPhotoDataUrl || body.document_photo;
     const appliance = body.appliancePhotoDataUrl || body.appliance_photo;
@@ -70,12 +77,6 @@ export async function handler(event) {
     if (mode === "facebookMarketplace") {
       if (!appliance && !label && !receipt) {
         return respond(400, { error: "At least one item photo is required" });
-      }
-
-      const apiKey = resolveUserApiKey(event);
-
-      if (!apiKey) {
-        return respond(401, { error: USER_API_KEY_REQUIRED });
       }
 
       const item = body.item && typeof body.item === "object" ? body.item : {};
@@ -97,28 +98,7 @@ export async function handler(event) {
         content.push({ type: "image_url", image_url: { url: receipt } });
       }
 
-      const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
-          messages: [{ role: "user", content }],
-          response_format: { type: "json_object" },
-          max_tokens: 1100,
-        }),
-      });
-
-      const data = await openaiRes.json();
-      if (!openaiRes.ok) {
-        const msg = data?.error?.message || "OpenAI request failed";
-        return respond(500, { error: msg });
-      }
-
-      const raw = data.choices?.[0]?.message?.content || "{}";
-      const parsed = JSON.parse(raw);
+      const parsed = await visionJson(provider, apiKey, content, { maxTokens: 1100 });
       return respond(200, mapFacebookMarketplaceResponse(parsed));
     }
 
@@ -127,46 +107,19 @@ export async function handler(event) {
         return respond(400, { error: "documentPhotoDataUrl is required" });
       }
 
-      const apiKey = resolveUserApiKey(event);
-
-      if (!apiKey) {
-        return respond(401, { error: USER_API_KEY_REQUIRED });
-      }
-
       const prompt = documentPromptForMode(mode);
       const mapper =
         mode === "insurancePolicy" ? mapInsurancePolicyResponse : mapPropertyTaxResponse;
 
-      const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: prompt },
-                { type: "image_url", image_url: { url: documentPhoto } },
-              ],
-            },
-          ],
-          response_format: { type: "json_object" },
-          max_tokens: 900,
-        }),
-      });
-
-      const data = await openaiRes.json();
-      if (!openaiRes.ok) {
-        const msg = data?.error?.message || "OpenAI request failed";
-        return respond(500, { error: msg });
-      }
-
-      const raw = data.choices?.[0]?.message?.content || "{}";
-      const parsed = JSON.parse(raw);
+      const parsed = await visionJson(
+        provider,
+        apiKey,
+        [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: documentPhoto } },
+        ],
+        { maxTokens: 900 },
+      );
       return respond(200, mapper(parsed));
     }
 
@@ -176,12 +129,6 @@ export async function handler(event) {
       }
     } else if (!appliance) {
       return respond(400, { error: "appliancePhotoDataUrl is required" });
-    }
-
-    const apiKey = resolveUserApiKey(event);
-
-    if (!apiKey) {
-      return respond(401, { error: USER_API_KEY_REQUIRED });
     }
 
     const content = labelOnly
@@ -195,34 +142,7 @@ export async function handler(event) {
           ...(label ? [{ type: "image_url", image_url: { url: label } }] : []),
         ];
 
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
-        messages: [
-          {
-            role: "user",
-            content,
-          },
-        ],
-        response_format: { type: "json_object" },
-        max_tokens: 850,
-      }),
-    });
-
-    const data = await openaiRes.json();
-    if (!openaiRes.ok) {
-      const msg = data?.error?.message || "OpenAI request failed";
-      return respond(500, { error: msg });
-    }
-
-    const raw = data.choices?.[0]?.message?.content || "{}";
-    const parsed = JSON.parse(raw);
-
+    const parsed = await visionJson(provider, apiKey, content, { maxTokens: 850 });
     return respond(200, mapAnalyzeResponse(parsed));
   } catch (err) {
     console.error("analyze error:", err);
