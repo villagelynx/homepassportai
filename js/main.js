@@ -36,7 +36,6 @@ import {
   getDocumentTypeMeta,
   isTaxLikeDocument,
 } from "./document-types.js";
-import { generateInsurancePdf } from "./insurance-report.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
 import { loadRoomChipsEnabled, saveRoomChipsEnabled, loadHomeFilterAxis, saveHomeFilterAxis } from "./room-chips-prefs.js";
@@ -576,7 +575,7 @@ function init() {
   els.btnHomeInventory?.addEventListener("click", () => openInventoryPanel());
   els.btnHomeReports?.addEventListener("click", () => openReportsHub());
   els.btnHomeViewAll?.addEventListener("click", () => openInventoryPanel());
-  els.btnHomeProtected?.addEventListener("click", () => void exportInsuranceReport());
+  els.btnHomeProtected?.addEventListener("click", () => openReportsHub());
   els.btnTabHome?.addEventListener("click", () => setHomePanel("dashboard"));
   els.btnTabInventory?.addEventListener("click", () => openInventoryPanel());
   els.btnTabReports?.addEventListener("click", () => openReportsHub());
@@ -2400,21 +2399,29 @@ async function exportInsuranceReport() {
     return;
   }
 
-  const btn = els.btnInsurancePdf;
-  if (btn instanceof HTMLButtonElement) {
+  const buttons = [els.btnInsurancePdf, els.btnReportsInsurancePdf].filter(
+    (btn) => btn instanceof HTMLButtonElement,
+  );
+  for (const btn of buttons) {
     btn.disabled = true;
+    btn.dataset.prevLabel = btn.textContent || "";
     btn.textContent = "Building PDF…";
   }
 
   try {
-    await generateInsurancePdf(list);
+    const { generateInsurancePdf: buildPdf } = await import("./insurance-report.js");
+    if (typeof buildPdf !== "function") {
+      throw new Error("PDF generator failed to load — hard-refresh and try again");
+    }
+    await buildPdf(list);
     toast(`Insurance PDF ready (${list.length} item${list.length === 1 ? "" : "s"})`);
   } catch (err) {
     toast(err instanceof Error ? err.message : "Could not create PDF");
   } finally {
-    if (btn instanceof HTMLButtonElement) {
+    for (const btn of buttons) {
       btn.disabled = false;
-      btn.textContent = "Download insurance PDF";
+      btn.textContent = btn.dataset.prevLabel || "Download insurance PDF";
+      delete btn.dataset.prevLabel;
     }
   }
 }
