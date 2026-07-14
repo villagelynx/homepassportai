@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static files + POST /api/analyze (OpenAI Vision) for HomePassportAI."""
+"""Static files + POST /api/analyze (OpenAI or Claude vision) for HomePassportAI."""
 
 from __future__ import annotations
 
@@ -405,12 +405,145 @@ def verify_openai_key(api_key: str) -> dict[str, Any]:
         return {"provided": True, "valid": False, "error": "Could not reach OpenAI"}
 
 
-USER_API_KEY_REQUIRED = "OpenAI API key required. Add your own key in Settings."
+USER_API_KEY_REQUIRED = "AI API key required. Add your own key in Settings."
 
 
-def resolve_user_api_key(handler: BaseHTTPRequestHandler) -> str:
-    """Only the caller's key from Settings — never the server's OPENAI_API_KEY."""
-    return (handler.headers.get("X-OpenAI-Api-Key") or "").strip()
+def resolve_ai_provider(handler: BaseHTTPRequestHandler) -> str:
+    raw = (handler.headers.get("X-AI-Provider") or "openai").strip().lower()
+    return "anthropic" if raw == "anthropic" else "openai"
+
+
+def resolve_user_api_key(handler: BaseHTTPRequestHandler) -> tuple[str, str]:
+    """Returns (api_key, provider). Never uses a shared developer key from the server env."""
+    provider = resolve_ai_provider(handler)
+    if provider == "anthropic":
+        key = (handler.headers.get("X-Anthropic-Api-Key") or "").strip()
+    else:
+        key = (handler.headers.get("X-OpenAI-Api-Key") or "").strip()
+    return key, provider
+
+
+def user_api_key_required_message(provider: str) -> str:
+    if provider == "anthropic":
+        return "Claude API key required. Add your Anthropic key in Settings."
+    return "OpenAI API key required. Add your own key in Settings."
+
+
+def verify_anthropic_key(api_key: str) -> dict[str, Any]:
+    if not api_key:
+        return {"provided": False, "valid": None}
+    try:
+        body = json.dumps(
+            {
+                "model": os.environ.get("ANTHROPIC_VISION_MODEL", "claude-sonnet-4-20250514"),
+                "max_tokens": 8,
+                "messages": [{"role": "user", "content": "ping"}],
+            }
+        ).encode("utf-8")
+        req = Request(
+            "https://api.anthropic.com/v1/messages",
+            data=body,
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urlopen(req, timeout=8) as resp:
+            return {"provided": True, "valid": 200 <= resp.status < 300 or True}
+    except HTTPError as exc:
+        if exc.code == 400:
+            return {"provided": True, "valid": True}
+        if exc.code in (401, 403):
+            return {"provided": True, "valid": False, "error": "Invalid API key"}
+        return {"provided": True, "valid": False, "error": f"Claude returned HTTP {exc.code}"}
+    except Exception:
+        return {"provided": True, "valid": False, "error": "Could not reach Claude"}
+
+
+def parse_data_url(data_url: str) -> tuple[str, str]:
+    import re
+
+    match = re.match(r"^data:(image/[a-zA-Z0-9.+-]+);base64,(.+)$", data_url or "", re.DOTALL)
+    if not match:
+        raise RuntimeError("Invalid image data URL")
+    return match.group(1), match.group(2)
+
+
+def openai_content_to_anthropic(content: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for block in content:
+        if block.get("type") == "text":
+            out.append({"type": "text", "text": str(block.get("text") or "")})
+        elif block.get("type") == "image_url":
+            image = block.get("image_url") or {}
+            url = str(image.get("url") or "") if isinstance(image, dict) else ""
+            media_type, data = parse_data_url(url)
+            out.append(
+                {
+                    "type": "image",
+                    "source": {"type": "base64", "media_type": media_type, "data": data},
+                }
+            )
+    return out
+
+
+def vision_json_completion(
+    provider: str,
+    api_key: str,
+    content: list[dict[str, Any]],
+    *,
+    max_tokens: int = 900,
+) -> dict[str, Any]:
+    if not api_key:
+        raise RuntimeError(user_api_key_required_message(provider))
+
+    if provider == "anthropic":
+        anth_content = openai_content_to_anthropic(content)
+        if anth_content and anth_content[0].get("type") == "text":
+            anth_content[0]["text"] = f"{anth_content[0]['text']}\n\nRespond with JSON only. No markdown."
+        else:
+            anth_content.insert(0, {"type": "text", "text": "Respond with JSON only. No markdown."})
+        body = json.dumps(
+            {
+                "model": os.environ.get("ANTHROPIC_VISION_MODEL", "claude-sonnet-4-20250514"),
+                "max_tokens": max_tokens,
+                "messages": [{"role": "user", "content": anth_content}],
+            }
+        ).encode("utf-8")
+        req = Request(
+            "https://api.anthropic.com/v1/messages",
+            data=body,
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+        with urlopen(req, timeout=90) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+        parts = payload.get("content") or []
+        text = "\n".join(str(p.get("text") or "") for p in parts if p.get("type") == "text").strip()
+        start = text.find("{")
+        end = text.rfind("}")
+        if start < 0 or end <= start:
+            raise RuntimeError("Claude did not return JSON")
+        return json.loads(text[start : end + 1])
+
+    from openai import OpenAI
+
+    client = OpenAI(api_key=api_key)
+    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": content}],
+        response_format={"type": "json_object"},
+        max_tokens=max_tokens,
+    )
+    raw = response.choices[0].message.content or "{}"
+    return json.loads(raw)
 
 
 def analyze_with_openai(
@@ -419,14 +552,10 @@ def analyze_with_openai(
     label_data_url: str | None = None,
     *,
     label_only: bool = False,
+    provider: str = "openai",
 ) -> dict[str, Any]:
     if not api_key:
-        raise RuntimeError("No OpenAI API key provided.")
-
-    from openai import OpenAI
-
-    client = OpenAI(api_key=api_key)
-    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
+        raise RuntimeError(user_api_key_required_message(provider))
 
     if label_only:
         if not label_data_url:
@@ -448,15 +577,7 @@ def analyze_with_openai(
         if label_data_url:
             content.append({"type": "image_url", "image_url": {"url": label_data_url}})
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": content}],
-        response_format={"type": "json_object"},
-        max_tokens=750,
-    )
-
-    raw = response.choices[0].message.content or "{}"
-    data = json.loads(raw)
+    data = vision_json_completion(provider, api_key, content, max_tokens=750)
 
     signature_regions = data.get("signature_regions") or data.get("signatureRegions") or []
 
@@ -574,31 +695,20 @@ def document_prompt_for_mode(mode: str) -> str:
     return ANALYZE_PROPERTY_TAX_PROMPT
 
 
-def analyze_document_with_openai(api_key: str, mode: str, document_data_url: str) -> dict[str, str]:
+def analyze_document_with_openai(
+    api_key: str, mode: str, document_data_url: str, *, provider: str = "openai"
+) -> dict[str, str]:
     if not api_key:
-        raise RuntimeError("No OpenAI API key provided.")
+        raise RuntimeError(user_api_key_required_message(provider))
     if mode not in DOCUMENT_MODES:
         raise RuntimeError(f"Unsupported document mode: {mode}")
 
-    from openai import OpenAI
-
-    client = OpenAI(api_key=api_key)
-    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
     prompt = document_prompt_for_mode(mode)
     content: list[dict[str, Any]] = [
         {"type": "text", "text": prompt},
         {"type": "image_url", "image_url": {"url": document_data_url}},
     ]
-
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": content}],
-        response_format={"type": "json_object"},
-        max_tokens=900,
-    )
-
-    raw = response.choices[0].message.content or "{}"
-    data = json.loads(raw)
+    data = vision_json_completion(provider, api_key, content, max_tokens=900)
     if mode == "insurancePolicy":
         return map_insurance_policy_response(data)
     return map_property_tax_response(data)
@@ -610,16 +720,14 @@ def analyze_marketplace_with_openai(
     appliance_data_url: str | None = None,
     label_data_url: str | None = None,
     receipt_data_url: str | None = None,
+    *,
+    provider: str = "openai",
 ) -> dict[str, Any]:
     if not api_key:
-        raise RuntimeError("No OpenAI API key provided.")
+        raise RuntimeError(user_api_key_required_message(provider))
     if not appliance_data_url and not label_data_url and not receipt_data_url:
         raise RuntimeError("At least one item photo is required.")
 
-    from openai import OpenAI
-
-    client = OpenAI(api_key=api_key)
-    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
     item_summary = f"Item details:\n{json.dumps(item, indent=2)}"
     content: list[dict[str, Any]] = [
         {"type": "text", "text": f"{ANALYZE_FACEBOOK_MARKETPLACE_PROMPT}\n\n{item_summary}"},
@@ -634,40 +742,22 @@ def analyze_marketplace_with_openai(
         content.append({"type": "text", "text": "Photo: purchase receipt"})
         content.append({"type": "image_url", "image_url": {"url": receipt_data_url}})
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": content}],
-        response_format={"type": "json_object"},
-        max_tokens=1100,
-    )
-
-    raw = response.choices[0].message.content or "{}"
-    data = json.loads(raw)
+    data = vision_json_completion(provider, api_key, content, max_tokens=1100)
     return map_facebook_marketplace_response(data)
 
 
-def analyze_room_with_openai(api_key: str, frames: list[str]) -> dict[str, Any]:
+def analyze_room_with_openai(
+    api_key: str, frames: list[str], *, provider: str = "openai"
+) -> dict[str, Any]:
     if not api_key:
-        raise RuntimeError("No OpenAI API key provided.")
+        raise RuntimeError(user_api_key_required_message(provider))
 
-    from openai import OpenAI
-
-    client = OpenAI(api_key=api_key)
-    model = os.environ.get("OPENAI_VISION_MODEL", "gpt-4o-mini")
     prompt = ROOM_PROMPT + f"\n\nThere are {len(frames)} frames (indices 0–{len(frames) - 1})."
     content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
     for url in frames:
         content.append({"type": "image_url", "image_url": {"url": url, "detail": "low"}})
 
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": content}],
-        response_format={"type": "json_object"},
-        max_tokens=2000,
-    )
-
-    raw = response.choices[0].message.content or "{}"
-    data = json.loads(raw)
+    data = vision_json_completion(provider, api_key, content, max_tokens=2000)
     items_raw = data.get("items") if isinstance(data.get("items"), list) else []
     items: list[dict[str, Any]] = []
     for i, item in enumerate(items_raw[:30]):
@@ -777,7 +867,10 @@ class Handler(BaseHTTPRequestHandler):
     def end_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-OpenAI-Api-Key, Authorization")
+        self.send_header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, X-OpenAI-Api-Key, X-Anthropic-Api-Key, X-AI-Provider, Authorization",
+        )
         self.send_header("X-HomePassportAI", "1")
         super().end_headers()
 
@@ -788,13 +881,20 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         path = urlparse(self.path).path
         if path == "/api/health":
-            user_key = (self.headers.get("X-OpenAI-Api-Key") or "").strip()
+            provider = resolve_ai_provider(self)
+            api_key, _ = resolve_user_api_key(self)
+            key_status = (
+                verify_anthropic_key(api_key)
+                if provider == "anthropic"
+                else verify_openai_key(api_key)
+            )
             self._json(
                 200,
                 {
                     "ok": True,
                     "requiresUserKey": True,
-                    "userKey": verify_openai_key(user_key),
+                    "provider": provider,
+                    "userKey": key_status,
                     "userKeySupported": True,
                     "analyzePath": "/api/analyze",
                     "analyzeRoomPath": "/api/analyze-room",
@@ -862,9 +962,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "At least one item photo is required"})
                 return
 
-            api_key = resolve_user_api_key(self)
+            api_key, provider = resolve_user_api_key(self)
             if not api_key:
-                self._json(401, {"error": USER_API_KEY_REQUIRED})
+                self._json(401, {"error": user_api_key_required_message(provider)})
                 return
 
             item = body.get("item") if isinstance(body.get("item"), dict) else {}
@@ -875,6 +975,7 @@ class Handler(BaseHTTPRequestHandler):
                     str(appliance) if appliance else None,
                     str(label) if label else None,
                     str(receipt) if receipt else None,
+                    provider=provider,
                 )
                 self._json(200, result)
             except Exception as exc:
@@ -887,13 +988,15 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(400, {"error": "documentPhotoDataUrl is required"})
                 return
 
-            api_key = resolve_user_api_key(self)
+            api_key, provider = resolve_user_api_key(self)
             if not api_key:
-                self._json(401, {"error": USER_API_KEY_REQUIRED})
+                self._json(401, {"error": user_api_key_required_message(provider)})
                 return
 
             try:
-                result = analyze_document_with_openai(api_key, mode, str(document))
+                result = analyze_document_with_openai(
+                    api_key, mode, str(document), provider=provider
+                )
                 self._json(200, result)
             except Exception as exc:
                 print(f"Analyze document error: {exc}", file=sys.stderr)
@@ -908,17 +1011,25 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": "appliancePhotoDataUrl is required"})
             return
 
-        api_key = resolve_user_api_key(self)
+        api_key, provider = resolve_user_api_key(self)
         if not api_key:
-            self._json(401, {"error": USER_API_KEY_REQUIRED})
+            self._json(401, {"error": user_api_key_required_message(provider)})
             return
 
         try:
             if label_only:
-                result = analyze_with_openai(api_key, label_data_url=str(label), label_only=True)
+                result = analyze_with_openai(
+                    api_key,
+                    label_data_url=str(label),
+                    label_only=True,
+                    provider=provider,
+                )
             else:
                 result = analyze_with_openai(
-                    api_key, str(appliance), str(label) if label else None
+                    api_key,
+                    str(appliance),
+                    str(label) if label else None,
+                    provider=provider,
                 )
             self._json(200, result)
         except Exception as exc:
@@ -949,13 +1060,13 @@ class Handler(BaseHTTPRequestHandler):
             self._json(400, {"error": "Too many frames (max 10)"})
             return
 
-        api_key = resolve_user_api_key(self)
+        api_key, provider = resolve_user_api_key(self)
         if not api_key:
-            self._json(401, {"error": USER_API_KEY_REQUIRED})
+            self._json(401, {"error": user_api_key_required_message(provider)})
             return
 
         try:
-            result = analyze_room_with_openai(api_key, frames)
+            result = analyze_room_with_openai(api_key, frames, provider=provider)
             self._json(200, result)
         except Exception as exc:
             print(f"Analyze room error: {exc}", file=sys.stderr)
@@ -1017,7 +1128,7 @@ def main() -> None:
     print(f"Serving from: {ROOT}")
     print(f"HomePassportAI → http://127.0.0.1:{port}  (or http://localhost:{port})")
     print(f"On your phone: http://{local_ip()}:{port}")
-    print("AI analysis: BYOK only — each user adds their own OpenAI key in Settings")
+    print("AI analysis: BYOK only — OpenAI or Claude key in Settings")
     print("Press Ctrl+C to stop.")
 
     try:

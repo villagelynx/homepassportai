@@ -1,3 +1,10 @@
+import {
+  resolveAiProvider,
+  resolveUserApiKey,
+  userApiKeyRequiredMessage,
+  visionJson,
+} from "./lib/vision.mjs";
+
 const ROOM_PROMPT = `You analyze still frames from a ~60 second smartphone video of a home room for an inventory app.
 
 The images are frames sampled across the room scan, in order.
@@ -31,18 +38,13 @@ Rules:
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, X-OpenAI-Api-Key",
+  "Access-Control-Allow-Headers":
+    "Content-Type, X-OpenAI-Api-Key, X-Anthropic-Api-Key, X-AI-Provider",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
 const MAX_BODY_BYTES = 5_500_000;
 const MAX_FRAMES = 10;
-const USER_API_KEY_REQUIRED = "OpenAI API key required. Add your own key in Settings.";
-
-/** @param {import("@netlify/functions").HandlerEvent} event */
-function resolveUserApiKey(event) {
-  return (event.headers["x-openai-api-key"] || event.headers["X-OpenAI-Api-Key"] || "").trim();
-}
 
 /** @param {number} code @param {object} payload */
 function respond(code, payload) {
@@ -85,44 +87,24 @@ export async function handler(event) {
       return respond(400, { error: `Too many frames (max ${MAX_FRAMES})` });
     }
 
-    const apiKey = resolveUserApiKey(event);
-
+    const provider = resolveAiProvider(event);
+    const apiKey = resolveUserApiKey(event, provider);
     if (!apiKey) {
-      return respond(401, { error: USER_API_KEY_REQUIRED });
+      return respond(401, { error: userApiKeyRequiredMessage(provider) });
     }
 
     const content = [
-      { type: "text", text: ROOM_PROMPT },
-      ...frames.map((url, i) => ({
+      {
+        type: "text",
+        text: `${ROOM_PROMPT}\n\nThere are ${frames.length} frames (indices 0–${frames.length - 1}).`,
+      },
+      ...frames.map((url) => ({
         type: "image_url",
         image_url: { url, detail: "low" },
       })),
     ];
-    // Remind model of frame indices in the prompt preamble
-    content[0].text += `\n\nThere are ${frames.length} frames (indices 0–${frames.length - 1}).`;
 
-    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_VISION_MODEL || "gpt-4o-mini",
-        messages: [{ role: "user", content }],
-        response_format: { type: "json_object" },
-        max_tokens: 2000,
-      }),
-    });
-
-    const data = await openaiRes.json();
-    if (!openaiRes.ok) {
-      const msg = data?.error?.message || "OpenAI request failed";
-      return respond(500, { error: msg });
-    }
-
-    const raw = data.choices?.[0]?.message?.content || "{}";
-    const parsed = JSON.parse(raw);
+    const parsed = await visionJson(provider, apiKey, content, { maxTokens: 2000 });
     const items = normalizeItems(parsed, frames.length);
 
     return respond(200, {
@@ -171,38 +153,4 @@ function normalizeItems(parsed, frameCount) {
     })
     .filter((item) => item.nickname)
     .slice(0, 30);
-}
-
-/** @param {number} frameCount */
-function demoItems(frameCount) {
-  const mid = Math.min(1, frameCount - 1);
-  return [
-    {
-      nickname: "Living room TV",
-      applianceType: "Television",
-      brand: "",
-      modelNumber: "",
-      serialNumber: "",
-      confidence: "low",
-      frameIndex: 0,
-    },
-    {
-      nickname: "Sofa",
-      applianceType: "Sofa",
-      brand: "",
-      modelNumber: "",
-      serialNumber: "",
-      confidence: "low",
-      frameIndex: mid,
-    },
-    {
-      nickname: "Lamp",
-      applianceType: "Lamp",
-      brand: "",
-      modelNumber: "",
-      serialNumber: "",
-      confidence: "low",
-      frameIndex: Math.max(0, frameCount - 1),
-    },
-  ];
 }

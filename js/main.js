@@ -1,5 +1,14 @@
 import { manualSearchUrl, manualsLibSearchUrl } from "./manual-links.js";
-import { clearApiKey, hasUserApiKey, saveApiKey } from "./api-key.js";
+import {
+  clearApiKey,
+  hasUserApiKey,
+  loadAiProvider,
+  loadAnthropicApiKey,
+  providerDisplayName,
+  saveAiProvider,
+  saveAnthropicApiKey,
+  saveApiKey,
+} from "./api-key.js";
 import { detectCurrentLocation, loadLocation, locationDisplayLabel, saveLocation } from "./location.js";
 import { localRepairGoogleUrl, localRepairSearchUrl } from "./repair-links.js";
 import { APP_VERSION, config, isSupabaseConfigured } from "./config.js";
@@ -218,6 +227,11 @@ const els = {
   editFieldRetailPrice: document.getElementById("edit-field-retail-price"),
   settingsForm: document.getElementById("settings-form"),
   fieldApiKey: document.getElementById("field-api-key"),
+  fieldAnthropicKey: document.getElementById("field-anthropic-key"),
+  fieldOpenAiWrap: document.getElementById("field-openai-wrap"),
+  fieldAnthropicWrap: document.getElementById("field-anthropic-wrap"),
+  providerOpenAi: document.getElementById("provider-openai"),
+  providerAnthropic: document.getElementById("provider-anthropic"),
   fieldTheme: document.getElementById("field-theme"),
   fieldRoomChips: document.getElementById("field-room-chips"),
   apiKeyStatus: document.getElementById("api-key-status"),
@@ -648,7 +662,21 @@ function init() {
   });
   els.settingsForm?.addEventListener("submit", (e) => {
     e.preventDefault();
-    saveSettingsApiKey();
+    void saveSettingsApiKey();
+  });
+  els.providerOpenAi?.addEventListener("change", () => {
+    if (els.providerOpenAi?.checked) {
+      saveAiProvider("openai");
+      syncAiProviderUi();
+      void refreshApiKeyStatus();
+    }
+  });
+  els.providerAnthropic?.addEventListener("change", () => {
+    if (els.providerAnthropic?.checked) {
+      saveAiProvider("anthropic");
+      syncAiProviderUi();
+      void refreshApiKeyStatus();
+    }
   });
   els.fieldTheme?.addEventListener("change", () => {
     const value = els.fieldTheme?.value;
@@ -985,7 +1013,7 @@ function updateHeaderTooltips() {
   );
   setTopbarTip(
     els.btnSettings,
-    "Settings — OpenAI API key, account sign-in, backup, and insurance PDF",
+    "Settings — AI API key, account sign-in, backup, and insurance PDF",
   );
 }
 
@@ -1111,20 +1139,23 @@ function openSettingsForApiKey() {
   renderSettings();
   showView("settings");
   requestAnimationFrame(() => {
-    els.fieldApiKey?.focus();
-    els.fieldApiKey?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const active =
+      loadAiProvider() === "anthropic" ? els.fieldAnthropicKey : els.fieldApiKey;
+    active?.focus();
+    active?.scrollIntoView({ behavior: "smooth", block: "center" });
   });
 }
 
 async function requireUserApiKeyForAi() {
+  const name = providerDisplayName();
   if (!hasUserApiKey()) {
-    toast("Add your OpenAI API key in Settings to use AI analysis");
+    toast(`Add your ${name} API key in Settings to use AI analysis`);
     openSettingsForApiKey();
     return false;
   }
   const status = await checkApiKeyStatus();
   if (!status.ready || status.source !== "user") {
-    toast(status.error ? `API key issue — ${status.error}` : "Set up your OpenAI API key in Settings first");
+    toast(status.error ? `API key issue — ${status.error}` : `Set up your ${name} API key in Settings first`);
     openSettingsForApiKey();
     return false;
   }
@@ -1284,12 +1315,12 @@ async function runRoomAnalysis() {
     populateRoomSelect(els.fieldRoomScan, roomScan.roomGuess);
     if (els.roomReviewLede) {
       els.roomReviewLede.textContent = result.demoMode
-        ? "Demo mode (no OpenAI key) — sample items shown. Check ones to keep, then save."
+        ? "Demo mode (no AI key) — sample items shown. Check ones to keep, then save."
         : `Found ${roomScan.candidates.length} item${roomScan.candidates.length === 1 ? "" : "s"}. Check the ones to keep.`;
     }
     renderRoomReview();
     showView("roomReview");
-    if (result.demoMode) toast("Demo mode — add an OpenAI key in Settings for real room scans");
+    if (result.demoMode) toast("Demo mode — add an AI API key in Settings for real room scans");
   } catch (err) {
     toast(err instanceof Error ? err.message : "Room analysis failed");
   } finally {
@@ -1823,7 +1854,7 @@ async function runAnalysis() {
       els.confidenceNote.hidden = false;
       if (result.demoMode) {
         els.confidenceNote.textContent =
-          "Demo mode — add your OpenAI key in Settings (⚙) to enable photo analysis.";
+          "Demo mode — add your AI API key in Settings (⚙) to enable photo analysis.";
       } else if (scan.labelPhotoDataUrl && result.signatureRegions?.length) {
         els.confidenceNote.textContent =
           "Signature corners cropped from your photo and saved as the label image. Verify artist and details below.";
@@ -1920,11 +1951,25 @@ async function saveRecord() {
   }
 }
 
+function syncAiProviderUi() {
+  const provider = loadAiProvider();
+  if (els.providerOpenAi instanceof HTMLInputElement) {
+    els.providerOpenAi.checked = provider === "openai";
+  }
+  if (els.providerAnthropic instanceof HTMLInputElement) {
+    els.providerAnthropic.checked = provider === "anthropic";
+  }
+  if (els.fieldOpenAiWrap) els.fieldOpenAiWrap.hidden = provider !== "openai";
+  if (els.fieldAnthropicWrap) els.fieldAnthropicWrap.hidden = provider !== "anthropic";
+}
+
 function renderSettings() {
   if (els.fieldTheme) els.fieldTheme.value = loadThemePreference();
   if (els.fieldRoomChips) els.fieldRoomChips.checked = loadRoomChipsEnabled();
+  syncAiProviderUi();
   void refreshApiKeyStatus();
   if (els.fieldApiKey) els.fieldApiKey.value = "";
+  if (els.fieldAnthropicKey) els.fieldAnthropicKey.value = "";
   if (els.btnClearApiKey) els.btnClearApiKey.hidden = !hasUserApiKey();
 
   const cloud = isSupabaseConfigured();
@@ -1941,33 +1986,34 @@ function applyApiKeyStatus(status) {
   if (!els.apiKeyStatus) return;
   els.apiKeyStatus.hidden = false;
   els.apiKeyStatus.classList.remove("is-ready", "is-warning", "is-missing");
+  const name = providerDisplayName(status.provider || loadAiProvider());
 
   if (status.ready && status.source === "user") {
     els.apiKeyStatus.classList.add("is-ready");
-    els.apiKeyStatus.textContent = `AI analysis ready — key ${status.masked} verified`;
+    els.apiKeyStatus.textContent = `${name} ready — key ${status.masked} verified`;
     return;
   }
   if (status.source === "user" && status.masked) {
     els.apiKeyStatus.classList.add("is-warning");
-    els.apiKeyStatus.textContent = `Key saved (${status.masked}) but not working — ${status.error || "check OpenAI dashboard"}`;
+    els.apiKeyStatus.textContent = `${name} key saved (${status.masked}) but not working — ${status.error || "check your provider dashboard"}`;
     return;
   }
   els.apiKeyStatus.classList.add("is-missing");
-  els.apiKeyStatus.textContent =
-    "No API key yet — add your own OpenAI key below (never a shared developer key)";
+  els.apiKeyStatus.textContent = `No ${name} key yet — add your own key below (never a shared developer key)`;
 }
 
 /** @param {import("./analyze.js").ApiKeyStatus} status */
 function notifyApiKeyStatus(status) {
+  const name = providerDisplayName(status.provider || loadAiProvider());
   if (status.ready && status.source === "user") {
-    toast(`AI analysis ready — ${status.masked}`);
+    toast(`${name} analysis ready — ${status.masked}`);
     return;
   }
   if (status.source === "user" && status.masked) {
     toast(status.error ? `API key issue — ${status.error}` : "API key saved but not verified — check Settings");
     return;
   }
-  toast("Add your OpenAI API key in Settings to use AI label and room video analysis");
+  toast(`Add your ${name} API key in Settings to use AI analysis`);
 }
 
 async function refreshApiKeyStatus() {
@@ -1978,18 +2024,44 @@ async function refreshApiKeyStatus() {
 }
 
 async function saveSettingsApiKey() {
-  const key = els.fieldApiKey?.value.trim() ?? "";
-  if (!key) {
-    toast("Paste your OpenAI API key");
-    return;
+  const provider = loadAiProvider();
+  if (provider === "anthropic") {
+    const key = els.fieldAnthropicKey?.value.trim() ?? "";
+    if (!key) {
+      toast("Paste your Claude API key");
+      return;
+    }
+    if (!key.startsWith("sk-ant-")) {
+      toast("Claude keys usually start with sk-ant-");
+      return;
+    }
+    saveAnthropicApiKey(key);
+  } else {
+    const key = els.fieldApiKey?.value.trim() ?? "";
+    if (!key) {
+      toast("Paste your OpenAI API key");
+      return;
+    }
+    if (!key.startsWith("sk-")) {
+      toast("OpenAI keys should start with sk-");
+      return;
+    }
+    saveApiKey(key);
   }
-  if (!key.startsWith("sk-")) {
-    toast("Key should start with sk-");
-    return;
-  }
-  saveApiKey(key);
+  if (els.fieldApiKey) els.fieldApiKey.value = "";
+  if (els.fieldAnthropicKey) els.fieldAnthropicKey.value = "";
   const status = await refreshApiKeyStatus();
   notifyApiKeyStatus(status);
+  if (els.btnClearApiKey) els.btnClearApiKey.hidden = !hasUserApiKey();
+}
+
+function clearSettingsApiKey() {
+  if (!hasUserApiKey()) return;
+  const name = providerDisplayName();
+  if (!confirm(`Remove the saved ${name} API key from this device?`)) return;
+  clearApiKey();
+  renderSettings();
+  toast(`${name} API key removed`);
 }
 
 function refreshToLatestVersion() {
@@ -2001,14 +2073,6 @@ function refreshToLatestVersion() {
   } catch {
     location.reload();
   }
-}
-
-function clearSettingsApiKey() {
-  if (!hasUserApiKey()) return;
-  if (!confirm("Remove the saved API key from this device?")) return;
-  clearApiKey();
-  renderSettings();
-  toast("API key removed");
 }
 
 function openReportsHub() {
@@ -2225,7 +2289,7 @@ function populateDocumentReviewForm(result) {
     els.docConfidenceNote.hidden = false;
     if (result.demoMode) {
       els.docConfidenceNote.textContent =
-        "Demo mode — add your OpenAI key in Settings to enable document extraction.";
+        "Demo mode — add your AI API key in Settings to enable document extraction.";
     } else {
       els.docConfidenceNote.textContent = `Extraction confidence: ${c}. Please verify before saving.`;
     }
@@ -3017,7 +3081,7 @@ async function onDetailLabelPhotoSelected() {
       els.detailLabelConfidence.hidden = false;
       if (result.demoMode) {
         els.detailLabelConfidence.textContent =
-          "Demo mode — add your OpenAI key in Settings (⚙) to enable label analysis.";
+          "Demo mode — add your AI API key in Settings (⚙) to enable label analysis.";
       } else {
         els.detailLabelConfidence.textContent = `Extraction confidence: ${result.confidence || "low"}. Review before saving.`;
       }
@@ -3349,7 +3413,7 @@ async function generateMarketplaceListing() {
 
     const result = await generateFacebookMarketplaceListing(item, photos);
     if (result.demoMode) {
-      toast("Add your OpenAI API key in Settings to generate listings");
+      toast("Add your AI API key in Settings to generate listings");
       openSettingsForApiKey();
       if (detailId) void openDetail(detailId);
       return;

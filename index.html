@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=101" />
+    <link rel="stylesheet" href="./css/app.css?v=102" />
   </head>
   <body>
     <div id="app" class="app">
@@ -384,8 +384,8 @@
           <div id="api-setup-banner" class="api-setup-banner" hidden>
             <p class="api-setup-banner__title">Set up AI on this device</p>
             <p class="api-setup-banner__text">
-              Add your own <strong>OpenAI API key</strong> in Settings. AI features always use your key on
-              this device — never a shared developer key.
+              Add your own <strong>AI API key</strong> (OpenAI or Claude) in Settings. AI features use
+              your key on this device — never a shared developer key.
             </p>
             <button type="button" class="btn btn--secondary btn--block" data-nav="settings">
               Set up API key
@@ -1076,25 +1076,39 @@
           <button type="button" class="btn btn--ghost btn--back" data-nav="home">← Back</button>
           <h2>Settings</h2>
           <p class="step-header__lede">
-            Your OpenAI API key is required on this device for AI features. The app never uses a
-            shared developer key — only the key you enter below.
+            AI analysis uses <strong>your</strong> API key on this device — OpenAI or Claude. The app
+            never uses a shared developer key.
           </p>
         </div>
         <form id="settings-form" class="form settings-form">
           <div class="settings-api-callout">
-            <h3 class="detail-section-title">OpenAI API key (required for AI)</h3>
+            <h3 class="detail-section-title">AI provider (required for AI)</h3>
             <p class="settings-note">
-              Paste a key from
-              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
-                >platform.openai.com</a
-              >. It stays on this device and is sent only when you run AI analysis. You pay OpenAI directly —
-              HomePassportAI does not provide or bill for shared AI usage. Without a key you can still save items
-              manually, share them, look up manuals, and build insurance PDFs from saved data.
+              Choose OpenAI or Claude, then paste your key. It stays on this device and is sent only when
+              you run AI analysis. You pay the provider directly — HomePassportAI does not bill for AI.
+              Without a key you can still save items and documents manually.
             </p>
           </div>
+          <fieldset class="field field--provider">
+            <legend class="field__legend">Provider</legend>
+            <label class="provider-option">
+              <input type="radio" name="ai-provider" id="provider-openai" value="openai" checked />
+              <span>OpenAI</span>
+            </label>
+            <label class="provider-option">
+              <input type="radio" name="ai-provider" id="provider-anthropic" value="anthropic" />
+              <span>Claude (Anthropic)</span>
+            </label>
+          </fieldset>
           <p id="api-key-status" class="api-key-status" hidden></p>
-          <label class="field">
+          <label class="field" id="field-openai-wrap">
             <span>OpenAI API key</span>
+            <p class="settings-note">
+              Get a key at
+              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer"
+                >platform.openai.com</a
+              >.
+            </p>
             <div class="password-field">
               <input
                 type="password"
@@ -1110,6 +1124,55 @@
                 class="password-toggle"
                 data-toggle-password="field-api-key"
                 aria-label="Show API key"
+                aria-pressed="false"
+              >
+                <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8" />
+                </svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M4 4l16 16M9.5 9.6A3 3 0 0 0 12 15a3 3 0 0 0 2.4-1.2M6.5 6.7C3.8 8.3 2 12 2 12s3.5 7 10 7c1.9 0 3.5-.5 4.9-1.2M17.5 17.3C20.2 15.7 22 12 22 12s-3.5-7-10-7c-1 0-1.9.1-2.7.4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          </label>
+          <label class="field" id="field-anthropic-wrap" hidden>
+            <span>Claude API key</span>
+            <p class="settings-note">
+              Get a key at
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer"
+                >console.anthropic.com</a
+              >.
+            </p>
+            <div class="password-field">
+              <input
+                type="password"
+                id="field-anthropic-key"
+                class="input"
+                placeholder="sk-ant-…"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+              />
+              <button
+                type="button"
+                class="password-toggle"
+                data-toggle-password="field-anthropic-key"
+                aria-label="Show Claude API key"
                 aria-pressed="false"
               >
                 <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true">
@@ -1398,6 +1461,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=55"></script>
+    <script type="module" src="./js/main.js?v=56"></script>
   </body>
 </html>

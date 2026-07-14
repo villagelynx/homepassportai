@@ -1,4 +1,9 @@
-import { loadApiKey, maskApiKey } from "./api-key.js";
+import {
+  loadActiveApiKey,
+  loadAiProvider,
+  maskApiKey,
+  providerDisplayName,
+} from "./api-key.js";
 import { config } from "./config.js";
 
 /**
@@ -35,15 +40,16 @@ import { config } from "./config.js";
 /** @param {string} text @param {Response} res */
 function formatAnalyzeError(text, res) {
   const trimmed = text.trim();
+  const providerName = providerDisplayName();
   if (res.status === 401) {
-    return "Add your OpenAI API key in Settings to use AI analysis.";
+    return `Add your ${providerName} API key in Settings to use AI analysis.`;
   }
   if (
     trimmed.includes("lambda") ||
     trimmed.includes("decoding") ||
     trimmed.includes("status code returned")
   ) {
-    return "Photo analysis timed out or photos were too large. Try again on Wi-Fi, or add your OpenAI key in Settings.";
+    return `Photo analysis timed out or photos were too large. Try again on Wi-Fi, or check your ${providerName} key in Settings.`;
   }
   if (
     trimmed.includes("Error response") ||
@@ -64,19 +70,28 @@ function formatAnalyzeError(text, res) {
 
 /** @returns {string} */
 function getUserApiKeyOrThrow() {
-  const apiKey = loadApiKey();
+  const apiKey = loadActiveApiKey();
   if (!apiKey) {
-    throw new Error("Add your OpenAI API key in Settings to use AI analysis.");
+    throw new Error(`Add your ${providerDisplayName()} API key in Settings to use AI analysis.`);
   }
   return apiKey;
 }
 
 /** @returns {Record<string, string>} */
 function userApiKeyHeaders() {
-  return {
+  const provider = loadAiProvider();
+  const apiKey = getUserApiKeyOrThrow();
+  /** @type {Record<string, string>} */
+  const headers = {
     "Content-Type": "application/json",
-    "X-OpenAI-Api-Key": getUserApiKeyOrThrow(),
+    "X-AI-Provider": provider,
   };
+  if (provider === "anthropic") {
+    headers["X-Anthropic-Api-Key"] = apiKey;
+  } else {
+    headers["X-OpenAI-Api-Key"] = apiKey;
+  }
+  return headers;
 }
 
 /**
@@ -199,18 +214,22 @@ export async function analyzeRoomFrames(frames) {
 }
 
 /**
- * @typedef {{ ready: boolean, source: "user" | "none", masked?: string, error?: string }} ApiKeyStatus
+ * @typedef {{ ready: boolean, source: "user" | "none", masked?: string, error?: string, provider?: string }} ApiKeyStatus
  */
 
 /**
  * @returns {Promise<ApiKeyStatus>}
  */
 export async function checkApiKeyStatus() {
-  const userKey = loadApiKey();
+  const provider = loadAiProvider();
+  const userKey = loadActiveApiKey();
   /** @type {Record<string, string>} */
-  const headers = {};
+  const headers = {
+    "X-AI-Provider": provider,
+  };
   if (userKey) {
-    headers["X-OpenAI-Api-Key"] = userKey;
+    if (provider === "anthropic") headers["X-Anthropic-Api-Key"] = userKey;
+    else headers["X-OpenAI-Api-Key"] = userKey;
   }
 
   try {
@@ -223,14 +242,20 @@ export async function checkApiKeyStatus() {
     });
     window.clearTimeout(timer);
     if (!res.ok) {
-      return { ready: false, source: userKey ? "user" : "none", masked: userKey ? maskApiKey(userKey) : "", error: "Could not check API status" };
+      return {
+        ready: false,
+        source: userKey ? "user" : "none",
+        masked: userKey ? maskApiKey(userKey) : "",
+        error: "Could not check API status",
+        provider,
+      };
     }
 
     const data = await res.json();
     const userStatus = data.userKey;
 
     if (userKey && userStatus?.valid === true) {
-      return { ready: true, source: "user", masked: maskApiKey(userKey) };
+      return { ready: true, source: "user", masked: maskApiKey(userKey), provider };
     }
     if (userKey && userStatus?.valid === false) {
       return {
@@ -238,17 +263,30 @@ export async function checkApiKeyStatus() {
         source: "user",
         masked: maskApiKey(userKey),
         error: userStatus.error || "Invalid API key",
+        provider,
       };
     }
     if (userKey) {
-      return { ready: false, source: "user", masked: maskApiKey(userKey), error: "Key not verified" };
+      return {
+        ready: false,
+        source: "user",
+        masked: maskApiKey(userKey),
+        error: "Key not verified",
+        provider,
+      };
     }
-    return { ready: false, source: "none" };
+    return { ready: false, source: "none", provider };
   } catch {
     if (userKey) {
-      return { ready: false, source: "user", masked: maskApiKey(userKey), error: "Could not verify key" };
+      return {
+        ready: false,
+        source: "user",
+        masked: maskApiKey(userKey),
+        error: "Could not verify key",
+        provider,
+      };
     }
-    return { ready: false, source: "none", error: "Could not check API status" };
+    return { ready: false, source: "none", error: "Could not check API status", provider };
   }
 }
 

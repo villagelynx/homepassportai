@@ -50,5 +50,5 @@
   for = "/.netlify/functions/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Headers = "Content-Type, X-OpenAI-Api-Key, Authorization"
+    Access-Control-Allow-Headers = "Content-Type, X-OpenAI-Api-Key, X-Anthropic-Api-Key, X-AI-Provider, Authorization"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
