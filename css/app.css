@@ -890,8 +890,52 @@ body {
   margin-bottom: 0.55rem;
 }
 
+.home-recent .home-filter-toolbar {
+  margin: 0 0 0.65rem;
+}
+
+.home-filter-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.home-filter-axis {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 0.2rem;
+  padding: 0.18rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 88%, var(--text) 4%);
+}
+
+.home-filter-axis__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted, var(--text-muted, #667085));
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.home-filter-axis__btn.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.home-filter-axis__btn:focus-visible {
+  outline: 2px solid rgba(59, 158, 255, 0.5);
+  outline-offset: 2px;
+}
+
 .home-recent .room-filter-chips {
-  margin: 0 -0.85rem 0.6rem;
+  margin: 0 -0.85rem 0;
   padding-bottom: 0;
 }
 

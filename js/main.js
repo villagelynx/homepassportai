@@ -39,7 +39,12 @@ import {
 import { generateInsurancePdf } from "./insurance-report.js";
 import { hintForType } from "./label-hints.js";
 import { initTheme, loadThemePreference, saveThemePreference } from "./theme.js";
-import { loadRoomChipsEnabled, saveRoomChipsEnabled } from "./room-chips-prefs.js";
+import { loadRoomChipsEnabled, saveRoomChipsEnabled, loadHomeFilterAxis, saveHomeFilterAxis } from "./room-chips-prefs.js";
+import {
+  getItemCategoryMeta,
+  groupByItemCategory,
+  mapItemCategory,
+} from "./item-categories.js";
 import {
   BUILDING_FILTER_ID,
   BUILDING_GROUP_LABEL,
@@ -96,6 +101,9 @@ const els = {
   inputHomeSearch: document.getElementById("input-home-search"),
   btnClearHomeSearch: document.getElementById("btn-clear-home-search"),
   roomFilterChips: document.getElementById("room-filter-chips"),
+  homeFilterToolbar: document.getElementById("home-filter-toolbar"),
+  btnFilterAxisRoom: document.getElementById("btn-filter-axis-room"),
+  btnFilterAxisType: document.getElementById("btn-filter-axis-type"),
   emptyState: document.getElementById("empty-state"),
   searchNoResults: document.getElementById("search-no-results"),
   homeDashboard: document.getElementById("home-dashboard"),
@@ -373,6 +381,9 @@ let authMode = "signin";
 let allowOfflineUse = false;
 /** @type {"all" | "recent" | string} */
 let homeRoomFilter = "recent";
+let homeTypeFilter = "recent";
+/** @type {import("./room-chips-prefs.js").HomeFilterAxis} */
+let homeFilterAxis = loadHomeFilterAxis();
 let homeSearchQuery = "";
 /** @type {"dashboard" | "inventory"} */
 let homePanel = "dashboard";
@@ -688,10 +699,15 @@ function init() {
   els.fieldRoomChips?.addEventListener("change", () => {
     const enabled = els.fieldRoomChips?.checked ?? true;
     saveRoomChipsEnabled(enabled);
-    if (!enabled) homeRoomFilter = "recent";
-    toast(enabled ? "Room filter chips on" : "Room filter chips off");
+    if (!enabled) {
+      homeRoomFilter = "recent";
+      homeTypeFilter = "recent";
+    }
+    toast(enabled ? "Filter chips on" : "Filter chips off");
     void renderHome();
   });
+  els.btnFilterAxisRoom?.addEventListener("click", () => setHomeFilterAxis("room"));
+  els.btnFilterAxisType?.addEventListener("click", () => setHomeFilterAxis("type"));
   els.btnClearApiKey?.addEventListener("click", () => clearSettingsApiKey());
   els.btnSignOut?.addEventListener("click", () => void handleSignOut());
   els.btnTopbarSignOut?.addEventListener("click", () => {
@@ -2474,27 +2490,40 @@ async function renderHome() {
     updateHomeDashboardStats(list.length);
     renderRecentlyAdded(list, chipsEnabled);
 
-    if (els.roomFilterChips) {
-      els.roomFilterChips.hidden = !chipsEnabled || !hasInventory;
+    if (els.homeFilterToolbar) {
+      els.homeFilterToolbar.hidden = !chipsEnabled || !hasInventory;
     }
 
     if (chipsEnabled && hasInventory) {
-      const allGrouped = groupByRoom(list);
-      if (
-        homeRoomFilter !== "all" &&
-        homeRoomFilter !== "recent" &&
-        homeRoomFilter !== BUILDING_FILTER_ID &&
-        homeRoomFilter !== OUTDOOR_FILTER_ID &&
-        !allGrouped.some(([room]) => room === homeRoomFilter)
-      ) {
-        homeRoomFilter = "recent";
+      if (homeFilterAxis === "type") {
+        const typeGrouped = groupByItemCategory(list);
+        if (
+          homeTypeFilter !== "all" &&
+          homeTypeFilter !== "recent" &&
+          !typeGrouped.some(([id]) => id === homeTypeFilter)
+        ) {
+          homeTypeFilter = "recent";
+        }
+      } else {
+        const allGrouped = groupByRoom(list);
+        if (
+          homeRoomFilter !== "all" &&
+          homeRoomFilter !== "recent" &&
+          homeRoomFilter !== BUILDING_FILTER_ID &&
+          homeRoomFilter !== OUTDOOR_FILTER_ID &&
+          !allGrouped.some(([room]) => room === homeRoomFilter)
+        ) {
+          homeRoomFilter = "recent";
+        }
       }
-      renderRoomFilterChips(allGrouped, list.length);
+      syncHomeFilterAxisButtons();
+      renderHomeFilterChips(list);
     } else {
       homeRoomFilter = "recent";
+      homeTypeFilter = "recent";
     }
   } else {
-    if (els.roomFilterChips) els.roomFilterChips.hidden = true;
+    if (els.homeFilterToolbar) els.homeFilterToolbar.hidden = true;
     if (els.homeRecentGrid) els.homeRecentGrid.innerHTML = "";
     if (els.homeRecentEmpty) els.homeRecentEmpty.hidden = true;
   }
@@ -2593,6 +2622,9 @@ function openInventoryPanel() {
   homeRoomFilter = "all";
   setHomePanel("inventory");
   void renderHome();
+  queueMicrotask(() => {
+    els.inputHomeSearch?.focus({ preventScroll: true });
+  });
 }
 
 function applyHomePanelVisibility() {
@@ -2627,12 +2659,42 @@ function updateHomeDashboardStats(itemCount) {
 }
 
 /** @param {"all" | "recent" | string} [filter] */
-function getHomeRecentSectionTitle(filter = homeRoomFilter) {
+function getHomeRecentSectionTitle(filter = activeHomeFilter()) {
   if (filter === "all") return "All Items";
   if (filter === "recent") return "Recently Added";
+  if (homeFilterAxis === "type") {
+    return getItemCategoryMeta(filter).label;
+  }
   if (filter === BUILDING_FILTER_ID) return BUILDING_GROUP_LABEL;
   if (filter === OUTDOOR_FILTER_ID) return OUTDOOR_GROUP_LABEL;
   return roomDisplayName(filter);
+}
+
+/** @returns {"all" | "recent" | string} */
+function activeHomeFilter() {
+  return homeFilterAxis === "type" ? homeTypeFilter : homeRoomFilter;
+}
+
+/** @param {import("./room-chips-prefs.js").HomeFilterAxis} axis */
+function setHomeFilterAxis(axis) {
+  if (homeFilterAxis === axis) return;
+  homeFilterAxis = axis;
+  saveHomeFilterAxis(axis);
+  homeRoomFilter = "recent";
+  homeTypeFilter = "recent";
+  syncHomeFilterAxisButtons();
+  void renderHome();
+}
+
+function syncHomeFilterAxisButtons() {
+  els.btnFilterAxisRoom?.classList.toggle("is-active", homeFilterAxis === "room");
+  els.btnFilterAxisType?.classList.toggle("is-active", homeFilterAxis === "type");
+  if (els.roomFilterChips) {
+    els.roomFilterChips.setAttribute(
+      "aria-label",
+      homeFilterAxis === "type" ? "Filter by group" : "Filter by room",
+    );
+  }
 }
 
 /** @param {import("./storage.js").ApplianceRecord} item */
@@ -2674,7 +2736,15 @@ function makeApplianceCardButton(item) {
 function getDashboardCategoryItems(list, filter) {
   let items = [...list];
 
-  if (filter !== "all" && filter !== "recent" && filter !== BUILDING_FILTER_ID && filter !== OUTDOOR_FILTER_ID) {
+  if (homeFilterAxis === "type") {
+    if (filter !== "all" && filter !== "recent") {
+      items = items.filter((item) => mapItemCategory(item.applianceType) === filter);
+      items.sort((a, b) =>
+        (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
+      );
+      return items;
+    }
+  } else if (filter !== "all" && filter !== "recent" && filter !== BUILDING_FILTER_ID && filter !== OUTDOOR_FILTER_ID) {
     items = items.filter((item) => (item.room || "Other") === filter);
     items.sort((a, b) =>
       (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
@@ -2682,7 +2752,7 @@ function getDashboardCategoryItems(list, filter) {
     return items;
   }
 
-  if (filter === BUILDING_FILTER_ID) {
+  if (homeFilterAxis === "room" && filter === BUILDING_FILTER_ID) {
     items = items.filter((item) => isBuildingRoom(item.room || "Other"));
     items.sort((a, b) =>
       (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
@@ -2690,7 +2760,7 @@ function getDashboardCategoryItems(list, filter) {
     return items;
   }
 
-  if (filter === OUTDOOR_FILTER_ID) {
+  if (homeFilterAxis === "room" && filter === OUTDOOR_FILTER_ID) {
     items = items.filter((item) => isOutdoorGroupRoom(item.room || "Other"));
     items.sort((a, b) =>
       (a.nickname || "").localeCompare(b.nickname || "", undefined, { sensitivity: "base" }),
@@ -2708,8 +2778,10 @@ function getDashboardCategoryItems(list, filter) {
 
 /** @param {"all" | "recent" | string} filter */
 function getHomeRecentEmptyMessage(filter) {
-  if (filter === "recent") return "No items yet — scan or add your first item.";
-  if (filter === "all") return "No items yet — scan or add your first item.";
+  if (filter === "recent" || filter === "all") return "No items yet — scan or add your first item.";
+  if (homeFilterAxis === "type") {
+    return `No ${getItemCategoryMeta(filter).label.toLowerCase()} items yet.`;
+  }
   if (filter === BUILDING_FILTER_ID) return "No building items yet.";
   if (filter === OUTDOOR_FILTER_ID) return "No outdoor items yet.";
   return `No items in ${roomDisplayName(filter)} yet.`;
@@ -2720,7 +2792,7 @@ function renderRecentlyAdded(list, chipsEnabled = loadRoomChipsEnabled()) {
   if (!els.homeRecentGrid) return;
   els.homeRecentGrid.innerHTML = "";
 
-  const filter = chipsEnabled ? homeRoomFilter : "recent";
+  const filter = chipsEnabled ? activeHomeFilter() : "recent";
   if (els.homeRecentTitle) {
     els.homeRecentTitle.textContent = getHomeRecentSectionTitle(filter);
   }
@@ -2791,26 +2863,45 @@ function updateHomeSearchClearButton() {
   els.btnClearHomeSearch.hidden = !homeSearchQuery;
 }
 
-/** @param {[string, import("./storage.js").ApplianceRecord[]][]} grouped */
-function renderRoomFilterChips(grouped, totalCount) {
+/** @param {import("./storage.js").ApplianceRecord[]} list */
+function renderHomeFilterChips(list) {
   const container = els.roomFilterChips;
   if (!container) return;
 
   container.innerHTML = "";
+  const totalCount = list.length;
+  const active = activeHomeFilter();
+
   container.append(
-    makeRoomFilterChip("all", `All · ${totalCount}`, homeRoomFilter === "all"),
-    makeRoomFilterChip("recent", "Recently Added", homeRoomFilter === "recent"),
+    makeHomeFilterChip("all", `All · ${totalCount}`, active === "all"),
+    makeHomeFilterChip("recent", "Recently Added", active === "recent"),
   );
 
+  if (homeFilterAxis === "type") {
+    for (const [categoryId, items] of groupByItemCategory(list)) {
+      const meta = getItemCategoryMeta(categoryId);
+      container.append(
+        makeHomeFilterChip(
+          categoryId,
+          `${meta.icon} ${meta.label} · ${items.length}`,
+          active === categoryId,
+          { plainText: true },
+        ),
+      );
+    }
+    return;
+  }
+
+  const grouped = groupByRoom(list);
   const buildingCount = grouped
     .filter(([room]) => isBuildingRoom(room))
     .reduce((sum, [, items]) => sum + items.length, 0);
   if (buildingCount > 0) {
     container.append(
-      makeRoomFilterChip(
+      makeHomeFilterChip(
         BUILDING_FILTER_ID,
         `${BUILDING_GROUP_LABEL} · ${buildingCount}`,
-        homeRoomFilter === BUILDING_FILTER_ID,
+        active === BUILDING_FILTER_ID,
       ),
     );
   }
@@ -2820,10 +2911,10 @@ function renderRoomFilterChips(grouped, totalCount) {
     .reduce((sum, [, items]) => sum + items.length, 0);
   if (outdoorCount > 0) {
     container.append(
-      makeRoomFilterChip(
+      makeHomeFilterChip(
         OUTDOOR_FILTER_ID,
         `${OUTDOOR_GROUP_LABEL} · ${outdoorCount}`,
-        homeRoomFilter === OUTDOOR_FILTER_ID,
+        active === OUTDOOR_FILTER_ID,
       ),
     );
   }
@@ -2831,30 +2922,40 @@ function renderRoomFilterChips(grouped, totalCount) {
   for (const [room, items] of grouped) {
     if (isBuildingRoom(room) || isOutdoorGroupRoom(room)) continue;
     container.append(
-      makeRoomFilterChip(room, `${roomDisplayName(room)} · ${items.length}`, homeRoomFilter === room),
+      makeHomeFilterChip(room, `${roomDisplayName(room)} · ${items.length}`, active === room),
     );
   }
 }
 
-/** @param {"all" | "recent" | string} roomId */
-function makeRoomFilterChip(roomId, label, selected) {
+/**
+ * @param {"all" | "recent" | string} filterId
+ * @param {string} label
+ * @param {boolean} selected
+ * @param {{ plainText?: boolean }} [opts]
+ */
+function makeHomeFilterChip(filterId, label, selected, opts = {}) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = `room-filter-chip${selected ? " room-filter-chip--selected" : ""}`;
   btn.setAttribute("role", "tab");
   btn.setAttribute("aria-selected", String(selected));
-  if (roomId === "recent") {
+  if (opts.plainText || filterId === "recent") {
     btn.textContent = label;
-  } else if (roomId === BUILDING_FILTER_ID) {
+  } else if (filterId === BUILDING_FILTER_ID) {
     setRoomTitleElement(btn, "Building", label);
-  } else if (roomId === OUTDOOR_FILTER_ID) {
+  } else if (filterId === OUTDOOR_FILTER_ID) {
     setRoomTitleElement(btn, "Outdoor", label);
   } else {
-    setRoomTitleElement(btn, roomId, label);
+    setRoomTitleElement(btn, filterId, label);
   }
   btn.addEventListener("click", () => {
-    if (homeRoomFilter === roomId) return;
-    homeRoomFilter = roomId;
+    if (homeFilterAxis === "type") {
+      if (homeTypeFilter === filterId) return;
+      homeTypeFilter = filterId;
+    } else {
+      if (homeRoomFilter === filterId) return;
+      homeRoomFilter = filterId;
+    }
     void renderHome();
   });
   return btn;
