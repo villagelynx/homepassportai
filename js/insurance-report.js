@@ -1,5 +1,84 @@
 import { loadLocation, locationDisplayLabel } from "./location.js";
 
+/** @type {Promise<{ jsPDF: typeof import("jspdf").jsPDF, autoTable: Function }> | null} */
+let pdfLibsPromise = null;
+
+/**
+ * Load jsPDF + autotable from local vendor UMD (no CDN).
+ * Same approach as supabase — avoids desktop/iPhone failures when esm.sh is blocked.
+ * @returns {Promise<{ jsPDF: typeof import("jspdf").jsPDF, autoTable: Function }>}
+ */
+function loadPdfLibs() {
+  if (pdfLibsPromise) return pdfLibsPromise;
+
+  pdfLibsPromise = (async () => {
+    await loadVendorScript("./vendor/jspdf.umd.min.js", "jspdf-vendor");
+    await loadVendorScript("./vendor/jspdf.plugin.autotable.min.js", "jspdf-autotable-vendor");
+
+    const jsPDF = globalThis.jspdf?.jsPDF;
+    if (typeof jsPDF !== "function") {
+      throw new Error("PDF library failed to load. Refresh the page and try again.");
+    }
+
+    /** @type {Function | undefined} */
+    let autoTable =
+      typeof globalThis.jspdf?.autoTable === "function"
+        ? globalThis.jspdf.autoTable
+        : undefined;
+
+    if (typeof autoTable !== "function") {
+      // Plugin usually attaches as doc.autoTable(...)
+      autoTable = (doc, opts) => {
+        if (typeof doc?.autoTable !== "function") {
+          throw new Error("PDF table plugin failed to load. Refresh the page and try again.");
+        }
+        doc.autoTable(opts);
+      };
+    }
+
+    return { jsPDF, autoTable };
+  })();
+
+  return pdfLibsPromise;
+}
+
+/**
+ * @param {string} relativePath path relative to this module
+ * @param {string} marker data attribute to avoid duplicate script tags
+ */
+function loadVendorScript(relativePath, marker) {
+  const attr = `data-${marker}`;
+  const existing = document.querySelector(`script[${attr}="1"]`);
+  if (existing) {
+    return new Promise((resolve, reject) => {
+      if (existing.dataset.loaded === "1") {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error("Could not load PDF library. Keep ./serve.sh running and refresh.")),
+        { once: true },
+      );
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = new URL(relativePath, import.meta.url).href;
+    script.async = true;
+    script.setAttribute(attr, "1");
+    script.onload = () => {
+      script.dataset.loaded = "1";
+      resolve();
+    };
+    script.onerror = () =>
+      reject(new Error("Could not load PDF library. Keep ./serve.sh running and refresh."));
+    document.head.append(script);
+  });
+}
+
 /** @param {string | undefined} iso */
 function formatScanDate(iso) {
   if (!iso) return "—";
@@ -104,11 +183,7 @@ export async function generateInsurancePdf(appliances) {
     throw new Error("No appliances to include in the report");
   }
 
-  const [{ jsPDF }, autoTableModule] = await Promise.all([
-    import("https://esm.sh/jspdf@2.5.2"),
-    import("https://esm.sh/jspdf-autotable@3.8.4"),
-  ]);
-  const autoTable = autoTableModule.default;
+  const { jsPDF, autoTable } = await loadPdfLibs();
 
   const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter" });
   const pageWidth = doc.internal.pageSize.getWidth();
