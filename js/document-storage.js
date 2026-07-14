@@ -1,4 +1,16 @@
-const STORAGE_KEY = "homepassport-ai:documents:v1";
+import { migrateLegacyStorageKey, storageKey } from "./storage-keys.js";
+
+const STORAGE_KEY = storageKey("documents:v1");
+const LEGACY_KEY = "home-passport:documents:v1";
+const ALT_KEYS = [
+  STORAGE_KEY,
+  LEGACY_KEY,
+  "homepassport-ai:documents:v1",
+  "home-passport:documents",
+  "homepassport-ai:documents",
+];
+
+migrateLegacyStorageKey(STORAGE_KEY, LEGACY_KEY);
 
 /**
  * @typedef {"insurancePolicy" | "propertyTax" | "propertyAssessment" | "propertyTaxDeferment" | "taxUtilities" | "propertyMap"} DocumentType
@@ -45,13 +57,29 @@ const STORAGE_KEY = "homepassport-ai:documents:v1";
  * @property {string} scannedAt ISO timestamp
  */
 
+/** @param {unknown} item @returns {item is DocumentRecord} */
+function looksLikeDocument(item) {
+  if (!item || typeof item !== "object") return false;
+  const doc = /** @type {Record<string, unknown>} */ (item);
+  return typeof doc.id === "string" && typeof doc.type === "string" && typeof doc.scannedAt === "string";
+}
+
+/** @param {string | null} raw @returns {DocumentRecord[]} */
+function parseDocumentList(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(looksLikeDocument);
+  } catch {
+    return [];
+  }
+}
+
 /** @returns {DocumentRecord[]} */
 export function loadDocuments() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return parseDocumentList(localStorage.getItem(STORAGE_KEY));
   } catch {
     return [];
   }
@@ -92,4 +120,106 @@ export function getDocument(id) {
 /** @param {DocumentType} type @returns {DocumentRecord[]} */
 export function loadDocumentsByType(type) {
   return loadDocuments().filter((doc) => doc.type === type);
+}
+
+/** Scan known + any localStorage keys that look like document lists. */
+export function scanAllDocumentStorage() {
+  /** @type {string[]} */
+  const matchedKeys = [];
+  /** @type {DocumentRecord[]} */
+  const documents = [];
+  const seen = new Set();
+
+  /** @param {string} key @param {string | null} raw */
+  function ingest(key, raw) {
+    const list = parseDocumentList(raw);
+    if (list.length === 0) return;
+    matchedKeys.push(key);
+    for (const doc of list) {
+      if (!seen.has(doc.id)) {
+        seen.add(doc.id);
+        documents.push(doc);
+      }
+    }
+  }
+
+  for (const key of ALT_KEYS) {
+    try {
+      ingest(key, localStorage.getItem(key));
+    } catch {
+      // ignore
+    }
+  }
+
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || ALT_KEYS.includes(key)) continue;
+      if (!/document/i.test(key)) continue;
+      ingest(key, localStorage.getItem(key));
+    }
+  } catch {
+    // private mode
+  }
+
+  return { matchedKeys, documents };
+}
+
+/**
+ * Merge recovered documents into the canonical key.
+ * @returns {number} total documents after recovery
+ */
+export function tryRecoverDocuments() {
+  const current = loadDocuments();
+  const { documents: found } = scanAllDocumentStorage();
+  if (found.length === 0) return current.length;
+
+  const seen = new Set(current.map((d) => d.id));
+  const merged = [...current];
+  for (const doc of found) {
+    if (!seen.has(doc.id)) {
+      seen.add(doc.id);
+      merged.push(doc);
+    }
+  }
+
+  merged.sort((a, b) => String(b.scannedAt).localeCompare(String(a.scannedAt)));
+  saveDocuments(merged);
+  return merged.length;
+}
+
+/** @param {DocumentRecord[]} list */
+export function replaceDocuments(list) {
+  saveDocuments(list.filter(looksLikeDocument));
+}
+
+/**
+ * Import documents from backup payload (array or { documents: [] }).
+ * @param {unknown} payload
+ * @returns {number} newly added count
+ */
+export function importDocumentsBackup(payload) {
+  /** @type {unknown[]} */
+  let incoming = [];
+  if (Array.isArray(payload)) {
+    incoming = payload;
+  } else if (payload && typeof payload === "object") {
+    const docs = /** @type {Record<string, unknown>} */ (payload).documents;
+    if (Array.isArray(docs)) incoming = docs;
+  }
+
+  const valid = incoming.filter(looksLikeDocument);
+  if (valid.length === 0) return 0;
+
+  const existing = loadDocuments();
+  const seen = new Set(existing.map((d) => d.id));
+  let added = 0;
+  for (const doc of valid) {
+    if (seen.has(doc.id)) continue;
+    seen.add(doc.id);
+    existing.unshift(doc);
+    added += 1;
+  }
+  if (added > 0) saveDocuments(existing);
+  return added;
 }

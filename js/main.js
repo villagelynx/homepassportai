@@ -30,7 +30,7 @@ import {
 } from "./auth.js";
 import { analyzeAppliancePhotos, analyzeDocumentPhoto, analyzeLabelPhoto, analyzeRoomFrames, checkAnalyzeServer, checkApiKeyStatus, generateFacebookMarketplaceListing, readFileAsDataUrl } from "./analyze.js";
 import { compressDataUrl } from "./image-compress.js";
-import { addDocument, deleteDocument, loadDocuments } from "./document-storage.js";
+import { addDocument, deleteDocument, importDocumentsBackup, loadDocuments, tryRecoverDocuments } from "./document-storage.js";
 import {
   documentTypeLabel,
   getDocumentTypeMeta,
@@ -288,6 +288,7 @@ const els = {
   btnScanPropertyMap: document.getElementById("btn-scan-property-map"),
   reportsSavedEmpty: document.getElementById("reports-saved-empty"),
   reportsSavedList: document.getElementById("reports-saved-list"),
+  btnRestoreDocuments: document.getElementById("btn-restore-documents"),
   scanDocTitle: document.getElementById("scan-doc-title"),
   scanDocLede: document.getElementById("scan-doc-lede"),
   previewDocPhoto: document.getElementById("preview-doc-photo"),
@@ -801,6 +802,22 @@ function init() {
   });
   els.btnRestoreBackup?.addEventListener("click", () => void restoreInventory());
   els.btnRestoreInventory?.addEventListener("click", () => void restoreInventory());
+  els.btnRestoreDocuments?.addEventListener("click", () => {
+    const before = loadDocuments().length;
+    const total = tryRecoverDocuments();
+    renderReportsHub();
+    if (total > before) {
+      toast(`Restored ${total - before} document${total - before === 1 ? "" : "s"}`);
+    } else if (total > 0) {
+      toast(`${total} document${total === 1 ? "" : "s"} already on this device`);
+    } else if (isLocalNetworkDev()) {
+      toast(
+        "No documents here. They may be under a different URL (localhost vs your Mac IP) — open that same address, then Settings → Export backup.",
+      );
+    } else {
+      toast("No documents found on this device. Import a backup from Settings if you exported one.");
+    }
+  });
   els.inputImportBackup?.addEventListener("change", () => void importBackupFile());
 
   for (const btn of document.querySelectorAll("[data-nav]")) {
@@ -2091,6 +2108,7 @@ function refreshToLatestVersion() {
 }
 
 function openReportsHub() {
+  tryRecoverDocuments();
   renderReportsHub();
   setHomePanel("reports");
   showView("home");
@@ -2100,6 +2118,9 @@ function renderReportsHub() {
   const docs = loadDocuments();
   if (els.reportsSavedEmpty) {
     els.reportsSavedEmpty.hidden = docs.length > 0;
+  }
+  if (els.btnRestoreDocuments) {
+    els.btnRestoreDocuments.hidden = docs.length > 0;
   }
   if (!els.reportsSavedList) return;
   els.reportsSavedList.hidden = docs.length === 0;
@@ -2427,40 +2448,84 @@ async function exportInsuranceReport() {
 }
 
 async function exportBackup() {
-  const list = loadAllLegacyAppliances();
-  const data = list.length ? list : await loadAppliances();
-  if (data.length === 0) {
-    toast("No appliances to export");
+  const appliances = loadAllLegacyAppliances();
+  const applianceList = appliances.length ? appliances : await loadAppliances();
+  const documents = loadDocuments();
+  if (applianceList.length === 0 && documents.length === 0) {
+    toast("Nothing to export — no appliances or documents on this device");
     return;
   }
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const payload = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    appliances: applianceList,
+    documents,
+  };
+  const filename = `homepassportai-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const text = JSON.stringify(payload, null, 2);
+  const file = new File([text], filename, { type: "application/json" });
+
+  const parts = [];
+  if (applianceList.length) parts.push(`${applianceList.length} appliance(s)`);
+  if (documents.length) parts.push(`${documents.length} document(s)`);
+  const summary = parts.join(" · ");
+
+  // iPhone: Share sheet → AirDrop to Mac (ignore random “Open in …” apps like shopping apps)
+  if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+    try {
+      const shareData =
+        typeof navigator.canShare === "function" && navigator.canShare({ files: [file] })
+          ? {
+              files: [file],
+              title: "HomePassportAI backup",
+              text: "AirDrop this to your Mac, then Settings → Import backup file.",
+            }
+          : {
+              title: "HomePassportAI backup",
+              text: text.slice(0, 100000),
+            };
+      await navigator.share(shareData);
+      toast(`Shared backup (${summary}) — AirDrop to your Mac`);
+      return;
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      // Fall through to download if share fails.
+    }
+  }
+
+  const blob = new Blob([text], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `homepassportai-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-  toast(`Exported ${data.length} appliance(s)`);
+  toast(`Exported ${summary}`);
 }
 
 async function restoreInventory() {
   const count = tryRecoverInventory();
-  if (count > 0) {
+  const docTotal = tryRecoverDocuments();
+  if (count > 0 || docTotal > 0) {
     await renderHome();
+    if (homePanel === "reports") renderReportsHub();
     updateSyncBanner();
-    toast(`Restored ${count} appliance(s)`);
+    const parts = [];
+    if (count > 0) parts.push(`${count} appliance(s)`);
+    if (docTotal > 0) parts.push(`${docTotal} document(s)`);
+    toast(`Restored ${parts.join(" · ")}`);
     return;
   }
 
   if (isLocalNetworkDev()) {
     toast(
-      "Nothing found here. Your items may be saved under a different port — try http://YOUR_MAC_IP:8080, then Settings → Export appliances (JSON)."
+      "Nothing found here. Data may be under a different URL — try http://YOUR_MAC_IP:8080, then Settings → Export backup (JSON).",
     );
     return;
   }
 
   toast(
-    "No saved data on this device. On your Mac app, open Settings → Export appliances (JSON), then use Import backup file here."
+    "No saved data on this device. On the device where you saved, open Settings → Export backup (JSON), then Import backup file here.",
   );
 }
 
@@ -2469,10 +2534,36 @@ async function importBackupFile() {
   if (!file) return;
   try {
     const text = await file.text();
-    const count = await importApplianceBackup(text);
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      throw new Error("Invalid backup file");
+    }
+
+    let applianceCount = 0;
+    let documentCount = 0;
+
+    if (Array.isArray(parsed)) {
+      applianceCount = await importApplianceBackup(JSON.stringify(parsed));
+      documentCount = importDocumentsBackup(parsed);
+    } else if (parsed && typeof parsed === "object") {
+      const appliances = Array.isArray(parsed.appliances) ? parsed.appliances : null;
+      if (appliances) {
+        applianceCount = await importApplianceBackup(JSON.stringify(appliances));
+      }
+      documentCount = importDocumentsBackup(parsed);
+    } else {
+      throw new Error("Backup must be a list or { appliances, documents }");
+    }
+
     await renderHome();
+    if (homePanel === "reports") renderReportsHub();
     updateSyncBanner();
-    toast(count ? `Imported ${count} appliance(s)` : "Nothing new to import");
+    const parts = [];
+    if (applianceCount) parts.push(`${applianceCount} appliance(s)`);
+    if (documentCount) parts.push(`${documentCount} document(s)`);
+    toast(parts.length ? `Imported ${parts.join(" · ")}` : "Nothing new to import");
   } catch (err) {
     toast(err instanceof Error ? err.message : "Import failed");
   } finally {

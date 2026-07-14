@@ -473,7 +473,13 @@
             </section>
             <section class="reports-hub__section">
               <h3 class="detail-section-title">Saved documents</h3>
-              <p id="reports-saved-empty" class="settings-note">No saved documents yet. Scan a document above to get started.</p>
+              <p class="settings-note">
+                Documents stay on this browser / URL (they are not cloud-synced yet). Use the same address you saved them on (localhost vs your Mac IP are different), or export/import a backup from Settings.
+              </p>
+              <p id="reports-saved-empty" class="settings-note">No saved documents yet on this device.</p>
+              <button type="button" class="btn btn--secondary btn--block" id="btn-restore-documents" hidden>
+                Look for saved documents on this device
+              </button>
               <div id="reports-saved-list" class="reports-saved-list" hidden></div>
             </section>
           </div>
@@ -1258,12 +1264,14 @@
           </div>
           <div class="settings-account settings-backup">
             <h3 class="detail-section-title">Backup</h3>
-            <p class="settings-note">Export a copy or import appliances from another port/device.</p>
+            <p class="settings-note">
+              On iPhone: Export opens the share sheet — choose <strong>AirDrop</strong> to your Mac (ignore “Open in …” shopping apps). On Mac: Import that file here.
+            </p>
             <button type="button" class="btn btn--secondary btn--block" id="btn-restore-backup">
               Restore saved data on this device
             </button>
             <button type="button" class="btn btn--secondary btn--block" id="btn-export-backup">
-              Export appliances (JSON)
+              Share / export backup
             </button>
             <label class="btn btn--secondary btn--block capture-btn" id="label-import-backup">
               <input type="file" id="input-import-backup" accept="application/json,.json" hidden />
@@ -1471,6 +1479,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=58"></script>
+    <script type="module" src="./js/main.js?v=60"></script>
   </body>
 </html>
