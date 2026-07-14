@@ -844,6 +844,8 @@ function init() {
         showView("settings");
       } else if (target === "guide") {
         showView("guide");
+      } else if (target === "guide-transfer") {
+        openGuideTransfer();
       } else if (target === "reports") {
         openReportsHub();
       } else if (target === "scan-doc") {
@@ -1559,6 +1561,14 @@ function showView(name) {
     els.btnLandingBackApp?.setAttribute("hidden", "");
   }
   scrollAppToTop();
+}
+
+function openGuideTransfer() {
+  showView("guide");
+  queueMicrotask(() => {
+    const section = document.getElementById("guide-transfer");
+    section?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 }
 
 function resetScan() {

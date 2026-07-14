@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=104" />
+    <link rel="stylesheet" href="./css/app.css?v=105" />
   </head>
   <body>
     <div id="app" class="app">
@@ -474,8 +474,11 @@
             <section class="reports-hub__section">
               <h3 class="detail-section-title">Saved documents</h3>
               <p class="settings-note">
-                Documents stay on this browser / URL (they are not cloud-synced yet). Use the same address you saved them on (localhost vs your Mac IP are different), or export/import a backup from Settings.
+                Documents stay on this browser / URL (they are not cloud-synced yet). Use the same address you saved them on, or share a backup between phone and Mac.
               </p>
+              <button type="button" class="btn btn--ghost btn--block" data-nav="guide-transfer">
+                How to move documents between phone and Mac
+              </button>
               <p id="reports-saved-empty" class="settings-note">No saved documents yet on this device.</p>
               <button type="button" class="btn btn--secondary btn--block" id="btn-restore-documents" hidden>
                 Look for saved documents on this device
@@ -1015,15 +1018,47 @@
           <p class="step-header__lede">Photos and serials, ready when you need them.</p>
         </div>
         <div class="guide">
-          <section class="guide-section guide-section--highlight">
-            <h3 class="detail-section-title">OpenAI API key (required for AI)</h3>
+          <section class="guide-section guide-section--highlight" id="guide-transfer">
+            <h3 class="detail-section-title">Move documents between phone and Mac</h3>
             <p class="guide-text">
-              HomePassportAI uses <strong>your</strong> OpenAI key on this device. You pay OpenAI
+              Saved documents live in <strong>this browser on this device</strong>. They are not cloud-synced yet.
+              <code>localhost</code> on your Mac and <code>192.168.…</code> on your phone are different places — use a backup file to copy them.
+            </p>
+            <h4 class="guide-subtitle">1. On the device that has the documents (usually iPhone)</h4>
+            <ol class="guide-list guide-list--ordered">
+              <li>Open HomePassportAI with the <strong>same URL</strong> where you saved the documents.</li>
+              <li>Go to <strong>Settings</strong>.</li>
+              <li>Tap <strong>Share / export backup</strong>.</li>
+              <li>In the share sheet, choose <strong>AirDrop</strong> → your Mac.</li>
+              <li>Ignore random “Open in …” apps (shopping apps, browsers, etc.) — those are not for backups.</li>
+            </ol>
+            <h4 class="guide-subtitle">2. On your Mac</h4>
+            <ol class="guide-list guide-list--ordered">
+              <li>Accept the AirDrop (file usually lands in Downloads).</li>
+              <li>Open HomePassportAI on the Mac.</li>
+              <li>Go to <strong>Settings → Import backup file</strong>.</li>
+              <li>Select the <code>.json</code> backup file.</li>
+              <li>Open <strong>Reports</strong> — your documents should appear under Saved documents.</li>
+            </ol>
+            <h4 class="guide-subtitle">Tips</h4>
+            <ul class="guide-list">
+              <li>The backup includes <strong>documents and inventory items</strong> from that device.</li>
+              <li>If the list still looks empty, tap <strong>Look for saved documents on this device</strong> on the Reports page.</li>
+              <li>After you change documents on either device, export again so phone and Mac stay in sync.</li>
+            </ul>
+            <button type="button" class="btn btn--primary btn--block guide-settings-btn" data-nav="settings">
+              Open Settings to export or import
+            </button>
+          </section>
+          <section class="guide-section guide-section--highlight">
+            <h3 class="detail-section-title">AI API key (required for AI)</h3>
+            <p class="guide-text">
+              HomePassportAI uses <strong>your</strong> OpenAI or Claude key on this device. You pay the AI provider
               directly for photo and video analysis — the site does not include shared AI credits.
             </p>
             <ul class="guide-list">
-              <li><strong>Needed for AI:</strong> label/model/serial extraction, appliance photos, room video scans.</li>
-              <li><strong>Works without AI:</strong> saving photos, editing details, search, share, manual lookup links, insurance PDF (from saved items).</li>
+              <li><strong>Needed for AI:</strong> label/model/serial extraction, appliance photos, room video scans, document extraction.</li>
+              <li><strong>Works without AI:</strong> saving photos, editing details, search, share, manual lookup links, insurance PDF (from saved items), document photos entered manually.</li>
             </ul>
             <button type="button" class="btn btn--primary btn--block guide-settings-btn" data-nav="settings">
               Set up API key in Settings
@@ -1035,7 +1070,7 @@
               <li><strong>Know what you own</strong> — brands, models, and serial numbers in one place.</li>
               <li><strong>Insurance ready</strong> — download a PDF inventory for claims or renewals.</li>
               <li><strong>Repairs faster</strong> — look up manuals and save your go-to repair companies per item.</li>
-              <li><strong>Cloud backup</strong> — sign in to sync across devices (optional).</li>
+              <li><strong>Cloud backup</strong> — sign in to sync inventory across devices (optional). Documents still use share/export until cloud sync is added.</li>
               <li><strong>Share an item</strong> — send details to a spouse, landlord, or technician from your phone.</li>
             </ul>
           </section>
@@ -1074,11 +1109,14 @@
           <section class="guide-section">
             <h3 class="detail-section-title">Settings worth knowing</h3>
             <ul class="guide-list">
-              <li><strong>OpenAI API key</strong> — required on your device for AI label and room video analysis.</li>
+              <li><strong>AI API key</strong> — OpenAI or Claude, required on your device for AI analysis.</li>
               <li><strong>Sign in</strong> — sync inventory to the cloud.</li>
               <li><strong>Add to iPhone home screen</strong> — open like an app.</li>
-              <li><strong>Insurance PDF</strong> and <strong>backup</strong> — export or restore your inventory.</li>
+              <li><strong>Insurance PDF</strong> and <strong>backup</strong> — export or restore inventory and documents between devices.</li>
             </ul>
+            <button type="button" class="btn btn--secondary btn--block guide-settings-btn" data-nav="guide-transfer">
+              How to move documents phone ↔ Mac
+            </button>
             <button type="button" class="btn btn--secondary btn--block guide-settings-btn" data-nav="settings">
               Open Settings
             </button>
@@ -1267,6 +1305,9 @@
             <p class="settings-note">
               On iPhone: Export opens the share sheet — choose <strong>AirDrop</strong> to your Mac (ignore “Open in …” shopping apps). On Mac: Import that file here.
             </p>
+            <button type="button" class="btn btn--ghost btn--block" data-nav="guide-transfer">
+              Step-by-step: move documents phone ↔ Mac
+            </button>
             <button type="button" class="btn btn--secondary btn--block" id="btn-restore-backup">
               Restore saved data on this device
             </button>
@@ -1479,6 +1520,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=60"></script>
+    <script type="module" src="./js/main.js?v=61"></script>
   </body>
 </html>
