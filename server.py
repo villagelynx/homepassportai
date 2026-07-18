@@ -265,9 +265,17 @@ def is_admin_user(user: dict[str, Any] | None, admin_emails: list[str]) -> bool:
         return True
     app_meta = user.get("app_metadata") or {}
     user_meta = user.get("user_metadata") or {}
-    if isinstance(app_meta, dict) and (app_meta.get("role") == "admin" or app_meta.get("admin") is True):
+    if isinstance(app_meta, dict) and (
+        app_meta.get("role") == "admin"
+        or app_meta.get("admin") is True
+        or app_meta.get("is_admin") is True
+    ):
         return True
-    if isinstance(user_meta, dict) and (user_meta.get("role") == "admin" or user_meta.get("admin") is True):
+    if isinstance(user_meta, dict) and (
+        user_meta.get("role") == "admin"
+        or user_meta.get("admin") is True
+        or user_meta.get("is_admin") is True
+    ):
         return True
     return False
 
