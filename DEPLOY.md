@@ -53,9 +53,17 @@ git push -u origin main
 |----------|--------|
 | `SUPABASE_URL` | `https://xxxx.supabase.co` |
 | `SUPABASE_ANON_KEY` | your anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role key *(server-only; required for `/admin`)* |
+| `ADMIN_EMAILS` | comma-separated admin emails *(required for `/admin` allowlist)* |
 | `OPENAI_API_KEY` | *(optional)* server fallback for AI |
 
+Admin dashboard setup details: **[docs/ADMIN.md](./docs/ADMIN.md)**.
+
 5. **Deploy site**
+
+6. **Admin analytics migration** — in Supabase SQL Editor, run  
+   `supabase/migrations/20260718000000_admin_analytics.sql`  
+   (required for rooms scanned, country/device/feature cards, storage RPC).
 
 ---
 

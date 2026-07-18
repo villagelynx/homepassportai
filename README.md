@@ -36,15 +36,26 @@ Open **http://localhost:8080** on your Mac or **http://YOUR_MAC_IP:8080** on you
 
 See **[DEPLOY.md](./DEPLOY.md)** for full setup.
 
+## Admin dashboard
+
+Secure metrics UI at **`/admin`**. Server-side aggregates only — see **[docs/ADMIN.md](./docs/ADMIN.md)** for:
+
+1. Applying `supabase/migrations/20260718000000_admin_analytics.sql`
+2. Setting `SUPABASE_SERVICE_ROLE_KEY` + `ADMIN_EMAILS` on Netlify
+3. Granting admin via allowlist or `app_metadata.role = "admin"`
+
 ## Project layout
 
 ```
 homepassport-ai/
   index.html
+  admin.html
   css/app.css
   js/
   netlify/functions/
   supabase/schema.sql
+  supabase/migrations/
+  docs/ADMIN.md
   scripts/build-config.mjs
 ```
 

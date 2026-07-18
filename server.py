@@ -228,8 +228,56 @@ def resolve_port() -> int:
     return 8080
 
 
+ALLOWED_ANALYTICS_EVENTS = {
+    "appliance_added",
+    "room_scanned",
+    "document_saved",
+    "manual_lookup",
+    "inventory_viewed",
+    "reports_viewed",
+}
+
+METRIC_DEFINITIONS = {
+    "totalUsers": "All auth.users rows (registered accounts).",
+    "activeToday": "Users with last_sign_in_at in the past 24 hours.",
+    "newUsersThisWeek": "Users with created_at in the past 7 days.",
+    "homesCreated": "Proxy for homes: distinct users with ≥1 cloud appliance. There is no separate homes table.",
+    "roomsScanned": "analytics_events.room_scanned count since instrumentation. Not backfilled for older scans.",
+    "appliancesAdded": "Count of rows in public.appliances.",
+    "manualsUploaded": "App does not store uploaded manuals. Card shows privacy-safe manual_lookup opens since analytics began.",
+    "storageUsed": "Sum of storage.objects metadata size for the appliance-photos bucket.",
+    "usersByCountry": "ISO country codes captured from edge geo headers on analytics events.",
+    "mostUsedFeatures": "Counts of analytics_events.event_name since instrumentation.",
+    "devices": "Device class inferred server-side from User-Agent on analytics events.",
+    "dailyGrowth": "New registered users per UTC day for the last 14 days (zeros filled).",
+}
+
+
 def parse_admin_emails(raw: str) -> list[str]:
     return [email.strip().lower() for email in raw.split(",") if email.strip()]
+
+
+def is_admin_user(user: dict[str, Any] | None, admin_emails: list[str]) -> bool:
+    if not user:
+        return False
+    email = str(user.get("email") or "").strip().lower()
+    if email and email in admin_emails:
+        return True
+    app_meta = user.get("app_metadata") or {}
+    user_meta = user.get("user_metadata") or {}
+    if isinstance(app_meta, dict) and (
+        app_meta.get("role") == "admin"
+        or app_meta.get("admin") is True
+        or app_meta.get("is_admin") is True
+    ):
+        return True
+    if isinstance(user_meta, dict) and (
+        user_meta.get("role") == "admin"
+        or user_meta.get("admin") is True
+        or user_meta.get("is_admin") is True
+    ):
+        return True
+    return False
 
 
 def supabase_request(
@@ -291,8 +339,25 @@ def list_supabase_users(supabase_url: str, service_key: str) -> list[dict[str, A
     return users
 
 
-def fetch_inventory_stats(supabase_url: str, service_key: str) -> dict[str, Any]:
-    status, headers, raw = supabase_request(
+def fetch_database_stats(supabase_url: str, service_key: str) -> dict[str, Any]:
+    status, _, raw = supabase_request(
+        f"{supabase_url}/rest/v1/rpc/admin_dashboard_database_stats",
+        api_key=service_key,
+        method="POST",
+        body={},
+    )
+    if status == 200:
+        data = json.loads(raw.decode("utf-8"))
+        rooms = data.get("rooms_with_items", data.get("distinct_rooms"))
+        return {
+            "appliancesAdded": int(data.get("appliances_added") or 0),
+            "homesWithInventory": int(data.get("homes_with_inventory") or 0),
+            "distinctRooms": int(rooms or 0),
+            "storageBytes": int(data.get("storage_bytes") or 0),
+            "source": "admin_dashboard_database_stats",
+        }
+
+    status, _, raw = supabase_request(
         f"{supabase_url}/rest/v1/rpc/admin_inventory_stats",
         api_key=service_key,
         method="POST",
@@ -301,8 +366,11 @@ def fetch_inventory_stats(supabase_url: str, service_key: str) -> dict[str, Any]
     if status == 200:
         data = json.loads(raw.decode("utf-8"))
         return {
-            "totalItems": int(data.get("total_items") or 0),
-            "usersWithInventory": int(data.get("users_with_inventory") or 0),
+            "appliancesAdded": int(data.get("total_items") or 0),
+            "homesWithInventory": int(data.get("users_with_inventory") or 0),
+            "distinctRooms": int(data.get("distinct_rooms") or 0) if data.get("distinct_rooms") is not None else None,
+            "storageBytes": None,
+            "source": "admin_inventory_stats",
         }
 
     status, headers, _ = supabase_request(
@@ -313,41 +381,114 @@ def fetch_inventory_stats(supabase_url: str, service_key: str) -> dict[str, Any]
     )
     content_range = headers.get("Content-Range") or headers.get("content-range") or ""
     total_items = int(content_range.split("/")[-1]) if "/" in content_range else 0
-    return {"totalItems": total_items, "usersWithInventory": None}
+    return {
+        "appliancesAdded": total_items,
+        "homesWithInventory": None,
+        "distinctRooms": None,
+        "storageBytes": None,
+        "source": "appliances_count_fallback",
+    }
+
+
+def fetch_analytics_aggregates(supabase_url: str, service_key: str) -> dict[str, Any]:
+    status, _, raw = supabase_request(
+        f"{supabase_url}/rest/v1/rpc/admin_analytics_aggregates",
+        api_key=service_key,
+        method="POST",
+        body={},
+    )
+    if status != 200:
+        return {
+            "available": False,
+            "roomsScanned": None,
+            "manualLookups": None,
+            "documentsSaved": None,
+            "byCountry": [],
+            "byDevice": {"ios": None, "android": None, "other": None},
+            "byFeature": [],
+            "eventsSince": None,
+            "totalEvents": 0,
+        }
+    data = json.loads(raw.decode("utf-8"))
+    by_country_raw = data.get("by_country") or []
+    by_device_raw = data.get("by_device") or []
+    by_feature_raw = data.get("by_feature") or []
+    devices = {"ios": 0, "android": 0, "other": 0}
+    for row in by_device_raw:
+        if not isinstance(row, dict):
+            continue
+        key = str(row.get("device_type") or "other")
+        if key not in devices:
+            key = "other"
+        devices[key] += int(row.get("count") or 0)
+    return {
+        "available": True,
+        "roomsScanned": int(data.get("rooms_scanned") or 0),
+        "manualLookups": int(data.get("manual_lookups") or 0),
+        "documentsSaved": int(data.get("documents_saved") or 0),
+        "byCountry": [
+            {
+                "countryCode": str(row.get("country_code")),
+                "count": int(row.get("count") or 0),
+            }
+            for row in by_country_raw
+            if isinstance(row, dict) and row.get("country_code")
+        ],
+        "byDevice": devices,
+        "byFeature": [
+            {
+                "name": str(row.get("event_name") or ""),
+                "count": int(row.get("count") or 0),
+            }
+            for row in by_feature_raw
+            if isinstance(row, dict)
+        ],
+        "eventsSince": data.get("events_since"),
+        "totalEvents": int(data.get("total_events") or 0),
+    }
+
+
+def utc_date_keys(days: int) -> list[str]:
+    now = datetime.now(timezone.utc).date()
+    return [(now - timedelta(days=offset)).isoformat() for offset in range(days - 1, -1, -1)]
 
 
 def compute_user_stats(users: list[dict[str, Any]]) -> dict[str, Any]:
     now = datetime.now(timezone.utc)
     seven_days_ago = now - timedelta(days=7)
-    thirty_days_ago = now - timedelta(days=30)
+    day_start = now - timedelta(days=1)
     signups_last_7 = 0
-    signups_last_30 = 0
+    active_today = 0
     by_date: dict[str, int] = {}
 
     for user in users:
-        created_raw = user.get("created_at") or ""
+        created_raw = str(user.get("created_at") or "")
         try:
             created = datetime.fromisoformat(created_raw.replace("Z", "+00:00"))
         except ValueError:
-            continue
-        if created >= seven_days_ago:
-            signups_last_7 += 1
-        if created >= thirty_days_ago:
-            signups_last_30 += 1
-        date_key = created_raw[:10]
-        if date_key:
-            by_date[date_key] = by_date.get(date_key, 0) + 1
+            created = None
+        if created is not None:
+            if created >= seven_days_ago:
+                signups_last_7 += 1
+            date_key = created_raw[:10]
+            if date_key:
+                by_date[date_key] = by_date.get(date_key, 0) + 1
 
-    recent_signups = [
-        {"date": date, "count": count}
-        for date, count in sorted(by_date.items(), reverse=True)[:14]
-    ]
+        last_raw = str(user.get("last_sign_in_at") or "")
+        try:
+            last_sign_in = datetime.fromisoformat(last_raw.replace("Z", "+00:00"))
+        except ValueError:
+            last_sign_in = None
+        if last_sign_in is not None and last_sign_in >= day_start:
+            active_today += 1
+
+    daily_growth = [{"date": date, "count": by_date.get(date, 0)} for date in utc_date_keys(14)]
 
     return {
         "totalUsers": len(users),
+        "activeToday": active_today,
         "signupsLast7Days": signups_last_7,
-        "signupsLast30Days": signups_last_30,
-        "recentSignups": recent_signups,
+        "dailyGrowth": daily_growth,
     }
 
 
@@ -359,8 +500,6 @@ def build_admin_stats(access_token: str) -> tuple[int, dict[str, Any]]:
 
     if not supabase_url or not anon_key or not service_key:
         return 503, {"error": "Admin stats are not configured on the server."}
-    if not admin_emails:
-        return 503, {"error": "ADMIN_EMAILS is not configured."}
     if not access_token:
         return 401, {"error": "Sign in required."}
 
@@ -368,21 +507,122 @@ def build_admin_stats(access_token: str) -> tuple[int, dict[str, Any]]:
     email = str((user or {}).get("email") or "").strip().lower()
     if not email:
         return 401, {"error": "Invalid or expired session."}
-    if email not in admin_emails:
+    if not is_admin_user(user, admin_emails):
         return 403, {"error": "Admin access required."}
 
     users = list_supabase_users(supabase_url, service_key)
-    inventory = fetch_inventory_stats(supabase_url, service_key)
+    database = fetch_database_stats(supabase_url, service_key)
+    analytics = fetch_analytics_aggregates(supabase_url, service_key)
     stats = compute_user_stats(users)
 
     return 200, {
         "ok": True,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "adminEmail": email,
-        **stats,
-        "totalInventoryItems": inventory["totalItems"],
-        "usersWithInventory": inventory["usersWithInventory"],
+        "analyticsAvailable": analytics["available"],
+        "definitions": METRIC_DEFINITIONS,
+        "totalUsers": stats["totalUsers"],
+        "activeToday": stats["activeToday"],
+        "newUsersThisWeek": stats["signupsLast7Days"],
+        "homesCreated": database["homesWithInventory"],
+        "roomsScanned": analytics["roomsScanned"],
+        "appliancesAdded": database["appliancesAdded"],
+        "manualsUploaded": analytics["manualLookups"],
+        "documentsSaved": analytics["documentsSaved"],
+        "storageBytes": database["storageBytes"],
+        "storageUsedBytes": database["storageBytes"],
+        "roomsWithItems": database["distinctRooms"],
+        "usersByCountry": analytics["byCountry"],
+        "mostUsedFeatures": analytics["byFeature"],
+        "devices": analytics["byDevice"],
+        "dailyGrowth": stats["dailyGrowth"],
+        "meta": {
+            "databaseSource": database["source"],
+            "distinctRoomsInInventory": database["distinctRooms"],
+            "documentsSavedEvents": analytics["documentsSaved"],
+            "analyticsEventsSince": analytics["eventsSince"],
+            "analyticsTotalEvents": analytics["totalEvents"],
+        },
+        "signupsLast7Days": stats["signupsLast7Days"],
+        "totalInventoryItems": database["appliancesAdded"],
+        "usersWithInventory": database["homesWithInventory"],
+        "recentSignups": [
+            row for row in reversed(stats["dailyGrowth"]) if row["count"] > 0
+        ][:14],
     }
+
+
+def detect_device_type(user_agent: str) -> str:
+    ua = (user_agent or "").lower()
+    if not ua:
+        return "other"
+    if "iphone" in ua or "ipad" in ua or "ipod" in ua or "ios" in ua:
+        return "ios"
+    if "android" in ua:
+        return "android"
+    return "other"
+
+
+def detect_country_code(headers: Any) -> str | None:
+    normalized = {str(k).lower(): str(v) for k, v in dict(headers or {}).items()}
+    for key in ("x-country", "x-nf-country", "x-vercel-ip-country", "cf-ipcountry"):
+        raw = str(normalized.get(key) or "").strip().upper()
+        if len(raw) == 2 and raw.isalpha() and raw not in {"XX", "T1"}:
+            return raw
+    return None
+
+
+def record_analytics_event(
+    access_token: str,
+    event_name: str,
+    user_agent: str,
+    country_code: str | None,
+) -> tuple[int, dict[str, Any] | None]:
+    supabase_url = (os.environ.get("SUPABASE_URL") or "").strip()
+    anon_key = (os.environ.get("SUPABASE_ANON_KEY") or "").strip()
+    service_key = (os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or "").strip()
+    name = (event_name or "").strip()
+
+    if not supabase_url or not anon_key or not service_key:
+        return 503, {"error": "Analytics is not configured on the server."}
+    if name not in ALLOWED_ANALYTICS_EVENTS:
+        return 400, {"error": "Unsupported analytics event."}
+    if not access_token:
+        return 401, {"error": "Sign in required."}
+
+    user = verify_supabase_user(supabase_url, anon_key, access_token)
+    user_id = str((user or {}).get("id") or "").strip()
+    if not user_id:
+        return 401, {"error": "Sign in required."}
+
+    payload = {
+        "user_id": user_id,
+        "event_name": name,
+        "device_type": detect_device_type(user_agent),
+        "country_code": country_code if country_code and len(country_code) == 2 else None,
+    }
+    status, _, raw = supabase_request(
+        f"{supabase_url}/rest/v1/analytics_events",
+        api_key=service_key,
+        method="POST",
+        body=payload,
+        extra_headers={"Prefer": "return=minimal"},
+    )
+    text = raw.decode("utf-8", errors="replace")
+    if status in (400, 404) and (
+        "analytics_events" in text
+        or "does not exist" in text
+        or "Could not find" in text
+        or status == 404
+    ):
+        return 202, {
+            "ok": False,
+            "skipped": True,
+            "reason": "analytics_events table is not available yet. Apply the admin analytics migration.",
+        }
+    if status not in (200, 201, 204):
+        raise RuntimeError(f"Failed to record analytics event ({status}): {text}")
+    return 204, None
 
 
 def verify_openai_key(api_key: str) -> dict[str, Any]:
@@ -913,11 +1153,17 @@ class Handler(BaseHTTPRequestHandler):
                 print(f"Admin stats error: {exc}", file=sys.stderr)
                 self._json(500, {"error": str(exc)})
             return
+        if path in ("/admin", "/admin/"):
+            self._send_file("admin.html")
+            return
         if path in ("", "/"):
             self._send_file("index.html")
             return
         if path == "/index.html":
             self._send_file("index.html")
+            return
+        if path == "/admin.html":
+            self._send_file("admin.html")
             return
         if path.startswith("/home-passport"):
             self.send_response(301)
@@ -934,6 +1180,34 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/api/analyze-room":
             self._handle_analyze_room()
+            return
+        if path == "/api/analytics/event":
+            length = int(self.headers.get("Content-Length") or 0)
+            if length < 0 or length > 10_000:
+                self._json(400, {"error": "Invalid request size"})
+                return
+            try:
+                body = json.loads(self.rfile.read(length).decode("utf-8")) if length else {}
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                self._json(400, {"error": "Invalid JSON"})
+                return
+            auth_header = self.headers.get("Authorization") or ""
+            access_token = auth_header[7:].strip() if auth_header.startswith("Bearer ") else ""
+            try:
+                code, payload = record_analytics_event(
+                    access_token,
+                    str(body.get("eventName") or body.get("event_name") or ""),
+                    self.headers.get("User-Agent") or "",
+                    detect_country_code(self.headers),
+                )
+                if code == 204:
+                    self.send_response(204)
+                    self.end_headers()
+                else:
+                    self._json(code, payload or {"error": "Analytics request failed"})
+            except Exception as exc:
+                print(f"Analytics event error: {exc}", file=sys.stderr)
+                self._json(500, {"error": str(exc)})
             return
         if path != "/api/analyze":
             self.send_error(404)
@@ -1072,8 +1346,8 @@ class Handler(BaseHTTPRequestHandler):
             print(f"Analyze room error: {exc}", file=sys.stderr)
             self._json(500, {"error": str(exc)})
 
-    def _json(self, code: int, payload: dict[str, Any]) -> None:
-        data = json.dumps(payload).encode("utf-8")
+    def _json(self, code: int, payload: dict[str, Any] | None) -> None:
+        data = json.dumps(payload or {}).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))

@@ -36,14 +36,6 @@ export async function handler(event) {
     };
   }
 
-  if (adminEmails.length === 0) {
-    return {
-      statusCode: 503,
-      headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify({ error: "ADMIN_EMAILS is not configured." }),
-    };
-  }
-
   const authHeader = event.headers.authorization || event.headers.Authorization || "";
   const accessToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
   if (!accessToken) {
