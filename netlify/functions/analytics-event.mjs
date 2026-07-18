@@ -1,84 +1,97 @@
-import { recordAnalyticsEvent } from "./lib/analytics-core.mjs";
+const ALLOWED_EVENTS = new Set([
+  "appliance_added",
+  "room_scanned",
+  "document_saved",
+  "manual_lookup",
+  "inventory_viewed",
+  "reports_viewed",
+]);
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+  "Cache-Control": "no-store",
 };
+
+function response(statusCode, body) {
+  return { statusCode, headers: JSON_HEADERS, body: JSON.stringify(body) };
+}
+
+function deviceType(userAgent) {
+  if (/iphone|ipad|ipod/i.test(userAgent)) return "ios";
+  if (/android/i.test(userAgent)) return "android";
+  return "other";
+}
+
+function countryCode(headers) {
+  const raw =
+    headers["x-country"] ||
+    headers["x-nf-country"] ||
+    headers["cloudfront-viewer-country"] ||
+    "";
+  const normalized = raw.trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(normalized) ? normalized : null;
+}
+
+async function authenticatedUser(supabaseUrl, anonKey, authHeader) {
+  if (!authHeader.startsWith("Bearer ")) return null;
+  const result = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: { apikey: anonKey, Authorization: authHeader },
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!result.ok) return null;
+  return result.json();
+}
 
 /** @param {import("@netlify/functions").HandlerEvent} event */
 export async function handler(event) {
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: CORS, body: "" };
-  }
-
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
+    return response(405, { error: "Method not allowed" });
   }
 
   const supabaseUrl = (process.env.SUPABASE_URL || "").trim();
   const anonKey = (process.env.SUPABASE_ANON_KEY || "").trim();
   const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-
   if (!supabaseUrl || !anonKey || !serviceKey) {
-    return {
-      statusCode: 503,
-      headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify({ error: "Analytics is not configured on the server." }),
-    };
+    return response(204, {});
   }
 
-  const authHeader = event.headers.authorization || event.headers.Authorization || "";
-  const accessToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-  if (!accessToken) {
-    return {
-      statusCode: 401,
-      headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify({ error: "Sign in required." }),
-    };
-  }
-
-  let payload = {};
+  let body;
   try {
-    payload = event.body ? JSON.parse(event.body) : {};
+    body = JSON.parse(event.body || "{}");
   } catch {
-    return {
-      statusCode: 400,
-      headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify({ error: "Invalid JSON body." }),
-    };
+    return response(400, { error: "Invalid JSON" });
+  }
+
+  const eventName = typeof body.eventName === "string" ? body.eventName : "";
+  if (!ALLOWED_EVENTS.has(eventName)) {
+    return response(400, { error: "Unknown event" });
   }
 
   try {
-    const result = await recordAnalyticsEvent({
-      supabaseUrl,
-      anonKey,
-      serviceKey,
-      accessToken,
-      eventName: payload.eventName || payload.event_name || "",
-      userAgent: event.headers["user-agent"] || event.headers["User-Agent"] || "",
-      headers: event.headers,
+    const authHeader = event.headers.authorization || event.headers.Authorization || "";
+    const user = await authenticatedUser(supabaseUrl, anonKey, authHeader);
+    const insert = await fetch(`${supabaseUrl}/rest/v1/analytics_events`, {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        user_id: user?.id || null,
+        event_name: eventName,
+        country_code: countryCode(event.headers),
+        device_type: deviceType(event.headers["user-agent"] || ""),
+      }),
+      signal: AbortSignal.timeout(8000),
     });
 
-    if (result.status === 204) {
-      return { statusCode: 204, headers: CORS, body: "" };
-    }
-
-    return {
-      statusCode: result.status,
-      headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify(result.body),
-    };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to record analytics event";
-    return {
-      statusCode: 500,
-      headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify({ error: message }),
-    };
+    // Analytics must never block the product. A missing migration is treated as
+    // unavailable collection and is surfaced in the admin dashboard instead.
+    if (!insert.ok) return response(204, {});
+    return response(202, { ok: true });
+  } catch {
+    return response(204, {});
   }
 }
