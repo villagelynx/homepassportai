@@ -12,6 +12,7 @@ import {
 import { detectCurrentLocation, loadLocation, locationDisplayLabel, saveLocation } from "./location.js";
 import { localRepairGoogleUrl, localRepairSearchUrl } from "./repair-links.js";
 import { APP_VERSION, config, isSupabaseConfigured } from "./config.js";
+import { trackEvent } from "./analytics.js";
 import {
   clearSessionExpiredFlag,
   friendlyAuthMessage,
@@ -1532,6 +1533,10 @@ async function saveRoomItems() {
     await renderHome();
     updateSyncBanner();
     showView("home");
+    trackEvent("room_scanned");
+    for (let i = 0; i < saved; i += 1) {
+      trackEvent("appliance_added", { dedupeKey: `room-appliance-${saved}-${i}`, dedupeMs: 250 });
+    }
     toast(`Saved ${saved} item${saved === 1 ? "" : "s"} from room scan`);
   } catch (err) {
     toast(err instanceof Error ? err.message : "Could not save room items");
@@ -1975,6 +1980,7 @@ async function saveRecord() {
     await renderHome();
     updateSyncBanner();
     showView("home");
+    trackEvent("appliance_added");
     toast(`Saved “${record.nickname}”`);
   } catch (err) {
     console.error(err);
@@ -2122,6 +2128,7 @@ function openReportsHub() {
   renderReportsHub();
   setHomePanel("reports");
   showView("home");
+  trackEvent("reports_viewed", { dedupeKey: "reports_viewed", dedupeMs: 60_000 });
 }
 
 function renderReportsHub() {
@@ -2412,6 +2419,7 @@ async function saveDocumentRecord() {
     addDocument(record);
     resetDocumentScan();
     openReportsHub();
+    trackEvent("document_saved");
     toast(`Saved ${record.nickname}`);
   } catch (err) {
     toast(err instanceof Error ? err.message : "Could not save document");
@@ -2730,6 +2738,7 @@ function openInventoryPanel() {
   homeRoomFilter = "all";
   setHomePanel("inventory");
   void renderHome();
+  trackEvent("inventory_viewed", { dedupeKey: "inventory_viewed", dedupeMs: 60_000 });
   queueMicrotask(() => {
     els.inputHomeSearch?.focus({ preventScroll: true });
   });
@@ -3739,6 +3748,7 @@ function renderDetailManualLinks(item) {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.textContent = "Search for owner's manual";
+    a.addEventListener("click", () => trackEvent("manual_lookup"));
     el.append(a);
   }
 
@@ -3749,6 +3759,7 @@ function renderDetailManualLinks(item) {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.textContent = "Search on ManualsLib";
+    a.addEventListener("click", () => trackEvent("manual_lookup"));
     el.append(a);
   }
 }

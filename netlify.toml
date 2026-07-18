@@ -20,6 +20,9 @@
 [functions."admin-stats"]
   timeout = 26
 
+[functions."analytics-event"]
+  timeout = 10
+
 [[redirects]]
   from = "/api/analyze"
   to = "/.netlify/functions/analyze"
@@ -38,6 +41,21 @@
 [[redirects]]
   from = "/api/admin/stats"
   to = "/.netlify/functions/admin-stats"
+  status = 200
+
+[[redirects]]
+  from = "/api/analytics/event"
+  to = "/.netlify/functions/analytics-event"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/"
+  to = "/admin.html"
   status = 200
 
 [[headers]]

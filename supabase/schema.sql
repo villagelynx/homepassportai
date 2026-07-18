@@ -108,3 +108,20 @@ as $$
     'users_with_inventory', (select count(distinct user_id)::int from appliances)
   );
 $$;
+
+revoke all on function admin_inventory_stats() from public;
+revoke all on function admin_inventory_stats() from anon;
+revoke all on function admin_inventory_stats() from authenticated;
+grant execute on function admin_inventory_stats() to service_role;
+
+-- For analytics_events + full admin dashboard RPCs, also run:
+-- supabase/migrations/20260718000000_admin_analytics.sql
+
+revoke all on function public.admin_inventory_stats() from public;
+revoke all on function public.admin_inventory_stats() from anon;
+revoke all on function public.admin_inventory_stats() from authenticated;
+grant execute on function public.admin_inventory_stats() to service_role;
+
+-- Optional admin analytics migration:
+-- also run supabase/migrations/20260718000000_admin_analytics.sql
+-- for analytics_events + admin_dashboard_database_stats().

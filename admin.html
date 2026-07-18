@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="light dark" />
     <title>Admin — HomePassportAI</title>
     <link rel="icon" href="./icons/icon-192.png" type="image/png" sizes="192x192" />
-    <link rel="stylesheet" href="./css/app.css?v=100" />
+    <link rel="stylesheet" href="./css/app.css?v=101" />
   </head>
   <body class="admin-page">
     <main class="admin-shell">
@@ -26,7 +26,9 @@
 
       <section id="admin-signin" class="admin-card" hidden>
         <h2>Sign in</h2>
-        <p class="settings-note">Use an admin account listed in <code>ADMIN_EMAILS</code>.</p>
+        <p class="settings-note">
+          Use an admin account from <code>ADMIN_EMAILS</code> or a user with an admin role flag.
+        </p>
         <form id="admin-signin-form" class="form">
           <label>
             <span>Email</span>
@@ -41,6 +43,14 @@
         <p id="admin-signin-error" class="admin-error" hidden></p>
       </section>
 
+      <section id="admin-denied" class="admin-card admin-card--warning" hidden>
+        <h2>Access denied</h2>
+        <p class="settings-note" id="admin-denied-message">
+          This account is not authorized for the admin dashboard.
+        </p>
+        <button type="button" class="btn btn--secondary" id="btn-admin-denied-signout">Sign out</button>
+      </section>
+
       <section id="admin-dashboard" class="admin-dashboard" hidden>
         <div class="admin-toolbar">
           <p class="settings-note" id="admin-signed-in-as"></p>
@@ -52,39 +62,87 @@
 
         <p id="admin-stats-error" class="admin-error" hidden></p>
         <p id="admin-stats-loading" class="settings-note">Loading stats…</p>
+        <p id="admin-analytics-note" class="settings-note admin-analytics-note" hidden></p>
 
         <div id="admin-stats-grid" class="admin-stats-grid" hidden>
           <article class="admin-stat-card">
-            <p class="admin-stat-card__label">Registered users</p>
+            <p class="admin-stat-card__emoji" aria-hidden="true">👥</p>
+            <p class="admin-stat-card__label">Total Registered Users</p>
             <p class="admin-stat-card__value" id="stat-total-users">—</p>
           </article>
           <article class="admin-stat-card">
-            <p class="admin-stat-card__label">Signups (7 days)</p>
-            <p class="admin-stat-card__value" id="stat-signups-7">—</p>
+            <p class="admin-stat-card__emoji" aria-hidden="true">🟢</p>
+            <p class="admin-stat-card__label">Active Today</p>
+            <p class="admin-stat-card__value" id="stat-active-today">—</p>
           </article>
           <article class="admin-stat-card">
-            <p class="admin-stat-card__label">Signups (30 days)</p>
-            <p class="admin-stat-card__value" id="stat-signups-30">—</p>
+            <p class="admin-stat-card__emoji" aria-hidden="true">📈</p>
+            <p class="admin-stat-card__label">New Users This Week</p>
+            <p class="admin-stat-card__value" id="stat-new-week">—</p>
           </article>
           <article class="admin-stat-card">
-            <p class="admin-stat-card__label">Users with inventory</p>
-            <p class="admin-stat-card__value" id="stat-users-inventory">—</p>
+            <p class="admin-stat-card__emoji" aria-hidden="true">🏠</p>
+            <p class="admin-stat-card__label">Homes Created</p>
+            <p class="admin-stat-card__value" id="stat-homes">—</p>
+            <p class="admin-stat-card__hint">Users with cloud inventory</p>
           </article>
           <article class="admin-stat-card">
-            <p class="admin-stat-card__label">Total inventory items</p>
-            <p class="admin-stat-card__value" id="stat-total-items">—</p>
+            <p class="admin-stat-card__emoji" aria-hidden="true">🛋️</p>
+            <p class="admin-stat-card__label">Rooms Scanned</p>
+            <p class="admin-stat-card__value" id="stat-rooms-scanned">—</p>
+            <p class="admin-stat-card__hint" id="stat-rooms-hint">Analytics events</p>
+          </article>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__emoji" aria-hidden="true">📷</p>
+            <p class="admin-stat-card__label">Appliances Added</p>
+            <p class="admin-stat-card__value" id="stat-appliances">—</p>
+          </article>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__emoji" aria-hidden="true">📄</p>
+            <p class="admin-stat-card__label">Manual Lookups</p>
+            <p class="admin-stat-card__value" id="stat-manuals">—</p>
+            <p class="admin-stat-card__hint">Not file uploads</p>
+          </article>
+          <article class="admin-stat-card">
+            <p class="admin-stat-card__emoji" aria-hidden="true">💾</p>
+            <p class="admin-stat-card__label">Storage Used</p>
+            <p class="admin-stat-card__value" id="stat-storage">—</p>
           </article>
         </div>
 
-        <section id="admin-recent-signups" class="admin-card" hidden>
-          <h2>Recent signups by day</h2>
-          <div id="admin-recent-signups-list" class="admin-recent-list"></div>
+        <section id="admin-growth" class="admin-card" hidden>
+          <h2>🔥 Daily Growth</h2>
+          <p class="settings-note">New Auth signups per UTC day (last 14 days).</p>
+          <div id="admin-growth-chart" class="admin-growth-chart" role="img" aria-label="Daily signup growth chart"></div>
+        </section>
+
+        <section id="admin-countries" class="admin-card" hidden>
+          <h2>🌍 Users by Country</h2>
+          <p class="settings-note">From analytics geo headers since instrumentation began.</p>
+          <div id="admin-countries-list" class="admin-recent-list"></div>
+        </section>
+
+        <section id="admin-features" class="admin-card" hidden>
+          <h2>⭐ Most Used Features</h2>
+          <p class="settings-note">Analytics event counts (no historical backfill).</p>
+          <div id="admin-features-list" class="admin-recent-list"></div>
+        </section>
+
+        <section id="admin-devices" class="admin-card" hidden>
+          <h2>📱 iPhone vs Android</h2>
+          <p class="settings-note">Inferred from User-Agent on analytics events.</p>
+          <div id="admin-devices-list" class="admin-recent-list"></div>
+        </section>
+
+        <section id="admin-definitions" class="admin-card" hidden>
+          <h2>Metric definitions</h2>
+          <ul id="admin-definitions-list" class="admin-definitions"></ul>
         </section>
 
         <p id="admin-generated-at" class="settings-note admin-generated-at" hidden></p>
       </section>
     </main>
 
-    <script type="module" src="./js/admin.js?v=1"></script>
+    <script type="module" src="./js/admin.js?v=2"></script>
   </body>
 </html>

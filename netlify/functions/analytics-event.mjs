@@ -1,12 +1,9 @@
-import {
-  buildAdminStats,
-  parseAdminEmails,
-} from "./lib/admin-stats-core.mjs";
+import { recordAnalyticsEvent } from "./lib/analytics-core.mjs";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-OpenAI-Api-Key",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 /** @param {import("@netlify/functions").HandlerEvent} event */
@@ -15,7 +12,7 @@ export async function handler(event) {
     return { statusCode: 204, headers: CORS, body: "" };
   }
 
-  if (event.httpMethod !== "GET") {
+  if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
       headers: { "Content-Type": "application/json", ...CORS },
@@ -26,13 +23,12 @@ export async function handler(event) {
   const supabaseUrl = (process.env.SUPABASE_URL || "").trim();
   const anonKey = (process.env.SUPABASE_ANON_KEY || "").trim();
   const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
-  const adminEmails = parseAdminEmails(process.env.ADMIN_EMAILS);
 
   if (!supabaseUrl || !anonKey || !serviceKey) {
     return {
       statusCode: 503,
       headers: { "Content-Type": "application/json", ...CORS },
-      body: JSON.stringify({ error: "Admin stats are not configured on the server." }),
+      body: JSON.stringify({ error: "Analytics is not configured on the server." }),
     };
   }
 
@@ -46,14 +42,31 @@ export async function handler(event) {
     };
   }
 
+  let payload = {};
   try {
-    const result = await buildAdminStats({
+    payload = event.body ? JSON.parse(event.body) : {};
+  } catch {
+    return {
+      statusCode: 400,
+      headers: { "Content-Type": "application/json", ...CORS },
+      body: JSON.stringify({ error: "Invalid JSON body." }),
+    };
+  }
+
+  try {
+    const result = await recordAnalyticsEvent({
       supabaseUrl,
       anonKey,
       serviceKey,
-      adminEmails,
       accessToken,
+      eventName: payload.eventName || payload.event_name || "",
+      userAgent: event.headers["user-agent"] || event.headers["User-Agent"] || "",
+      headers: event.headers,
     });
+
+    if (result.status === 204) {
+      return { statusCode: 204, headers: CORS, body: "" };
+    }
 
     return {
       statusCode: result.status,
@@ -61,7 +74,7 @@ export async function handler(event) {
       body: JSON.stringify(result.body),
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to load admin stats";
+    const message = err instanceof Error ? err.message : "Failed to record analytics event";
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json", ...CORS },
