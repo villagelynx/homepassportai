@@ -34,7 +34,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Montserrat:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./css/app.css?v=105" />
+    <link rel="stylesheet" href="./css/app.css?v=106" />
   </head>
   <body>
     <div id="app" class="app">
@@ -206,12 +206,28 @@
             </div>
 
             <div class="landing__phone-col">
-              <img
-                class="landing__phone-straight"
-                src="./images/landing-phone-straight.png?v=6"
-                alt="HomePassportAI app on iPhone — My Home screen with house illustration, categories, and recently added items"
-                decoding="async"
-              />
+              <div class="landing__promo">
+                <video
+                  id="landing-promo-video"
+                  class="landing__promo-video"
+                  poster="./public/promo/homepassport-promo-poster.jpg"
+                  preload="metadata"
+                  playsinline
+                  controls
+                  controlslist="nodownload"
+                >
+                  <source src="./public/promo/homepassport-promo.mp4" type="video/mp4" />
+                  Your browser does not support this video.
+                </video>
+                <button
+                  type="button"
+                  class="landing__promo-play"
+                  id="btn-landing-promo-play"
+                  aria-label="Play HomePassportAI promo video"
+                >
+                  <span class="landing__promo-play-icon" aria-hidden="true"></span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1520,6 +1536,6 @@
         });
       })();
     </script>
-    <script type="module" src="./js/main.js?v=63"></script>
+    <script type="module" src="./js/main.js?v=64"></script>
   </body>
 </html>
