@@ -11,10 +11,12 @@ migrateLegacyStorageKey(STORAGE_KEY, LEGACY_KEY);
  */
 
 /** @param {unknown} err */
-function isQuotaExceededError(err) {
+export function isQuotaExceededError(err) {
   if (!err || typeof err !== "object") return false;
   const name = /** @type {{ name?: string }} */ (err).name;
-  return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED";
+  if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return true;
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /quota.?exceeded|storage full/i.test(msg);
 }
 
 /** @returns {ApplianceRecord[]} */
@@ -131,8 +133,8 @@ export function scanAllApplianceStorage() {
 }
 
 /**
- * Merge recovered appliances into the canonical key.
- * Never throws QuotaExceeded — automatic recovery must not crash the app.
+ * Consolidate leftover guest/legacy appliance keys into the canonical key.
+ * Never throws on quota — automatic recovery must not surface as an app crash.
  * @returns {number}
  */
 export function recoverLocalInventory() {
@@ -151,19 +153,27 @@ export function recoverLocalInventory() {
 
   if (merged.length === 0) return 0;
 
+  const current = loadLocalAppliances();
+  const currentIds = new Set(current.map((item) => item.id));
+  const alreadyComplete =
+    current.length > 0 && merged.every((item) => item?.id && currentIds.has(item.id));
+
   const extras = [
     ...matchedKeys.filter((key) => key !== STORAGE_KEY),
     ...KNOWN_KEYS.filter((key) => key !== STORAGE_KEY),
   ];
+
+  if (alreadyComplete) {
+    removeApplianceKeys(extras);
+    return current.length;
+  }
 
   try {
     replaceLocalAppliances(merged);
     removeApplianceKeys(extras);
     return merged.length;
   } catch (err) {
-    if (!isQuotaExceededError(err) && !(err instanceof Error && /Storage full/i.test(err.message))) {
-      throw err;
-    }
+    if (!isQuotaExceededError(err)) throw err;
   }
 
   // Canonical write failed (often because legacy/duplicate keys still hold the same
@@ -173,17 +183,15 @@ export function recoverLocalInventory() {
     replaceLocalAppliances(merged);
     return merged.length;
   } catch (err) {
-    if (!isQuotaExceededError(err) && !(err instanceof Error && /Storage full/i.test(err.message))) {
-      throw err;
-    }
+    if (!isQuotaExceededError(err)) throw err;
     // Don't leave the user with nothing if canonical still won't fit — put the
     // in-memory merge back under the legacy key when possible.
     try {
       localStorage.setItem(LEGACY_KEY, JSON.stringify(merged));
     } catch {
-      console.warn("Inventory recovery skipped — browser storage is full");
+      console.warn("Could not recover local inventory — browser storage is full.");
     }
-    return 0;
+    return loadLocalAppliances().length;
   }
 }
 

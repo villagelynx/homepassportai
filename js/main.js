@@ -1035,8 +1035,9 @@ async function handleSignOut() {
   allowOfflineUse = false;
   // Skip renderHome on sign-out: after cloud migrate the canonical local list is
   // empty, and auto-recovery can hit QuotaExceeded while consolidating leftover
-  // legacy keys — that used to surface as a scary "App error: Storage full" banner
+  // guest/legacy photo keys — that used to surface as "App error: Storage full"
   // while the previous (cloud) home UI was still on screen.
+  clearBootError();
   if (els.applianceList) els.applianceList.innerHTML = "";
   if (els.homeRecentGrid) els.homeRecentGrid.innerHTML = "";
   if (els.homeItemMeta) els.homeItemMeta.textContent = "0 Items • All Up to Date";
@@ -2608,7 +2609,7 @@ async function renderHome() {
       list = await loadAppliances();
     } catch (err) {
       // Recovery is best-effort; never let storage quota crash the home screen.
-      console.warn(err);
+      console.warn("Inventory recovery skipped", err);
     }
   }
   if (!els.applianceList || !els.emptyState) return;

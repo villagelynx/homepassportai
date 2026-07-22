@@ -154,7 +154,12 @@ export async function importApplianceBackup(jsonText) {
 /** @returns {number} */
 export function tryRecoverInventory() {
   if (useCloud() && isSignedIn()) return 0;
-  return recoverLocalInventory();
+  try {
+    return recoverLocalInventory();
+  } catch (err) {
+    console.warn("Inventory recovery failed", err);
+    return 0;
+  }
 }
 
 export {
