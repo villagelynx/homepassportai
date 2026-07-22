@@ -2,12 +2,20 @@ import { migrateLegacyStorageKey } from "./storage-keys.js";
 
 const STORAGE_KEY = "homepassport-ai:appliances:v1";
 const LEGACY_KEY = "home-passport:appliances:v1";
+const KNOWN_KEYS = [STORAGE_KEY, LEGACY_KEY, "homepassport-ai:appliances:v1"];
 
 migrateLegacyStorageKey(STORAGE_KEY, LEGACY_KEY);
 
 /**
  * @typedef {import("./storage.js").ApplianceRecord} ApplianceRecord
  */
+
+/** @param {unknown} err */
+function isQuotaExceededError(err) {
+  if (!err || typeof err !== "object") return false;
+  const name = /** @type {{ name?: string }} */ (err).name;
+  return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED";
+}
 
 /** @returns {ApplianceRecord[]} */
 export function loadLocalAppliances() {
@@ -26,8 +34,7 @@ export function saveLocalAppliances(list) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch (err) {
-    const name = err instanceof DOMException ? err.name : "";
-    if (name === "QuotaExceededError") {
+    if (isQuotaExceededError(err)) {
       throw new Error("Storage full — try removing old appliances or use a smaller photo.");
     }
     throw err;
@@ -63,8 +70,30 @@ export function updateLocalAppliance(id, updates) {
   return list[idx];
 }
 
+/** @param {Iterable<string>} keys */
+function removeApplianceKeys(keys) {
+  for (const key of keys) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // private mode
+    }
+  }
+}
+
+/**
+ * Remove every on-device appliance list (canonical, legacy, and scan matches).
+ * Used after a successful cloud migrate so leftovers cannot refill localStorage.
+ */
 export function clearLocalAppliances() {
-  localStorage.removeItem(STORAGE_KEY);
+  /** @type {string[]} */
+  let matchedKeys = [];
+  try {
+    matchedKeys = scanAllApplianceStorage().matchedKeys;
+  } catch {
+    // ignore scan failures — still clear known keys
+  }
+  removeApplianceKeys([...KNOWN_KEYS, ...matchedKeys]);
 }
 
 /** Scan every localStorage key for saved appliance arrays. */
@@ -101,11 +130,16 @@ export function scanAllApplianceStorage() {
   return { matchedKeys, appliances };
 }
 
-/** @returns {number} */
+/**
+ * Merge recovered appliances into the canonical key.
+ * Never throws QuotaExceeded — automatic recovery must not crash the app.
+ * @returns {number}
+ */
 export function recoverLocalInventory() {
-  const fromScan = scanAllApplianceStorage().appliances;
+  const { matchedKeys, appliances: fromScan } = scanAllApplianceStorage();
   const fromLegacy = loadAllLegacyAppliances();
   const seen = new Set();
+  /** @type {ApplianceRecord[]} */
   const merged = [];
 
   for (const item of [...fromScan, ...fromLegacy]) {
@@ -116,17 +150,46 @@ export function recoverLocalInventory() {
   }
 
   if (merged.length === 0) return 0;
-  replaceLocalAppliances(merged);
-  return merged.length;
+
+  const extras = [
+    ...matchedKeys.filter((key) => key !== STORAGE_KEY),
+    ...KNOWN_KEYS.filter((key) => key !== STORAGE_KEY),
+  ];
+
+  try {
+    replaceLocalAppliances(merged);
+    removeApplianceKeys(extras);
+    return merged.length;
+  } catch (err) {
+    if (!isQuotaExceededError(err) && !(err instanceof Error && /Storage full/i.test(err.message))) {
+      throw err;
+    }
+  }
+
+  // Canonical write failed (often because legacy/duplicate keys still hold the same
+  // photo-heavy payload). Free those copies, then retry once with the in-memory merge.
+  removeApplianceKeys(extras);
+  try {
+    replaceLocalAppliances(merged);
+    return merged.length;
+  } catch (err) {
+    if (!isQuotaExceededError(err) && !(err instanceof Error && /Storage full/i.test(err.message))) {
+      throw err;
+    }
+    // Don't leave the user with nothing if canonical still won't fit — put the
+    // in-memory merge back under the legacy key when possible.
+    try {
+      localStorage.setItem(LEGACY_KEY, JSON.stringify(merged));
+    } catch {
+      console.warn("Inventory recovery skipped — browser storage is full");
+    }
+    return 0;
+  }
 }
 
 /** Read legacy keys from before rebrand. @returns {ApplianceRecord[]} */
 export function loadAllLegacyAppliances() {
-  const keys = [
-    STORAGE_KEY,
-    LEGACY_KEY,
-    "homepassport-ai:appliances:v1",
-  ];
+  const keys = KNOWN_KEYS;
   const seen = new Set();
   const all = [];
   for (const key of keys) {

@@ -165,13 +165,33 @@ export function scanAllDocumentStorage() {
   return { matchedKeys, documents };
 }
 
+/** @param {unknown} err */
+function isQuotaExceededError(err) {
+  if (!err || typeof err !== "object") return false;
+  const name = /** @type {{ name?: string }} */ (err).name;
+  return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED";
+}
+
+/** @param {string[]} matchedKeys */
+function removeExtraDocumentKeys(matchedKeys) {
+  for (const key of matchedKeys) {
+    if (key === STORAGE_KEY) continue;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // private mode
+    }
+  }
+}
+
 /**
  * Merge recovered documents into the canonical key.
+ * Never throws QuotaExceeded — automatic recovery must not crash the app.
  * @returns {number} total documents after recovery
  */
 export function tryRecoverDocuments() {
   const current = loadDocuments();
-  const { documents: found } = scanAllDocumentStorage();
+  const { matchedKeys, documents: found } = scanAllDocumentStorage();
   if (found.length === 0) return current.length;
 
   const seen = new Set(current.map((d) => d.id));
@@ -184,8 +204,28 @@ export function tryRecoverDocuments() {
   }
 
   merged.sort((a, b) => String(b.scannedAt).localeCompare(String(a.scannedAt)));
-  saveDocuments(merged);
-  return merged.length;
+
+  try {
+    saveDocuments(merged);
+    removeExtraDocumentKeys(matchedKeys);
+    return merged.length;
+  } catch (err) {
+    if (!isQuotaExceededError(err) && !(err instanceof Error && /Storage full/i.test(err.message))) {
+      throw err;
+    }
+  }
+
+  removeExtraDocumentKeys(matchedKeys);
+  try {
+    saveDocuments(merged);
+    return merged.length;
+  } catch (err) {
+    if (!isQuotaExceededError(err) && !(err instanceof Error && /Storage full/i.test(err.message))) {
+      throw err;
+    }
+    console.warn("Document recovery skipped — browser storage is full");
+    return current.length;
+  }
 }
 
 /** @param {DocumentRecord[]} list */
