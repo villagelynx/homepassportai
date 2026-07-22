@@ -24,7 +24,7 @@ const DEFINITION_ORDER = [
   ["usersByCountry", "Users by Country"],
   ["mostUsedFeatures", "Most Used Features"],
   ["devices", "iPhone vs Android"],
-  ["dailyGrowth", "Daily Growth"],
+  ["dailyGrowth", "Daily Growth Chart"],
 ];
 
 const els = {

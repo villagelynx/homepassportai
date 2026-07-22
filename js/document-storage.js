@@ -85,13 +85,21 @@ export function loadDocuments() {
   }
 }
 
+/** @param {unknown} err */
+function isQuotaExceededError(err) {
+  if (!err || typeof err !== "object") return false;
+  const name = /** @type {{ name?: string }} */ (err).name;
+  if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return true;
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return /quota.?exceeded|storage full/i.test(msg);
+}
+
 /** @param {DocumentRecord[]} list */
 function saveDocuments(list) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   } catch (err) {
-    const name = err instanceof DOMException ? err.name : "";
-    if (name === "QuotaExceededError") {
+    if (isQuotaExceededError(err)) {
       throw new Error("Storage full — try removing an older saved document.");
     }
     throw err;
@@ -165,13 +173,26 @@ export function scanAllDocumentStorage() {
   return { matchedKeys, documents };
 }
 
+/** @param {string[]} matchedKeys */
+function removeExtraDocumentKeys(matchedKeys) {
+  for (const key of matchedKeys) {
+    if (key === STORAGE_KEY) continue;
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // private mode
+    }
+  }
+}
+
 /**
  * Merge recovered documents into the canonical key.
+ * Soft-fails on quota so automatic recovery never becomes an unhandled rejection.
  * @returns {number} total documents after recovery
  */
 export function tryRecoverDocuments() {
   const current = loadDocuments();
-  const { documents: found } = scanAllDocumentStorage();
+  const { matchedKeys, documents: found } = scanAllDocumentStorage();
   if (found.length === 0) return current.length;
 
   const seen = new Set(current.map((d) => d.id));
@@ -183,9 +204,30 @@ export function tryRecoverDocuments() {
     }
   }
 
+  if (merged.length === current.length) {
+    removeExtraDocumentKeys(matchedKeys);
+    return current.length;
+  }
+
   merged.sort((a, b) => String(b.scannedAt).localeCompare(String(a.scannedAt)));
-  saveDocuments(merged);
-  return merged.length;
+
+  try {
+    saveDocuments(merged);
+    removeExtraDocumentKeys(matchedKeys);
+    return merged.length;
+  } catch (err) {
+    if (!isQuotaExceededError(err)) throw err;
+  }
+
+  removeExtraDocumentKeys(matchedKeys);
+  try {
+    saveDocuments(merged);
+    return merged.length;
+  } catch (err) {
+    if (!isQuotaExceededError(err)) throw err;
+    console.warn("Could not recover documents — browser storage is full.");
+    return current.length;
+  }
 }
 
 /** @param {DocumentRecord[]} list */
