@@ -270,6 +270,8 @@ const els = {
   btnLandingHeaderRegister: document.getElementById("btn-landing-header-register"),
   btnLandingStart: document.getElementById("btn-landing-start"),
   btnLandingOffline: document.getElementById("btn-landing-offline"),
+  landingPromoVideo: document.getElementById("landing-promo-video"),
+  btnLandingPromoPlay: document.getElementById("btn-landing-promo-play"),
   updatePasswordForm: document.getElementById("update-password-form"),
   newPassword: document.getElementById("new-password"),
   confirmPassword: document.getElementById("confirm-password"),
@@ -744,6 +746,7 @@ function init() {
     allowOfflineUse = true;
     void enterApp();
   });
+  setupLandingPromoVideo();
   els.btnAuthBack?.addEventListener("click", () => showView("landing"));
   els.authForm?.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -3985,6 +3988,36 @@ function renderDetailRepair(item) {
 function normalizeUrl(url) {
   if (/^https?:\/\//i.test(url)) return url;
   return `https://${url}`;
+}
+
+function setupLandingPromoVideo() {
+  const video = els.landingPromoVideo;
+  const playBtn = els.btnLandingPromoPlay;
+  if (!(video instanceof HTMLVideoElement) || !(playBtn instanceof HTMLButtonElement)) return;
+
+  const hidePlay = () => {
+    playBtn.hidden = true;
+  };
+  const showPlay = () => {
+    playBtn.hidden = false;
+  };
+
+  playBtn.addEventListener("click", () => {
+    void video.play().then(hidePlay).catch(() => {
+      showPlay();
+    });
+  });
+
+  video.addEventListener("play", hidePlay);
+  video.addEventListener("pause", showPlay);
+  video.addEventListener("ended", () => {
+    showPlay();
+    try {
+      video.currentTime = 0;
+    } catch {
+      /* ignore seek errors on some mobile browsers */
+    }
+  });
 }
 
 async function removeDetail() {
