@@ -3382,6 +3382,7 @@ function formatApplianceShareText(item) {
     item.estimatedCurrentValue ? `Est. value: ${item.estimatedCurrentValue}` : "",
     item.suggestedRetailPrice ? `Retail (MSRP): ${item.suggestedRetailPrice}` : "",
     "— HomePassportAI",
+    "https://homepassportai.com",
   ].filter(Boolean);
   return lines.join("\n");
 }
