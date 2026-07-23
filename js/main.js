@@ -354,9 +354,13 @@ const scan = {
  * @property {string} brand
  * @property {string} modelNumber
  * @property {string} serialNumber
+ * @property {string} [estimatedCurrentValue]
+ * @property {string} [suggestedRetailPrice]
  * @property {string} confidence
  * @property {number} frameIndex
  * @property {string} photoDataUrl
+ * @property {boolean} [captured]
+ * @property {boolean} [saved]
  */
 
 /** @type {{ videoUrl: string | null, frames: string[], candidates: RoomCandidate[], roomGuess: string }} */
@@ -1359,17 +1363,20 @@ async function runRoomAnalysis() {
         confidence: item.confidence,
         frameIndex,
         photoDataUrl: roomScan.frames[frameIndex],
+        captured: false,
+        saved: false,
       };
     });
 
     populateRoomSelect(els.fieldRoomScan, roomScan.roomGuess);
     if (els.roomReviewLede) {
       els.roomReviewLede.textContent = result.demoMode
-        ? "Demo mode (no AI key) — sample items shown. Check ones to keep, then save."
-        : `Found ${roomScan.candidates.length} item${roomScan.candidates.length === 1 ? "" : "s"}. Check the ones to keep.`;
+        ? "Demo mode (no AI key) — sample items shown. Green checks mark each capture; uncheck any to skip."
+        : `Found ${roomScan.candidates.length} item${roomScan.candidates.length === 1 ? "" : "s"}. Green checks mark each capture — uncheck any you don’t want.`;
     }
     renderRoomReview();
     showView("roomReview");
+    void revealRoomCaptureChecks();
     if (result.demoMode) toast("Demo mode — add an AI API key in Settings for real room scans");
   } catch (err) {
     toast(err instanceof Error ? err.message : "Room analysis failed");
@@ -1378,6 +1385,59 @@ async function runRoomAnalysis() {
       btn.disabled = roomScan.frames.length < 2;
       btn.textContent = "Analyze room video";
     }
+  }
+}
+
+/** @param {number} ms */
+function sleepMs(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+/** Stagger green checkmarks as each detected item is confirmed in the results list. */
+async function revealRoomCaptureChecks() {
+  for (const item of roomScan.candidates) {
+    await sleepMs(160);
+    item.captured = true;
+    updateRoomCandidateCaptureUi(item);
+  }
+}
+
+/** @param {RoomCandidate} item */
+function updateRoomCandidateCaptureUi(item) {
+  const list = els.roomReviewList;
+  if (!list) return;
+  /** @type {HTMLElement | null} */
+  let card = null;
+  for (const el of list.querySelectorAll("[data-candidate-id]")) {
+    if (el instanceof HTMLElement && el.dataset.candidateId === item.id) {
+      card = el;
+      break;
+    }
+  }
+  if (!card) return;
+
+  const show = Boolean(item.captured || item.saved);
+  card.classList.toggle("room-review-card--captured", Boolean(item.captured) && !item.saved);
+  card.classList.toggle("room-review-card--saved", Boolean(item.saved));
+  card.classList.toggle("room-review-card--pending", !show);
+
+  const mark = card.querySelector(".room-review-card__captured-mark");
+  if (mark instanceof HTMLElement) {
+    if (show) {
+      mark.removeAttribute("aria-hidden");
+      mark.setAttribute(
+        "aria-label",
+        item.saved ? "Item saved to inventory" : "Item captured from room scan",
+      );
+    } else {
+      mark.setAttribute("aria-hidden", "true");
+      mark.removeAttribute("aria-label");
+    }
+  }
+
+  const status = card.querySelector(".room-review-card__status");
+  if (status instanceof HTMLElement) {
+    status.textContent = item.saved ? "Saved to inventory" : "Captured from scan";
   }
 }
 
@@ -1393,6 +1453,7 @@ function renderRoomReview() {
   for (const item of roomScan.candidates) {
     const card = document.createElement("label");
     card.className = "room-review-card";
+    card.dataset.candidateId = item.id;
     card.setAttribute("role", "listitem");
 
     const check = document.createElement("input");
@@ -1404,10 +1465,21 @@ function renderRoomReview() {
       updateRoomSaveButton();
     });
 
+    const thumbWrap = document.createElement("div");
+    thumbWrap.className = "room-review-card__thumb-wrap";
+
     const img = document.createElement("img");
     img.className = "room-review-card__thumb";
     img.src = item.photoDataUrl;
     img.alt = "";
+
+    const mark = document.createElement("span");
+    mark.className = "room-review-card__captured-mark";
+    mark.setAttribute("aria-hidden", "true");
+    mark.innerHTML =
+      '<svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M8.2 13.6 4.9 10.3l1.4-1.4 1.9 1.9 5-5.1 1.4 1.4-6.4 6.5Z"/></svg>';
+
+    thumbWrap.append(img, mark);
 
     const body = document.createElement("div");
     body.className = "room-review-card__body";
@@ -1464,9 +1536,14 @@ function renderRoomReview() {
     meta.className = "room-review-card__meta";
     updateRoomMeta(meta, item);
 
-    body.append(nickname, type, brand, model, serial, meta);
-    card.append(check, img, body);
+    const status = document.createElement("p");
+    status.className = "room-review-card__status";
+    status.textContent = "Captured from scan";
+
+    body.append(nickname, type, brand, model, serial, meta, status);
+    card.append(check, thumbWrap, body);
     list.append(card);
+    updateRoomCandidateCaptureUi(item);
   }
 }
 
@@ -1542,8 +1619,13 @@ async function saveRoomItems() {
         repairCompany: null,
       });
       saved += 1;
+      item.captured = true;
+      item.saved = true;
+      updateRoomCandidateCaptureUi(item);
+      await sleepMs(220);
     }
 
+    await sleepMs(380);
     resetRoomScan();
     await renderHome();
     updateSyncBanner();

@@ -1990,6 +1990,20 @@ body {
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--surface);
+  transition:
+    border-color 0.22s ease,
+    background-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.room-review-card--captured {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.room-review-card--saved {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.08);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.12);
 }
 
 .room-review-card__check {
@@ -1999,13 +2013,72 @@ body {
   accent-color: var(--accent);
 }
 
-.room-review-card__thumb {
+.room-review-card__thumb-wrap {
+  position: relative;
   width: 4.25rem;
   height: 4.25rem;
+  flex-shrink: 0;
+}
+
+.room-review-card__thumb {
+  width: 100%;
+  height: 100%;
   border-radius: 10px;
   object-fit: cover;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  display: block;
+}
+
+.room-review-card__badge {
+  position: absolute;
+  left: 0.3rem;
+  right: 0.3rem;
+  bottom: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 1.35rem;
+  padding: 0.12rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.95);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  box-shadow: 0 1px 6px rgba(22, 163, 74, 0.35);
+  opacity: 0;
+  transform: scale(0.82) translateY(4px);
+  pointer-events: none;
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s cubic-bezier(0.22, 1.2, 0.36, 1),
+    background-color 0.2s ease;
+}
+
+.room-review-card__badge[hidden] {
+  display: none !important;
+}
+
+.room-review-card__badge--visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.room-review-card__badge--saved {
+  background: #15803d;
+}
+
+.room-review-card__badge-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex-shrink: 0;
+}
+
+.room-review-card__badge-label {
+  white-space: nowrap;
 }
 
 .room-review-card__body {
@@ -2023,6 +2096,17 @@ body {
   margin: 0;
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-review-card,
+  .room-review-card__badge {
+    transition: none;
+  }
+
+  .room-review-card__badge--visible {
+    transform: none;
+  }
 }
 
 .detail-body {
