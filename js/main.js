@@ -1423,8 +1423,7 @@ function updateRoomCandidateCaptureUi(item) {
   const mark = card.querySelector(".room-review-card__captured-mark");
   const status = card.querySelector(".room-review-card__status");
 
-  // Unhide before applying --captured/--saved so opacity/scale transitions can run
-  // (display:none → visible with the end-state class already on skips the animation).
+  // Unhide before --captured/--saved so the opacity/scale transition can run.
   if (mark instanceof HTMLElement) {
     if (show) {
       mark.hidden = false;
