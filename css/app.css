@@ -2030,27 +2030,21 @@ body {
   display: block;
 }
 
-.room-review-card__badge {
+.room-review-card__captured-mark {
   position: absolute;
-  left: 0.3rem;
-  right: 0.3rem;
-  bottom: 0.3rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  min-height: 1.35rem;
-  padding: 0.12rem 0.35rem;
+  top: -0.3rem;
+  right: -0.3rem;
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
   border-radius: 999px;
-  background: rgba(22, 163, 74, 0.95);
+  background: #22c55e;
   color: #fff;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  box-shadow: 0 1px 6px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 1px 5px rgba(22, 163, 74, 0.4);
+  border: 2px solid var(--surface);
   opacity: 0;
-  transform: scale(0.82) translateY(4px);
+  transform: scale(0.45);
   pointer-events: none;
   transition:
     opacity 0.22s ease,
@@ -2058,27 +2052,22 @@ body {
     background-color 0.2s ease;
 }
 
-.room-review-card__badge[hidden] {
+.room-review-card__captured-mark[hidden] {
   display: none !important;
 }
 
-.room-review-card__badge--visible {
+.room-review-card--captured .room-review-card__captured-mark,
+.room-review-card--saved .room-review-card__captured-mark {
   opacity: 1;
-  transform: scale(1) translateY(0);
+  transform: scale(1);
 }
 
-.room-review-card__badge--saved {
+.room-review-card--saved .room-review-card__captured-mark {
   background: #15803d;
 }
 
-.room-review-card__badge-icon {
-  width: 0.85rem;
-  height: 0.85rem;
-  flex-shrink: 0;
-}
-
-.room-review-card__badge-label {
-  white-space: nowrap;
+.room-review-card__captured-mark svg {
+  display: block;
 }
 
 .room-review-card__body {
@@ -2098,13 +2087,44 @@ body {
   color: var(--muted);
 }
 
+.room-review-card__status {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #16a34a;
+  letter-spacing: 0.01em;
+  opacity: 0;
+  transform: translateY(2px);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.room-review-card__status[hidden] {
+  display: none !important;
+}
+
+.room-review-card--captured .room-review-card__status,
+.room-review-card--saved .room-review-card__status {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.room-review-card--saved .room-review-card__status {
+  color: #15803d;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .room-review-card,
-  .room-review-card__badge {
+  .room-review-card__captured-mark,
+  .room-review-card__status {
     transition: none;
   }
 
-  .room-review-card__badge--visible {
+  .room-review-card--captured .room-review-card__captured-mark,
+  .room-review-card--saved .room-review-card__captured-mark,
+  .room-review-card--captured .room-review-card__status,
+  .room-review-card--saved .room-review-card__status {
     transform: none;
   }
 }

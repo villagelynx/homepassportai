@@ -1395,8 +1395,11 @@ function sleepMs(ms) {
 
 /** Stagger green checkmarks as each detected item is confirmed in the results list. */
 async function revealRoomCaptureChecks() {
+  const reduceMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   for (const item of roomScan.candidates) {
-    await sleepMs(160);
+    if (!reduceMotion) await sleepMs(160);
     item.captured = true;
     updateRoomCandidateCaptureUi(item);
   }
@@ -1417,13 +1420,14 @@ function updateRoomCandidateCaptureUi(item) {
   if (!card) return;
 
   const show = Boolean(item.captured || item.saved);
-  card.classList.toggle("room-review-card--captured", Boolean(item.captured) && !item.saved);
-  card.classList.toggle("room-review-card--saved", Boolean(item.saved));
-  card.classList.toggle("room-review-card--pending", !show);
-
   const mark = card.querySelector(".room-review-card__captured-mark");
+  const status = card.querySelector(".room-review-card__status");
+
+  // Unhide before applying --captured/--saved so opacity/scale transitions can run
+  // (display:none → visible with the end-state class already on skips the animation).
   if (mark instanceof HTMLElement) {
     if (show) {
+      mark.hidden = false;
       mark.removeAttribute("aria-hidden");
       mark.setAttribute(
         "aria-label",
@@ -1434,10 +1438,22 @@ function updateRoomCandidateCaptureUi(item) {
       mark.removeAttribute("aria-label");
     }
   }
-
-  const status = card.querySelector(".room-review-card__status");
   if (status instanceof HTMLElement) {
+    if (show) status.hidden = false;
     status.textContent = item.saved ? "Saved to inventory" : "Captured from scan";
+  }
+
+  if (show && mark instanceof HTMLElement) {
+    void mark.offsetWidth;
+  }
+
+  card.classList.toggle("room-review-card--captured", Boolean(item.captured) && !item.saved);
+  card.classList.toggle("room-review-card--saved", Boolean(item.saved));
+  card.classList.toggle("room-review-card--pending", !show);
+
+  if (!show) {
+    if (mark instanceof HTMLElement) mark.hidden = true;
+    if (status instanceof HTMLElement) status.hidden = true;
   }
 }
 
@@ -1475,6 +1491,7 @@ function renderRoomReview() {
 
     const mark = document.createElement("span");
     mark.className = "room-review-card__captured-mark";
+    mark.hidden = true;
     mark.setAttribute("aria-hidden", "true");
     mark.innerHTML =
       '<svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M8.2 13.6 4.9 10.3l1.4-1.4 1.9 1.9 5-5.1 1.4 1.4-6.4 6.5Z"/></svg>';
@@ -1538,6 +1555,7 @@ function renderRoomReview() {
 
     const status = document.createElement("p");
     status.className = "room-review-card__status";
+    status.hidden = true;
     status.textContent = "Captured from scan";
 
     body.append(nickname, type, brand, model, serial, meta, status);
@@ -1589,6 +1607,8 @@ async function saveRoomItems() {
     btn.disabled = true;
     btn.textContent = "Saving…";
   }
+  if (els.btnRoomSelectAll instanceof HTMLButtonElement) els.btnRoomSelectAll.disabled = true;
+  if (els.btnRoomSelectNone instanceof HTMLButtonElement) els.btnRoomSelectNone.disabled = true;
 
   try {
     let saved = 0;
@@ -1638,6 +1658,8 @@ async function saveRoomItems() {
   } catch (err) {
     toast(err instanceof Error ? err.message : "Could not save room items");
     updateRoomSaveButton();
+    if (els.btnRoomSelectAll instanceof HTMLButtonElement) els.btnRoomSelectAll.disabled = false;
+    if (els.btnRoomSelectNone instanceof HTMLButtonElement) els.btnRoomSelectNone.disabled = false;
   }
 }
 
